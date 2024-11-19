@@ -1,0 +1,121 @@
+  
+/* ContentManagement.css */
+
+/* Container for overall spacing */
+.content-management {
+    max-width: 800px;
+    margin: auto;
+    padding: 2rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabs styling */
+.content-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.content-tabs button {
+    padding: 10px 20px;
+    border: none;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.content-tabs .active {
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+}
+
+/* Form styling */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+form input,
+form textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    resize: none;
+}
+
+form button {
+    align-self: flex-start;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #45a049;
+}
+
+/* Content List styling */
+.content-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.content-list li {
+    padding: 1rem;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.content-list h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.content-list p {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 10px 0;
+}
+
+/* Button styling inside list items */
+.content-list button {
+    margin-right: 10px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.content-list button:first-of-type {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.content-list button:last-of-type {
+    background-color: #f44336;
+    color: white;
+}
+
+.content-list button:first-of-type:hover {
+    background-color: #45a049;
+}
+
+.content-list button:last-of-type:hover {
+    background-color: #d32f2f;
+}
