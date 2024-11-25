@@ -1,3 +1,4 @@
+// models/Admin.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -14,7 +15,11 @@ AdminSchema.pre('save', async function (next) {
 });
 
 AdminSchema.methods.comparePassword = async function (password) {
-    return await bcrypt.compare(password, this.password);
+    try {
+        return await bcrypt.compare(password, this.password);
+    } catch (error) {
+        throw error;
+    }
 };
 
 module.exports = mongoose.model('Admin', AdminSchema);

@@ -1,30 +1,30 @@
-/* adminLogin.css */
-
-.login-container {
+/* src/css/auth.css */
+/* Common styles for both Login and Register components */
+.auth-container {
     max-width: 400px;
-    margin: 80px auto;
-    padding: 40px;
+    margin: 50px auto;
+    padding: 20px;
     background-color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
 
-.login-container h2 {
+.auth-container h2 {
     font-size: 2rem;
     color: #333;
     margin-bottom: 20px;
     font-family: 'Playfair Display', serif;
 }
 
-.login-container form {
+.auth-container form {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-.login-container input[type="text"],
-.login-container input[type="password"] {
+.auth-container input {
+    width: 100%;
     padding: 12px;
     font-size: 1rem;
     border: 1px solid #ddd;
@@ -32,13 +32,13 @@
     transition: border-color 0.3s ease;
 }
 
-.login-container input[type="text"]:focus,
-.login-container input[type="password"]:focus {
+.auth-container input:focus {
     border-color: #3d5a40;
     outline: none;
 }
 
-.login-container button {
+.auth-container button {
+    width: 100%;
     padding: 12px;
     font-size: 1rem;
     background-color: #3d5a40;
@@ -49,7 +49,7 @@
     transition: background-color 0.3s ease;
 }
 
-.login-container button:hover {
+.auth-container button:hover {
     background-color: #2b4a32;
 }
 
@@ -57,4 +57,14 @@
     color: #e74c3c;
     margin-top: 10px;
     font-size: 0.9rem;
+}
+
+/* Specific styles for Login */
+.login-container h2 {
+    color: #333;
+}
+
+/* Specific styles for Register */
+.register-container h2 {
+    color: #4b774f;
 }

@@ -1,12 +1,15 @@
-// models/Blog.js
 const mongoose = require('mongoose');
 
 const blogSchema = new mongoose.Schema({
-    title: String,
-    content: String,
-    date: { type: Date, default: Date.now },
-    author: String,
-    image: String, // URL to image, if applicable
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  imageUrl: { type: String }, // Path to the uploaded image
+  metadata: {
+    title: { type: String, default: '' },
+    description: { type: String, default: '' },
+    keywords: { type: [String], default: [] }, // SEO keywords
+  },
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Blog', blogSchema);

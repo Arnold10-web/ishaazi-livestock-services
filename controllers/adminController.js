@@ -1,3 +1,4 @@
+// controllers/adminController.js
 const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
 
@@ -33,6 +34,7 @@ exports.loginAdmin = async (req, res) => {
         if (!admin) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
+       // localStorage.setItem('myAppAdminToken', response.data.token); not sure where to put it 
 
         // Validate password
         const isMatch = await admin.comparePassword(password);
@@ -60,3 +62,4 @@ exports.logoutAdmin = (req, res) => {
 exports.getAdminDashboard = (req, res) => {
     res.status(200).json({ message: `Welcome to the admin dashboard, Admin ID: ${req.adminId}` });
 };
+

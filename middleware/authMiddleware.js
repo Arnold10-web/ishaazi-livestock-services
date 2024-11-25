@@ -1,3 +1,4 @@
+// middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
@@ -11,9 +12,10 @@ const authMiddleware = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.adminId = decoded.id;
+        req.adminId = decoded.id; // Attach admin ID to request
         next();
     } catch (error) {
+        console.error('Error verifying token:', error);
         res.status(401).json({ message: 'Invalid or expired token' });
     }
 };
