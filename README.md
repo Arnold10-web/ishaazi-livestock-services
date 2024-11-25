@@ -40,8 +40,8 @@ online-farming-magazine/             # Root directory for the project
 │   │   ├── admin/                   # Admin-related components
 │   │   │   ├── AdminDashboard.js    # Admin dashboard component
 │   │   │   ├── ContentManagement.js # Component for managing content
-│   │   │   ├── MagazineManagement.js# Component for managing magazines
-│   │   │   └── MediaManagement.js   # Component for managing media files
+│   │   │  
+│   │   │   
 │   │   │
 │   │   ├── components/              # Reusable UI components
 │   │   │   ├── AdminAuth.js         # Component for admin authentication
