@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 
 const Services = () => (
     <div>
-<Header />
+<Header showAd={true} />
         <main className="container my-4">
             <section>
                 <h1>Our Services</h1>

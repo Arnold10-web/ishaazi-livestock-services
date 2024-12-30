@@ -1,0 +1,189 @@
+/* DairyForm.css */
+
+/* Form Container */
+.dairy-form {
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f7fefc, #ffffff);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Poppins', sans-serif;
+    animation: fadeIn 1.5s ease-in-out;
+  }
+  
+  /* Form Title */
+  .dairy-form h3 {
+    font-size: 1.8rem;
+    text-align: center;
+    color: #27ae60;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  
+  /* Input Fields */
+  .dairy-form input[type="text"],
+  .dairy-form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .dairy-form input[type="text"]:focus,
+  .dairy-form textarea:focus {
+    border-color: #2ecc71;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+    outline: none;
+  }
+  
+  /* Textarea Styling */
+  .dairy-form textarea {
+    height: 100px;
+    resize: none;
+  }
+  
+  /* File Input Styling */
+  .file-input-wrapper {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .file-input-button {
+    padding: 10px 20px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .file-input-button:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+  }
+  
+  .file-name {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    font-style: italic;
+  }
+  
+  /* Image Preview */
+  .dairy-form img {
+    display: block;
+    margin: 10px 0;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    max-width: 100%;
+  }
+  
+  /* Quill Editor */
+  .dairy-form-quill {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+  }
+  
+  /* Buttons */
+  .dairy-form button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .dairy-form button[type="submit"] {
+    background-color: #3498db;
+    color: white;
+  }
+  
+  .dairy-form button[type="submit"]:hover {
+    background-color: #2980b9;
+    transform: scale(1.05);
+  }
+  
+  .dairy-form button[type="button"] {
+    background-color: #e74c3c;
+    color: white;
+  }
+  
+  .dairy-form button[type="button"]:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
+  }
+  
+  /* Error Message */
+  .dairy-form div[style*="color: red"] {
+    color: #e74c3c;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .dairy-form {
+      padding: 15px;
+    }
+  
+    .dairy-form h3 {
+      font-size: 1.5rem;
+    }
+  
+    .file-input-button {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+  
+    .file-name {
+      font-size: 0.8rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .dairy-form h3 {
+      font-size: 1.2rem;
+    }
+  
+    .file-input-button {
+      width: 100%;
+      text-align: center;
+      margin-top: 10px;
+    }
+  
+    .file-name {
+      display: none;
+    }
+  }
+  

@@ -1,59 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import API_ENDPOINTS from '../config/apiConfig';
-import { getAuthHeader } from '../utils/auth';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import '../css/NewsList.css'; // Make sure to create this CSS file
 
-const NewsList = () => {
-  const [news, setNews] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchNews = async (page) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINTS.GET_NEWS}?page=${page}&limit=5`, {
-        headers: { ...getAuthHeader() },
-      });
-      const { news, total } = response.data.data;
-      setNews(news);
-      setTotalPages(Math.ceil(total / 5));
-    } catch (error) {
-      console.error('Error fetching news:', error);
-    }
+const NewsList = ({ news, apiBaseUrl, isAdmin, onDelete, onEdit }) => {
+  const handleImageError = (e) => {
+    console.error('Image failed to load:', e.target.src);
+    e.target.src = '/placeholder-image.jpg'; // Replace with a default placeholder image
   };
 
-  const deleteNews = async (id) => {
-    if (window.confirm('Are you sure you want to delete this news item?')) {
-      try {
-        await axios.delete(API_ENDPOINTS.DELETE_NEWS(id), {
-          headers: { ...getAuthHeader() },
-        });
-        fetchNews(page);
-        alert('News deleted successfully.');
-      } catch (error) {
-        console.error('Error deleting news:', error);
-      }
-    }
+  const truncateContent = (content, maxLength = 150) => {
+    if (!content) return '';
+    
+    // Create a temporary element to parse the HTML
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = content;
+    
+    // Extract text content
+    let text = tempElement.textContent || tempElement.innerText;
+    
+    // Truncate the text
+    text = text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+    
+    return text;
   };
 
-  useEffect(() => {
-    fetchNews(page);
-  }, [page]);
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
-    <div>
-      <h3>News List</h3>
-      {news.map((item) => (
-        <div key={item._id}>
-          <h4>{item.title}</h4>
-          <div dangerouslySetInnerHTML={{ __html: item.content }}></div>
-          <button onClick={() => deleteNews(item._id)}>Delete</button>
-        </div>
-      ))}
-      <div>
-        <button disabled={page === 1} onClick={() => setPage((prev) => prev - 1)}>Previous</button>
-        <span> Page {page} of {totalPages} </span>
-        <button disabled={page === totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
-      </div>
+    <div className="news-list">
+      {news.length > 0 ? (
+        news.map((newsItem) => (
+          <article key={newsItem._id} className="news-item">
+            {newsItem.imageUrl && (
+              <div className="news-image-container">
+                <img
+                  src={`${apiBaseUrl}${newsItem.imageUrl}`}
+                  alt={newsItem.title}
+                  className="news-image"
+                  onError={handleImageError}
+                  crossOrigin="anonymous"
+                />
+              </div>
+            )}
+            <div className="news-content">
+              <Link to={`/news/${newsItem._id}`} className="news-link">
+                <h2 className="news-title">{newsItem.title}</h2>
+              </Link>
+              <p className="news-date">{formatDate(newsItem.createdAt)}</p>
+              <p className="news-excerpt">{truncateContent(newsItem.content)}</p>
+              <Link to={`/news/${newsItem._id}`} className="read-more">
+                Read More
+              </Link>
+              {isAdmin && (
+                <div className="admin-actions">
+                  <button onClick={() => onEdit(newsItem._id)} className="update-btn">
+                    Edit
+                  </button>
+                  <button onClick={() => onDelete(newsItem._id)} className="delete-btn">
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          </article>
+        ))
+      ) : (
+        <p className="no-news">No news available at the moment. Check back soon!</p>
+      )}
     </div>
   );
 };

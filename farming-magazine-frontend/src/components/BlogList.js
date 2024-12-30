@@ -1,65 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import API_ENDPOINTS from '../config/apiConfig';
-import { getAuthHeader } from '../utils/auth'; // Helper for Authorization header
+import React from 'react';
+import { Link } from 'react-router-dom';
+import '../css/BlogList.css';
 
-const BlogList = () => {
-  const [blogs, setBlogs] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchBlogs = async (page) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINTS.GET_BLOGS}?page=${page}&limit=5`);
-      const { blogs, total } = response.data.data;
-      setBlogs(blogs);
-      setTotalPages(Math.ceil(total / 5));
-    } catch (error) {
-      console.error('Error fetching blogs:', error);
-      alert('Failed to fetch blogs');
-    }
+const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit }) => {
+  const handleImageError = (e) => {
+    console.error('Image failed to load:', e.target.src);
+    e.target.src = '/placeholder-image.jpg'; // Replace with a default placeholder image
   };
 
-  const deleteBlog = async (id) => {
-    if (!getAuthHeader().Authorization) {
-      alert('Unauthorized. Please login as admin.');
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this blog?')) {
-      try {
-        await axios.delete(API_ENDPOINTS.DELETE_BLOG(id), {
-          headers: getAuthHeader(),
-        });
-        fetchBlogs(page);
-        alert('Blog deleted successfully.');
-      } catch (error) {
-        console.error('Error deleting blog:', error);
-        alert(error.response?.data?.message || 'Failed to delete blog');
-      }
-    }
+  const truncateContent = (content, maxLength = 150) => {
+    if (!content) return '';
+    
+    // Create a temporary element to parse the HTML
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = content;
+    
+    // Extract text content
+    let text = tempElement.textContent || tempElement.innerText;
+    
+    // Truncate the text
+    text = text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+    
+    return text;
   };
 
-  useEffect(() => {
-    fetchBlogs(page);
-  }, [page]);
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
-    <div>
-      <h3>Blog List</h3>
-      {blogs.map((blog) => (
-        <div key={blog._id}>
-          <h4>{blog.title}</h4>
-          <p>{blog.content.slice(0, 100)}...</p>
-          {blog.imageUrl && <img src={blog.imageUrl} alt={blog.title} width="100" />}
-          <button onClick={() => deleteBlog(blog._id)}>Delete</button>
-        </div>
-      ))}
-      <div>
-        <button disabled={page === 1} onClick={() => setPage((prev) => prev - 1)}>Previous</button>
-        <span> Page {page} of {totalPages} </span>
-        <button disabled={page === totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
-      </div>
+    <div className="blog-list">
+      {blogs.length > 0 ? (
+        blogs.map((blog) => (
+          <article key={blog._id} className="blog-item">
+            {blog.imageUrl && (
+              <div className="blog-image-container">
+                <img
+                  src={`${apiBaseUrl}${blog.imageUrl}`}
+                  alt={blog.title}
+                  className="blog-image"
+                  onError={handleImageError}
+                  crossOrigin="anonymous"
+                />
+              </div>
+            )}
+            <div className="blog-content">
+              <Link to={`/blog/${blog._id}`} className="blog-link">
+                <h2 className="blog-title">{blog.title}</h2>
+              </Link>
+              <p className="blog-date">{formatDate(blog.createdAt)}</p>
+              <p className="blog-excerpt">{truncateContent(blog.content)}</p>
+              <Link to={`/blog/${blog._id}`} className="read-more">
+                Read More
+              </Link>
+              {isAdmin && (
+                <div className="admin-actions">
+                  <button onClick={() => onEdit(blog._id)} className="update-btn">
+                    Edit
+                  </button>
+                  <button onClick={() => onDelete(blog._id)} className="delete-btn">
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          </article>
+        ))
+      ) : (
+        <p className="no-blogs">No blogs available at the moment. Check back soon!</p>
+      )}
     </div>
   );
 };

@@ -1,0 +1,125 @@
+.magazine-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.magazine-item {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.magazine-item:hover {
+    transform: translateY(-5px);
+}
+
+.magazine-image-container {
+    height: 200px;
+    overflow: hidden;
+}
+
+.magazine-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.magazine-content {
+    padding: 15px;
+}
+
+.magazine-title {
+    font-size: 1.2em;
+    margin: 0 0 10px;
+    color: #333;
+}
+
+.magazine-issue {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.magazine-date {
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.magazine-price {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.magazine-discount {
+    color: #e74c3c;
+    font-size: 0.9em;
+}
+
+.magazine-description {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.purchase-btn, .update-btn, .delete-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+.purchase-btn {
+    background-color: #3498db;
+    color: #fff;
+}
+
+.purchase-btn:hover {
+    background-color: #2980b9;
+}
+
+.admin-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.update-btn {
+    background-color: #2ecc71;
+    color: #fff;
+}
+
+.update-btn:hover {
+    background-color: #27ae60;
+}
+
+.delete-btn {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+.no-magazines {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 1.2em;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .magazine-list {
+        grid-template-columns: 1fr;
+    }
+}

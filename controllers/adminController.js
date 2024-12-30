@@ -1,9 +1,9 @@
 // controllers/adminController.js
-const Admin = require('../models/Admin');
-const jwt = require('jsonwebtoken');
+import Admin from '../models/Admin.js';
+import jwt from 'jsonwebtoken';
 
 // Admin Registration
-exports.registerAdmin = async (req, res) => {
+export async function registerAdmin(req, res) {
     const { username, password } = req.body;
 
     try {
@@ -25,41 +25,43 @@ exports.registerAdmin = async (req, res) => {
 };
 
 // Admin Login
-exports.loginAdmin = async (req, res) => {
+export async function loginAdmin(req, res) {
     const { username, password } = req.body;
+    console.log('Login attempt:', { username }); // Debug log
 
     try {
-        // Find admin by username
+        // Check if admin exists
         const admin = await Admin.findOne({ username });
         if (!admin) {
+            console.log('Admin not found');
             return res.status(400).json({ error: 'Invalid credentials' });
         }
-       // localStorage.setItem('myAppAdminToken', response.data.token); not sure where to put it 
 
         // Validate password
         const isMatch = await admin.comparePassword(password);
         if (!isMatch) {
+            console.log('Password mismatch');
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
         // Generate JWT
         const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        console.log('Login successful, token:', token);
 
         res.status(200).json({ token, message: 'Login successful' });
     } catch (error) {
-        console.error("Login error:", error);
+        console.error('Login error:', error);
         res.status(500).json({ error: 'Login failed' });
     }
 };
 
 // Admin Logout
-exports.logoutAdmin = (req, res) => {
+export function logoutAdmin(req, res) {
     // Clear token on client-side, logout functionality is usually front-end driven
     res.status(200).json({ message: 'Admin logged out successfully' });
 };
 
 // Admin Dashboard (Protected)
-exports.getAdminDashboard = (req, res) => {
+export function getAdminDashboard(req, res) {
     res.status(200).json({ message: `Welcome to the admin dashboard, Admin ID: ${req.adminId}` });
 };
-

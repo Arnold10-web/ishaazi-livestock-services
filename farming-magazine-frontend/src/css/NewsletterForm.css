@@ -1,0 +1,108 @@
+.newsletter-form {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+  }
+  
+  .newsletter-form h3 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #333;
+    text-align: center;
+  }
+  
+  .newsletter-form input[type="text"] {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  
+  .newsletter-form .newsletter-form-quill {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    height: 300px;
+    margin-bottom: 1rem;
+  }
+  
+  .newsletter-form button {
+    display: inline-block;
+    width: calc(50% - 0.5rem);
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-top: 1rem;
+  }
+  
+  .newsletter-form button[type="submit"] {
+    background-color: #007BFF;
+    color: white;
+  }
+  
+  .newsletter-form button[type="submit"]:hover {
+    background-color: #0056b3;
+  }
+  
+  .newsletter-form button[type="button"] {
+    background-color: #FF4C4C;
+    color: white;
+  }
+  
+  .newsletter-form button[type="button"]:hover {
+    background-color: #cc0000;
+  }
+  
+  .newsletter-form .error {
+    color: red;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  
+  .newsletter-form .file-input-wrapper {
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .newsletter-form .file-input-wrapper input[type="file"] {
+    display: none;
+  }
+  
+  .newsletter-form .file-input-wrapper label {
+    background-color: #007BFF;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .newsletter-form .file-input-wrapper label:hover {
+    background-color: #0056b3;
+  }
+  
+  .newsletter-form .file-name {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #555;
+  }
+  
+  .newsletter-form img {
+    max-width: 100%;
+    max-height: 200px;
+    margin-top: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  

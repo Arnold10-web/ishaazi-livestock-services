@@ -1,43 +1,53 @@
-/* src/css/header.css */
+/* General Styles */
 
 /* Top Bar */
 .top-bar {
     background-color: #C8F336;
-    padding: 10px 0;
+    padding: 8px 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 5px;
+    font-family: Arial, sans-serif;
 }
 
 .top-bar .left-links {
     text-align: center;
-    margin-bottom: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .top-bar .left-links a {
     color: #333;
-    margin-right: 10px;
+    margin: 0 10px;
     text-decoration: none;
     font-weight: 500;
+    transition: color 0.3s ease-in-out;
+    white-space: nowrap;
 }
 
-.top-bar .left-links a:hover {
+.top-bar .left-links a:hover,
+.top-bar .left-links a:focus {
     color: #ff9800;
 }
 
 .social-icons {
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
 }
 
 .social-icons img {
-    width: 20px;
-    height: 20px;
-    margin: 0 5px;
-    transition: transform 0.3s ease;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-.social-icons img:hover {
+.social-icons img:hover,
+.social-icons img:focus {
     transform: scale(1.1);
+    opacity: 0.8;
 }
 
 /* Navbar */
@@ -48,29 +58,44 @@
     background-color: #C8F336;
     padding: 10px 20px;
     border-bottom: 1px solid #ddd;
+    position: relative;
+    flex-wrap: wrap;
 }
 
 .logo img {
-    max-width: 180px;
+    max-width: 200px;
     height: auto;
+    transition: max-width 0.3s ease;
+}
+
+.ad-banner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f4;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-left: 20px;
+    flex-shrink: 0;
 }
 
 .ad-banner img {
     max-width: 100%;
-    height: auto;
-    max-height: 80px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-height: 100%;
 }
 
 /* Categories Section */
 .categories {
     background-color: #f1f1f1;
     padding: 15px 0;
-    text-align: center;
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 15px;
+    text-align: center;
+    transition: all 0.3s ease-in-out;
 }
 
 .categories a {
@@ -79,22 +104,41 @@
     text-transform: uppercase;
     text-decoration: none;
     padding: 5px 10px;
-    transition: color 0.3s;
+    transition: color 0.3s, transform 0.2s ease;
+    border-radius: 5px;
 }
 
-.categories a:hover {
+.categories a:hover,
+.categories a:focus {
     color: #ff9800;
+    background-color: #eaeaea;
+    transform: scale(1.05);
 }
 
 /* Responsive Styles */
+
+/* General Breakpoints */
+@media (max-width: 1024px) {
+    .logo img {
+        max-width: 180px;
+    }
+
+    .ad-banner {
+        height: 60px;
+    }
+}
+
 @media (max-width: 768px) {
     .navbar {
         flex-direction: column;
+        align-items: center;
     }
 
     .ad-banner {
         margin-top: 10px;
-        text-align: center;
+        width: 100%;
+        height: 60px;
+        margin-left: 0;
     }
 
     .categories {
@@ -103,12 +147,155 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
     .logo img {
-        max-width: 140px;
+        max-width: 160px;
     }
 
     .categories a {
         font-size: 0.9rem;
     }
+
+    .top-bar .left-links {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .top-bar .left-links a {
+        margin: 0;
+    }
+}
+
+/* Small Screens - Mobile */
+@media (max-width: 480px) {
+    .top-bar {
+        gap: 3px;
+    }
+
+    .social-icons img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .categories a {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .navbar {
+        padding: 10px;
+    }
+
+    .logo img {
+        max-width: 140px;
+    }
+}
+
+/* Hamburger Menu for Mobile */
+@media (max-width: 480px) {
+    .navbar {
+        position: relative;
+    }
+
+    .navbar .menu-toggle {
+        display: block;
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        cursor: pointer;
+        font-size: 1.5rem;
+        background: none;
+        border: none;
+        outline: none;
+    }
+
+    .categories {
+        display: none;
+        flex-direction: column;
+    }
+
+    .categories.active {
+        display: flex;
+    }
+
+    body.menu-open {
+        overflow-x: hidden; /* Prevent scrolling when menu is open */
+    }
+}
+
+/* Add these styles at the end of your existing CSS */
+
+@media (min-width: 769px) {
+  .menu-toggle {
+    display: none;
+  }
+
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo {
+    flex: 1;
+  }
+
+  .logo img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .ad-banner {
+    flex: 2;
+    margin-left: 20px;
+  }
+
+  .categories {
+    display: flex !important;
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    flex: 1 1 100%;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .logo img {
+    max-width: 80%;
+    height: auto;
+  }
+
+  .ad-banner {
+    flex: 1 1 100%;
+    margin-top: 10px;
+  }
+
+  .menu-toggle {
+    display: block;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    outline: none;
+  }
+
+  .categories {
+    display: none;
+    flex-direction: column;
+  }
+
+  .categories.active {
+    display: flex;
+  }
 }

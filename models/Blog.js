@@ -1,15 +1,16 @@
-const mongoose = require('mongoose');
+// models/Blog.js
+import mongoose from 'mongoose';
 
-const blogSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  content: { type: String, required: true },
-  imageUrl: { type: String }, // Path to the uploaded image
-  metadata: {
-    title: { type: String, default: '' },
-    description: { type: String, default: '' },
-    keywords: { type: [String], default: [] }, // SEO keywords
+const blogSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    imageUrl: { type: String, default: null },
+    metadata: { type: Object },
+    published: { type: Boolean, default: true }
+    
   },
-  createdAt: { type: Date, default: Date.now },
-});
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Blog', blogSchema);
+export default mongoose.model('Blog', blogSchema);

@@ -1,8 +1,7 @@
 // routes/adminRoutes.js
-
-const express = require('express');
-const { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard } = require('../controllers/adminController');
-const authMiddleware = require('../middleware/authMiddleware');
+import express from 'express';
+import { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard } from '../controllers/adminController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -15,14 +14,7 @@ router.post('/register', (req, res) => {
     }
 });
 
-router.post('/login', (req, res) => {
-    try {
-        loginAdmin(req, res);
-    } catch (error) {
-        console.error('Error logging in admin:', error);
-        res.status(500).json({ message: 'Error logging in admin' });
-    }
-});
+router.post('/login', loginAdmin);
 
 router.post('/logout', authMiddleware, (req, res) => {
     try {
@@ -42,21 +34,4 @@ router.get('/dashboard', authMiddleware, (req, res) => {
     }
 });
 
-module.exports = router; 
-
-//suggested change in adminRoutes.js
-
- /*routes/adminRoutes.js
-const express = require('express');
-const { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard } = require('../controllers/adminController');
-const authMiddleware = require('../middleware/authMiddleware');
-
-const router = express.Router();
-
-// Admin routes
-router.post('/register', registerAdmin);
-router.post('/login', loginAdmin);
-router.post('/logout', authMiddleware, logoutAdmin);
-router.get('/dashboard', authMiddleware, getAdminDashboard);
-
-module.exports = router;*/
+export default router;

@@ -1,44 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import API_ENDPOINTS from '../config/apiConfig';
+import BlogList from '../components/BlogList';
+import '../css/BlogPage.css'; // Add this line to import the CSS file
 
 const BlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await axios.get(API_ENDPOINTS.GET_BLOGS);
-        setBlogs(response.data);
-      } catch (error) {
-        console.error('Error fetching blogs:', error);
-      } finally {
+        const response = await axios.get(`${API_BASE_URL}/api/content/blogs`);
+        setBlogs(response.data.data.blogs);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching blogs:', err);
+        setError('Failed to fetch blogs. Please try again later.');
         setLoading(false);
       }
     };
 
     fetchBlogs();
-  }, []);
+  }, [API_BASE_URL]);
 
-  if (loading) {
-    return <p>Loading blogs...</p>;
-  }
+  if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   return (
-    <div>
-      <h2>Blogs</h2>
-      {blogs.length === 0 ? (
-        <p>No blogs available.</p>
-      ) : (
-        blogs.map((blog) => (
-          <div key={blog._id} style={{ marginBottom: '20px' }}>
-            <h3>{blog.title}</h3>
-            {blog.imageUrl && <img src={blog.imageUrl} alt={blog.title} style={{ width: '100%', maxWidth: '500px' }} />}
-            <div dangerouslySetInnerHTML={{ __html: blog.content }}></div>
-          </div>
-        ))
-      )}
+    <div className="blog-page">
+      <h1 className="page-title">Our Blogs</h1>
+      <BlogList blogs={blogs} apiBaseUrl={API_BASE_URL} />
     </div>
   );
 };
