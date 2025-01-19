@@ -1,18 +1,19 @@
-import { fileURLToPath } from 'url';
-import path from 'path';
-import fs from 'fs';
-import Blog from '../models/Blog.js';
-import News from '../models/News.js';
-import Basic from '../models/Basic.js';
-import Farm from '../models/Farm.js';
-import Magazine from '../models/Magazine.js';
-import Dairy from '../models/Dairy.js';
-import Goat from '../models/Goat.js';
-import Piggery from '../models/Piggery.js';
-import Beef from '../models/Beef.js';
-import Newsletter from '../models/Newsletter.js';
-import Subscriber from '../models/Subscriber.js';
-import nodemailer from 'nodemailer';
+const { fileURLToPath } = require('url');
+const path = require('path');
+const fs = require('fs');
+const nodemailer = require('nodemailer');
+const Blog = require('../models/Blog.js');
+const News = require('../models/News.js');
+const Basic = require('../models/Basic.js');
+const Farm = require('../models/Farm.js');
+const Magazine = require('../models/Magazine.js');
+const Dairy = require('../models/Dairy.js');
+const Goat = require('../models/Goat.js');
+const Piggery = require('../models/Piggery.js');
+const Beef = require('../models/Beef.js');
+const Newsletter = require('../models/Newsletter.js');
+const Subscriber = require('../models/Subscriber.js');
+
 
 // Define __dirname manually for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +36,7 @@ const sendResponse = (res, success, message, data = null, error = null) => {
   res.status(success ? 200 : 500).json({ success, message, data, error });
 };
 // ----- BLOG CRUD -----
-export const createBlog = async (req, res) => {
+ const createBlog = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -65,7 +66,7 @@ export const createBlog = async (req, res) => {
     sendResponse(res, false, 'Failed to create blog', null, error.message);
   }
 };
-export const getBlogById = async (req, res) => {
+ const getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) {
@@ -77,7 +78,7 @@ export const getBlogById = async (req, res) => {
   }
 };
 
-export const getBlogs = async (req, res) => {
+ const getBlogs = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -92,7 +93,7 @@ export const getBlogs = async (req, res) => {
     sendResponse(res, false, 'Failed to retrieve blogs', null, error.message);
   }
 };
-export const getAdminBlogs = async (req, res) => {
+ const getAdminBlogs = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -114,7 +115,7 @@ export const getAdminBlogs = async (req, res) => {
   }
 };
 
-export const updateBlog = async (req, res) => {
+ const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -132,7 +133,7 @@ export const updateBlog = async (req, res) => {
   }
 };
 
-export const deleteBlog = async (req, res) => {
+ const deleteBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const blog = await Blog.findById(id);
@@ -159,7 +160,7 @@ export const deleteBlog = async (req, res) => {
   }
 };
 // ----- NEWS CRUD -----
-export const createNews = async (req, res) => {
+ const createNews = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -190,7 +191,7 @@ export const createNews = async (req, res) => {
   }
 };
 
-export const getNewsById = async (req, res) => {
+ const getNewsById = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) {
@@ -202,7 +203,7 @@ export const getNewsById = async (req, res) => {
   }
 };
 
-export const getNews = async (req, res) => {
+ const getNews = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -218,7 +219,7 @@ export const getNews = async (req, res) => {
   }
 };
 
-export const getAdminNews = async (req, res) => {
+ const getAdminNews = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -240,7 +241,7 @@ export const getAdminNews = async (req, res) => {
   }
 };
 
-export const updateNews = async (req, res) => {
+ const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -258,7 +259,7 @@ export const updateNews = async (req, res) => {
   }
 };
 
-export const deleteNews = async (req, res) => {
+ const deleteNews = async (req, res) => {
   try {
     const { id } = req.params;
     const news = await News.findById(id);
@@ -287,7 +288,7 @@ export const deleteNews = async (req, res) => {
 // ----- BASIC CRUD OPERATIONS -----
 
 // Create a new Basic media
-export const createBasic = async (req, res) => {
+ const createBasic = async (req, res) => {
   try {
     const { title, description, fileType, metadata } = req.body;
 
@@ -326,7 +327,7 @@ export const createBasic = async (req, res) => {
 };
 
 // Get all Basics with pagination
-export const getBasics = async (req, res) => {
+ const getBasics = async (req, res) => {
   const { page = 1, limit = 10, fileType } = req.query;
 
   try {
@@ -344,7 +345,7 @@ export const getBasics = async (req, res) => {
 };
 
 // Get all Basics for admin (with pagination)
-export const getAdminBasics = async (req, res) => {
+ const getAdminBasics = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
@@ -372,7 +373,7 @@ export const getAdminBasics = async (req, res) => {
 };
 
 // Get a single Basic by ID
-export const getBasicById = async (req, res) => {
+ const getBasicById = async (req, res) => {
   try {
     const basic = await Basic.findById(req.params.id);
     if (!basic) {
@@ -385,7 +386,7 @@ export const getBasicById = async (req, res) => {
 };
 
 // Update a Basic media
-export const updateBasic = async (req, res) => {
+ const updateBasic = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, fileType, metadata } = req.body;
@@ -422,7 +423,7 @@ export const updateBasic = async (req, res) => {
 };
 
 // Delete a Basic media
-export const deleteBasic = async (req, res) => {
+ const deleteBasic = async (req, res) => {
   try {
     const { id } = req.params;
     const basic = await Basic.findById(id);
@@ -454,7 +455,7 @@ export const deleteBasic = async (req, res) => {
 };
 
 // Add a comment to a Basic media
-export const addComment = async (req, res) => {
+ const addComment = async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -478,7 +479,7 @@ export const addComment = async (req, res) => {
 };
 
 // Delete a comment from a Basic media
-export const deleteComment = async (req, res) => {
+ const deleteComment = async (req, res) => {
   try {
     const { id, commentId } = req.params;
 
@@ -499,7 +500,7 @@ export const deleteComment = async (req, res) => {
 // ----- FARM CRUD -----
 
 // Create a new farm
-export const createFarm = async (req, res) => {
+ const createFarm = async (req, res) => {
   try {
     const { name, location, price, description, metadata } = req.body;
     let imageUrl = null;
@@ -531,7 +532,7 @@ export const createFarm = async (req, res) => {
 };
 
 // Get a farm by ID
-export const getFarmById = async (req, res) => {
+ const getFarmById = async (req, res) => {
   try {
     const farm = await Farm.findById(req.params.id);
     if (!farm) {
@@ -544,7 +545,7 @@ export const getFarmById = async (req, res) => {
 };
 
 // Get all farms (with optional pagination)
-export const getFarms = async (req, res) => {
+ const getFarms = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -561,7 +562,7 @@ export const getFarms = async (req, res) => {
 };
 
 // Get farms (admin view with pagination)
-export const getAdminFarms = async (req, res) => {
+ const getAdminFarms = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
@@ -584,7 +585,7 @@ export const getAdminFarms = async (req, res) => {
 };
 
 // Update a farm
-export const updateFarm = async (req, res) => {
+ const updateFarm = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, location, price, description, metadata } = req.body;
@@ -602,7 +603,7 @@ export const updateFarm = async (req, res) => {
 };
 
 // Delete a farm
-export const deleteFarm = async (req, res) => {
+ const deleteFarm = async (req, res) => {
   try {
     const { id } = req.params;
     const farm = await Farm.findById(id);
@@ -635,7 +636,7 @@ export const deleteFarm = async (req, res) => {
 // ----- MAGAZINE CRUD -----
 
 // Create a new magazine
-export const createMagazine = async (req, res) => {
+ const createMagazine = async (req, res) => {
   try {
     const { title, description, issue, price, discount, metadata } = req.body;
 
@@ -684,7 +685,7 @@ export const createMagazine = async (req, res) => {
 };
 
 // Get a magazine by ID
-export const getMagazineById = async (req, res) => {
+ const getMagazineById = async (req, res) => {
   try {
     const magazine = await Magazine.findById(req.params.id);
     if (!magazine) {
@@ -697,7 +698,7 @@ export const getMagazineById = async (req, res) => {
 };
 
 // Get all magazines (with pagination)
-export const getMagazines = async (req, res) => {
+ const getMagazines = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -713,7 +714,7 @@ export const getMagazines = async (req, res) => {
   }
 };
 // Get all magazines for admin (with pagination)
-export const getAdminMagazines = async (req, res) => {
+ const getAdminMagazines = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
@@ -742,7 +743,7 @@ export const getAdminMagazines = async (req, res) => {
 };
 
 // Update a magazine
-export const updateMagazine = async (req, res) => {
+ const updateMagazine = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, issue, price, discount, metadata, published } = req.body;
@@ -778,7 +779,7 @@ export const updateMagazine = async (req, res) => {
 };
 
 // Delete a magazine
-export const deleteMagazine = async (req, res) => {
+ const deleteMagazine = async (req, res) => {
   try {
     const { id } = req.params;
     const magazine = await Magazine.findById(id);
@@ -811,7 +812,7 @@ export const deleteMagazine = async (req, res) => {
 
 
 // ----- PIGGERY CRUD -----
-export const createPiggery = async (req, res) => {
+ const createPiggery = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -842,7 +843,7 @@ export const createPiggery = async (req, res) => {
   }
 };
 
-export const getPiggeryById = async (req, res) => {
+ const getPiggeryById = async (req, res) => {
   try {
     const piggery = await Piggery.findById(req.params.id);
     if (!piggery) {
@@ -854,7 +855,7 @@ export const getPiggeryById = async (req, res) => {
   }
 };
 
-export const getPiggeries = async (req, res) => {
+ const getPiggeries = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -870,7 +871,7 @@ export const getPiggeries = async (req, res) => {
   }
 };
 
-export const getAdminPiggeries = async (req, res) => {
+ const getAdminPiggeries = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -892,7 +893,7 @@ export const getAdminPiggeries = async (req, res) => {
   }
 };
 
-export const updatePiggery = async (req, res) => {
+ const updatePiggery = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -910,7 +911,7 @@ export const updatePiggery = async (req, res) => {
   }
 };
 
-export const deletePiggery = async (req, res) => {
+ const deletePiggery = async (req, res) => {
   try {
     const { id } = req.params;
     const piggery = await Piggery.findById(id);
@@ -940,7 +941,7 @@ export const deletePiggery = async (req, res) => {
 // ----- GOAT CRUD -----
 
 
-export const createGoat = async (req, res) => {
+ const createGoat = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -970,7 +971,7 @@ export const createGoat = async (req, res) => {
   }
 };
 
-export const getGoatById = async (req, res) => {
+ const getGoatById = async (req, res) => {
   try {
     const goat = await Goat.findById(req.params.id);
     if (!goat) {
@@ -982,7 +983,7 @@ export const getGoatById = async (req, res) => {
   }
 };
 
-export const getGoats = async (req, res) => {
+ const getGoats = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -998,7 +999,7 @@ export const getGoats = async (req, res) => {
   }
 };
 
-export const getAdminGoats = async (req, res) => {
+ const getAdminGoats = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -1021,7 +1022,7 @@ export const getAdminGoats = async (req, res) => {
 };
 
 
-export const updateGoat = async (req, res) => {
+ const updateGoat = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -1038,7 +1039,7 @@ export const updateGoat = async (req, res) => {
   }
 };
 
-export const deleteGoat = async (req, res) => {
+ const deleteGoat = async (req, res) => {
   try {
     const { id } = req.params;
     const goat = await Goat.findById(id);
@@ -1065,7 +1066,7 @@ export const deleteGoat = async (req, res) => {
 
 // ----- DAIRY CRUD -----
 
-export const createDairy = async (req, res) => {
+ const createDairy = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -1096,7 +1097,7 @@ export const createDairy = async (req, res) => {
   }
 };
 
-export const getDairyById = async (req, res) => {
+ const getDairyById = async (req, res) => {
   try {
     const dairy = await Dairy.findById(req.params.id);
     if (!dairy) {
@@ -1108,7 +1109,7 @@ export const getDairyById = async (req, res) => {
   }
 };
 
-export const getDairies = async (req, res) => {
+ const getDairies = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -1124,7 +1125,7 @@ export const getDairies = async (req, res) => {
   }
 };
 
-export const getAdminDairies = async (req, res) => {
+ const getAdminDairies = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -1146,7 +1147,7 @@ export const getAdminDairies = async (req, res) => {
   }
 };
 
-export const updateDairy = async (req, res) => {
+ const updateDairy = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -1164,7 +1165,7 @@ export const updateDairy = async (req, res) => {
   }
 };
 
-export const deleteDairy = async (req, res) => {
+ const deleteDairy = async (req, res) => {
   try {
     const { id } = req.params;
     const dairy = await Dairy.findById(id);
@@ -1193,7 +1194,7 @@ export const deleteDairy = async (req, res) => {
 
 // ----- BEEF CRUD -----
 
-export const createBeef = async (req, res) => {
+ const createBeef = async (req, res) => {
   try {
     const { title, content, metadata, published } = req.body;
     let imageUrl = null;
@@ -1223,7 +1224,7 @@ export const createBeef = async (req, res) => {
   }
 };
 
-export const getBeefById = async (req, res) => {
+ const getBeefById = async (req, res) => {
   try {
     const beef = await Beef.findById(req.params.id);
     if (!beef) {
@@ -1235,7 +1236,7 @@ export const getBeefById = async (req, res) => {
   }
 };
 
-export const getBeefs = async (req, res) => {
+ const getBeefs = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
@@ -1251,7 +1252,7 @@ export const getBeefs = async (req, res) => {
   }
 };
 
-export const getAdminBeefs = async (req, res) => {
+ const getAdminBeefs = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
   try {
@@ -1273,7 +1274,7 @@ export const getAdminBeefs = async (req, res) => {
   }
 };
 
-export const updateBeef = async (req, res) => {
+ const updateBeef = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
@@ -1293,7 +1294,7 @@ export const updateBeef = async (req, res) => {
   }
 };
 
-export const deleteBeef = async (req, res) => {
+ const deleteBeef = async (req, res) => {
   try {
     const { id } = req.params;
     const beef = await Beef.findById(id);
@@ -1329,7 +1330,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Fetch all subscribers
-export const getSubscribers = async (req, res) => {
+ const getSubscribers = async (req, res) => {
   try {
     const subscribers = await Subscriber.find();
     res.status(200).json(subscribers);
@@ -1339,7 +1340,7 @@ export const getSubscribers = async (req, res) => {
 };
 
 // Add a subscriber
-export const createSubscriber = async (req, res) => {
+ const createSubscriber = async (req, res) => {
   const { email } = req.body;
   try {
     const subscriber = new Subscriber({ email });
@@ -1351,7 +1352,7 @@ export const createSubscriber = async (req, res) => {
 };
 
 // Delete a subscriber
-export const deleteSubscriber = async (req, res) => {
+ const deleteSubscriber = async (req, res) => {
   try {
     await Subscriber.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: 'Subscriber deleted' });
@@ -1361,7 +1362,7 @@ export const deleteSubscriber = async (req, res) => {
 };
 
 // Fetch all newsletters
-export const getNewsletters = async (req, res) => {
+ const getNewsletters = async (req, res) => {
   try {
     const newsletters = await Newsletter.find();
     res.status(200).json(newsletters);
@@ -1371,7 +1372,7 @@ export const getNewsletters = async (req, res) => {
 };
 
 // Create a new newsletter
-export const createNewsletter = async (req, res) => {
+ const createNewsletter = async (req, res) => {
   const { title, body } = req.body;
   try {
     const newsletter = new Newsletter({ title, body });
@@ -1383,7 +1384,7 @@ export const createNewsletter = async (req, res) => {
 };
 
 // Update a newsletter
-export const updateNewsletter = async (req, res) => {
+ const updateNewsletter = async (req, res) => {
   try {
     const newsletter = await Newsletter.findByIdAndUpdate(
       req.params.id,
@@ -1397,7 +1398,7 @@ export const updateNewsletter = async (req, res) => {
 };
 
 // Delete a newsletter
-export const deleteNewsletter = async (req, res) => {
+ const deleteNewsletter = async (req, res) => {
   try {
     await Newsletter.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: 'Newsletter deleted' });
@@ -1407,7 +1408,7 @@ export const deleteNewsletter = async (req, res) => {
 };
 
 // Send a newsletter
-export const sendNewsletter = async (req, res) => {
+ const sendNewsletter = async (req, res) => {
   try {
     const newsletter = await Newsletter.findById(req.params.id);
     if (!newsletter) return res.status(404).json({ message: 'Newsletter not found' });
@@ -1434,3 +1435,56 @@ export const sendNewsletter = async (req, res) => {
   }
 };
 
+module.exports = {
+  // Blog operations
+  createBlog,
+  getBlogById,
+  getBlogs,
+  getAdminBlogs,
+  updateBlog,
+  deleteBlog,
+
+  // News operations
+  createNews,
+  getNews,
+  getNewsById,
+  getAdminNews,
+  updateNews,
+  deleteNews,
+
+  // Basic operations
+  createBasic,
+  getBasicById,
+  getBasics,
+  getAdminBasics,
+  updateBasic,
+  deleteBasic,
+  addComment,
+  deleteComment,
+
+  // Farm operations
+  createFarm,
+  getFarms,
+  getFarmById,
+  getAdminFarms,
+  updateFarm,
+  deleteFarm,
+
+  // Magazine operations
+  createMagazine,
+  getMagazines,
+  getMagazineById,
+  getAdminMagazines,
+  updateMagazine,
+  deleteMagazine,
+
+  // Newsletter operations
+  sendNewsletter,
+  getSubscribers,
+  createSubscriber,
+  deleteSubscriber,
+  getNewsletters,
+  createNewsletter,
+  updateNewsletter,
+  deleteNewsletter
+};

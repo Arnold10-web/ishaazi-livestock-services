@@ -1,7 +1,7 @@
 // routes/adminRoutes.js
-import express from 'express';
-import { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard } from '../controllers/adminController.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+const express = require('express');
+const { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard } = require('../controllers/adminController.js');
+const authMiddleware = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -34,4 +34,4 @@ router.get('/dashboard', authMiddleware, (req, res) => {
     }
 });
 
-export default router;
+module.exports = router;

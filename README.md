@@ -1,110 +1,94 @@
-Project Structure
-online-farming-magazine/             # Root directory for the project
-│
-├── config/                          # Backend configuration files
-│   └── db.js                        # Database connection configuration
-│
-├── controllers/                     # Backend logic for handling requests
-│   ├── adminController.js           # Logic for admin-related operations
-│   ├── contentController.js         # Logic for managing website content
-│   └── magazineController.js        # Logic for magazine-related operations
-│
-├── middleware/                      # Middleware for handling requests
-│   └── authMiddleware.js            # Middleware for authentication and authorization
-|   |   fileUpload.js                # Middleware for handling file uploads
-|
-│
-├── models/                          # Mongoose schemas for MongoDB collections
-│   ├── Admin.js                     # Schema for admin users
-│   ├── Blog.js                      # Schema for blog posts
-│   ├── Farm.js                      # Schema for farm-related data
-│   ├── Magazine.js                  # Schema for magazine issues
-│   ├── Media.js                     # Schema for media files
-│   └── News.js                      # Schema for news articles
-│
-├── routes/                          # API route definitions
-│   ├── adminRoutes.js               # Routes for admin operations
-│   └── contentRoutes.js             # Routes for content management
-│
-│
-├── server.js                        # Entry point for the backend server
-├── node_modules/                    # Backend dependencies (missing, now added)
-├── .env                             # Backend environment variables
-├── package.json                     # Backend dependencies
-├── package-lock.json                # Backend dependency lock file (missing, now added)
-├── README.md                        # Documentation for the backend
-│
-├── farming-magazine-frontend/       # React frontend application
-│   ├── public/                      # Publicly accessible static files
-│   │   └── ...                      # (e.g., HTML templates, favicon)
-|   ├── node_modules/                 # Frontend dependencies
-│   │
-│   ├── src/                         # Frontend source files
-│   │   ├── admin/                   # Admin-related components
-│   │   │   ├── AdminDashboard.js    # Admin dashboard component
-│   │   │   ├── ContentManagement.js # Component for managing content
-│   │   │   
-│   │   │
-│   │   ├── components/              # Reusable UI components
-│   │   │   ├── AdminAuth.js         # Component for admin authentication
-│   │   │   ├── BlogForm.js          # Component for blog post form
-│   │   │   ├── Footer.js            # Footer component
-│   │   │   ├── Header.js            # Header component
-│   │   │   ├── HeroSection.js       # Component for the hero/banner section
-│   │   │   ├── MagazineCard.js      # Component for individual magazine cards
-│   │   │   ├── ServicesSection.js   # Component for services display
-│   │   │   └── ProtectedRoute.js    # Component for protecting admin routes
-│   │   │   └── BlogList.js          # Component for displaying blog posts
-│   │   │   └── NewsForm.js          # Component for news article form
-│   │   │   └── NewsList.js          # Component for displaying news articles
-│   │   │   
-│   │   │
-│   │   ├── config/                  # Frontend configuration files
-│   │   │   ├── apiConfig.js         # Configuration for API requests
-│   │   │
-│   │   ├── css/                     # Frontend stylesheets
-│   │   │   ├── admin.css            # Styles for admin-related pages
-│   │   │   ├── adminLogin.css       # Styles for admin login
-│   │   │   ├── adminRegister.css    # Styles for admin registration
-│   │   │   ├── contentmanagement.css# Styles for content management
-│   │   │   ├── footer.css           # Styles for the footer
-│   │   │   ├── header.css           # Styles for the header
-│   │   │   ├── magazinecard.css     # Styles for magazine cards
-│   │   │   ├── magazinemanagement.css# Styles for magazine management
-│   │   │   ├── mediamanagement.css  # Styles for media management
-│   │   │   ├── servicesection.css   # Styles for the services section
-│   │   │   └── style.css            # General/global styles
-│   │   │
-│   │   ├── pages/                   # Frontend page components
-│   │   │   ├── Home.js              # Home page
-│   │   │   ├── Services.js          # Services page
-│   │   │   ├── News.js              # News page
-│   │   │   ├── Auctions.js          # Auctions page
-│   │   │   ├── Beef.js              # Beef page
-│   │   │   ├── Dairy.js             # Dairy page
-│   │   │   ├── Events.js            # Events page
-│   │   │   ├── FarmBasics.js        # Farm basics page
-│   │   │   ├── FarmsForSale.js      # Farms for sale page
-│   │   │   ├── Goats.js             # Goats page
-│   │   │   ├── Piggery.js           # Piggery page
-│   │   │   └── Contact.js           # Contact page
-|   │   |   ├── BlogPage.js          # Blog page
-│   │   |   
-│   │   │
-│   │   ├── App.js                   # Main app component
-│   │   ├── App.css                  # Global styles for the app
-│   │   ├── App.test.js              # Tests for the app
-│   │   ├── index.js                 # Entry point for the frontend
-│   │   ├── index.css                # Global styles for the index
-│   │   ├── reportWebVitals.js       # Performance metrics
-│   │   ├── setupTests.js            # Test setup
-│   │   └── logo.svg                 # Logo image
-│   │
-│   ├── .env                         # Frontend environment variables
-│   ├── package.json                 # Frontend dependencies
-│   ├── package-lock.json            # Frontend dependency lock file (missing, now added)
-│   ├── README.md                    # Documentation for the frontend
-│   └── .gitignore                   # Git ignore file for frontend
+Ishaazi Livestock Services
+Welcome to the Ishaazi Livestock Services platform, a comprehensive online farming magazine and livestock services application. This project consists of a backend server built with Node.js, Express, and MongoDB, and a frontend application developed using React. The platform offers features such as managing content, handling admin operations, and providing services related to farming, livestock, and auctions.
+
+Table of Contents
+Features
+Getting Started
+Backend Structure
+Frontend Structure
+Scripts
+Environment Variables
+Contributing
+License
+
+
+Features
+Content Management: Create, update, and delete blog posts and news articles.
+Admin Operations: Manage users, content, and other administrative tasks.
+Livestock Services: Provide services related to farming, livestock, and auctions.
+Secure Authentication: User authentication using JSON Web Tokens (JWT).
+Responsive Design: Frontend built with React for a seamless user experience.
+
+
+Getting Started
+Backend
+1.
+Clone the repository:
+git clone https://github.com/arnold-ishaazi/ishaazi-livestock-services.git
+2.
+Navigate to the project directory:
+cd ishaazi-livestock-services
+3.
+Install dependencies:
+npm install
+4.
+Set up environment variables:
+cp .env.example .env
+5.
+Start the server:
+npm start
+
+
+Frontend
+1.
+Navigate to the frontend directory:
+cd farming-magazine-frontend
+2.
+Install dependencies:
+npm install
+3.
+Set up environment variables:
+cp .env.example .env
+4.
+Start the app:
+npm start
+
+
+Backend Structure
+config: Contains configuration files, such as db.js for database connection.
+controllers: Handles the logic for different routes and endpoints.
+middleware: Contains middleware functions for request and response handling.
+models: Defines Mongoose schemas for MongoDB collections.
+routes: Defines the routes and endpoints for the application.
+
+
+Frontend Structure
+src: Contains the source code for React components.
+public: Contains static assets like images, CSS, and JavaScript files.
+
+
+Scripts
+Backend
+start: Runs the application using Node.js.
+dev: Runs the application using nodemon for automatic restarts.
+lint: Checks code quality using ESLint.
+test: Runs tests using Jest.
+
+
+Frontend
+start: Starts the React application.
+build: Builds the React application for production.
+test: Runs tests using Jest.
+eject: Ejects the project from the Create React App template.
+
+
+Environment Variables
+Ensure you have the following environment variables set in your .env file:
+
+PORT: The port on which the server will run.
+MONGODB_URI: The URI for connecting to MongoDB.
+JWT_SECRET: Secret key for signing JWTs.
+REACT_APP_FRONTEND_URL: URL of the frontend application.
 
 
 

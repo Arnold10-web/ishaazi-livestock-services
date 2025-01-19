@@ -1,5 +1,4 @@
-// models/Blog.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const blogSchema = new mongoose.Schema(
   {
@@ -8,9 +7,8 @@ const blogSchema = new mongoose.Schema(
     imageUrl: { type: String, default: null },
     metadata: { type: Object },
     published: { type: Boolean, default: true }
-    
   },
   { timestamps: true }
 );
 
-export default mongoose.model('Blog', blogSchema);
+module.exports = mongoose.model('Blog', blogSchema);

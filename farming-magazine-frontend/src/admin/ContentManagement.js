@@ -88,7 +88,7 @@ const ContentManagement = ({ activeTab }) => {
   if (error) return <div>{error}</div>;
 
   const renderContent = () => {
-    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://api.ishaazilivestockservices.com';
     const commonProps = {
       apiBaseUrl,
       isAdmin: true,

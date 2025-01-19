@@ -1,5 +1,5 @@
 // models/Goat.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const goatSchema = new mongoose.Schema(
   {
@@ -12,4 +12,4 @@ const goatSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Goat', goatSchema);
+module.exports = mongoose.model('Goat', goatSchema);

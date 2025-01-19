@@ -1,11 +1,6 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Ensure necessary upload directories exist
 const ensureDirExists = (dir) => {
@@ -90,7 +85,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-
 // File size limits
 const limits = {
   fileSize: 50 * 1024 * 1024, // 50MB max file size
@@ -103,4 +97,4 @@ const upload = multer({
   limits: limits,
 });
 
-export default upload;
+module.exports = upload;

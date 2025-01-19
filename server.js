@@ -1,17 +1,18 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import helmet from 'helmet';
-import path from 'path';
-import fs from 'fs';
-import connectDB from './config/db.js';
-import upload from './middleware/fileUpload.js';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const helmet = require('helmet');
+const path = require('path');
+const fs = require('fs');
+const connectDB = require('./config/db.js');
+const upload = require('./middleware/fileUpload.js');
 
-// Create __dirname for ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Log Node.js version
+console.log('Node version:', process.version);
+
+// Create __dirname for CommonJS
+const __filename = __filename;
+const __dirname = __dirname;
 
 // Load environment variables
 dotenv.config();
@@ -19,10 +20,11 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Middleware
-const corsOrigin = process.env.NODE_ENV === 'production' 
-  ? process.env.FRONTEND_URL 
+// Updated CORS configuration
+const corsOrigin = process.env.NODE_ENV === 'production'
+  ? ['https://ishaazilivestockservices.com', 'https://api.ishaazilivestockservices.com']
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+console.log('CORS Origin:', corsOrigin);
 
 app.use(cors({
   origin: corsOrigin,
@@ -38,7 +40,7 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database connection
+// Database connection with error logging
 connectDB().catch((err) => {
   console.error('Database connection failed:', err.message);
   process.exit(1);
@@ -50,8 +52,6 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
   console.log('Uploads images directory created.');
 }
-
-
 
 // Serve static files
 app.use(
@@ -68,8 +68,8 @@ app.use(
 );
 
 // Import routes
-import adminRoutes from './routes/adminRoutes.js';
-import contentRoutes from './routes/contentRoutes.js';
+const adminRoutes = require('./routes/adminRoutes.js');
+const contentRoutes = require('./routes/contentRoutes.js');
 
 // Mount routes
 app.use('/api/admin', adminRoutes);
@@ -91,32 +91,38 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   });
 });
 
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.send('Welcome to the Online Farming Magazine API');
 });
 
-// Debug middleware (enabled only in development)
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    if (req.file) {
-      console.log('Uploaded file details:', req.file);
-    }
-    next();
-  });
-}
+// Enhanced error logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
-// Global error-handling middleware
+// Global error-handling middleware with enhanced logging
 app.use((err, req, res, next) => {
-  console.error(`Error: ${err.message}`);
+  console.error(`Error ${new Date().toISOString()}: ${err.message}`);
+  console.error('Stack:', err.stack);
   res.status(500).json({
     message: 'Internal Server Error',
     error: process.env.NODE_ENV === 'production' ? null : err.message,
   });
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Updated port configuration for cPanel
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('CORS Origins:', corsOrigin);
+});
 
-export default app;
+module.exports = app;

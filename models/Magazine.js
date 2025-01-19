@@ -1,5 +1,5 @@
 // models/Magazine.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const magazineSchema = new mongoose.Schema(
   {
@@ -16,4 +16,4 @@ const magazineSchema = new mongoose.Schema(
   { timestamps: true } // Auto-manages createdAt and updatedAt fields
 );
 
-export default mongoose.model('Magazine', magazineSchema);
+module.exports = mongoose.model('Magazine', magazineSchema);

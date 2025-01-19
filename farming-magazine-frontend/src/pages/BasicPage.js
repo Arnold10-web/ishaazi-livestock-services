@@ -12,7 +12,7 @@ const BasicPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.ishaazilivestockservices.com';
 
   // Fetch basics with pagination
   const fetchBasics = useCallback(async () => {

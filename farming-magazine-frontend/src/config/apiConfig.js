@@ -1,7 +1,7 @@
 // src/config/apiConfig.js
 
 // Base URL for your backend API (local or production URL)
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://api.ishaazilivestockservices.com';
 if (!BASE_URL) {
   console.error('BASE_URL is missing. Check your environment variables.');
 }

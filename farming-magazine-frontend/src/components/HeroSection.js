@@ -6,7 +6,7 @@ import '../css/style.css';
 const HeroSection = () => {
   const [latestBlogs, setLatestBlogs] = useState([]);
   const [hasPurchased, setHasPurchased] = useState(false); // Track purchase status
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.ishaazilivestockservices.com';
 
   useEffect(() => {
     const fetchLatestBlogs = async () => {
@@ -17,9 +17,10 @@ const HeroSection = () => {
         console.error('Error fetching latest blogs:', error);
       }
     };
-
+  
     fetchLatestBlogs();
-  }, []);
+  }, [API_BASE_URL]);
+  
 
   const handlePayment = async () => {
     try {
@@ -96,7 +97,7 @@ const HeroSection = () => {
             <p>Get the latest edition now!</p>
             <p className="price">shs10,000 /copy</p>
             {!hasPurchased ? (
-              <button onClick={handlePayment} className="btn btn-dark">Pay Now</button>
+              <button onClick={handlePayment} className="btn btn-dark">BuyNow</button>
             ) : (
               <button onClick={handleDownload} className="btn btn-success">Download Magazine</button>
             )}

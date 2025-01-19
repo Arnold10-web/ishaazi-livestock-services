@@ -29,8 +29,10 @@
     "start": "PORT=3000 react-scripts start --openssl-legacy-provider",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+     "homepage": "https://ishaazilivestockservices.com"
   },
+  
   "eslintConfig": {
     "extends": [
       "react-app",

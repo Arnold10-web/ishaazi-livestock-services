@@ -1,5 +1,5 @@
 // models/Farm.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const farmSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -10,4 +10,4 @@ const farmSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.model('Farm', farmSchema);
+module.exports = mongoose.model('Farm', farmSchema);

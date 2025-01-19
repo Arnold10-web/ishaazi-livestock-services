@@ -1,5 +1,4 @@
-// models/Dairy.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const dairySchema = new mongoose.Schema(
   {
@@ -12,4 +11,4 @@ const dairySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Dairy', dairySchema);
+module.exports = mongoose.model('Dairy', dairySchema);

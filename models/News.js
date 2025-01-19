@@ -1,5 +1,5 @@
 // models/News.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const newsSchema = new mongoose.Schema(
   {
@@ -12,4 +12,4 @@ const newsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('News', newsSchema);
+module.exports = mongoose.model('News', newsSchema);
