@@ -36,6 +36,7 @@ app.use(cors({
 
 // Apply helmet after CORS
 app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -46,11 +47,12 @@ connectDB().catch((err) => {
   process.exit(1);
 });
 
-// Ensure uploads directory exists asynchronously
+// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads', 'images');
-fs.mkdir(uploadsDir, { recursive: true }, (err) => {
-  if (!err) console.log('Uploads images directory created.');
-});
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Uploads images directory created.');
+}
 
 // Serve static files
 app.use(
@@ -86,8 +88,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
       path: `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`,
       name: req.file.originalname,
       type: req.file.mimetype,
-      size: req.file.size, // Added file size
-      uploadTime: new Date().toISOString(), // Added upload timestamp
     },
   });
 });
