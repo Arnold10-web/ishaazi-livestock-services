@@ -28,12 +28,36 @@ const corsOrigin = process.env.NODE_ENV === 'production'
 console.log('CORS Origin:', corsOrigin);
 
 app.use(cors({
-  origin: corsOrigin,
+  origin: function (origin, callback) {
+    console.log("Request origin:", origin); // For debugging
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log("Blocked origin:", origin); // For debugging
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400
 }));
 
+// Add these headers explicitly
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
+  next();
+});
 // Apply helmet after CORS
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
@@ -68,6 +92,14 @@ app.use(
   })
 );
 
+// Add this before your routes
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
 import contentRoutes from './routes/contentRoutes.js';
@@ -91,7 +123,17 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
     },
   });
 });
-
+// Add this AFTER all your other routes but BEFORE error handlers
+app.get('*', (req, res) => {
+  res.status(404).json({
+    message: 'API route not found',
+    availableRoutes: [
+      '/api/content/blogs',
+      '/api/content/dairies',
+      
+    ]
+  });
+});
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
