@@ -123,17 +123,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
     },
   });
 });
-// Add this AFTER all your other routes but BEFORE error handlers
-app.get('*', (req, res) => {
-  res.status(404).json({
-    message: 'API route not found',
-    availableRoutes: [
-      '/api/content/blogs',
-      '/api/content/dairies',
-      
-    ]
-  });
-});
+
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
