@@ -23,7 +23,7 @@ const app = express();
 
 // Updated CORS configuration
 const corsOrigin = process.env.NODE_ENV === 'production'
-  ? ['https://ishaazilivestockservices.com', 'https://api.ishaazilivestockservices.com']
+  ? ['https://ishaazilivestockservices.com', 'https://ishaazi-livestock-services.onrender.com']
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 console.log('CORS Origin:', corsOrigin);
 
@@ -36,7 +36,6 @@ app.use(cors({
 
 // Apply helmet after CORS
 app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,12 +46,11 @@ connectDB().catch((err) => {
   process.exit(1);
 });
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists asynchronously
 const uploadsDir = path.join(__dirname, 'uploads', 'images');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Uploads images directory created.');
-}
+fs.mkdir(uploadsDir, { recursive: true }, (err) => {
+  if (!err) console.log('Uploads images directory created.');
+});
 
 // Serve static files
 app.use(
@@ -88,6 +86,8 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
       path: `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`,
       name: req.file.originalname,
       type: req.file.mimetype,
+      size: req.file.size, // Added file size
+      uploadTime: new Date().toISOString(), // Added upload timestamp
     },
   });
 });
@@ -120,7 +120,7 @@ app.use((err, req, res, next) => {
 
 // Updated port configuration for cPanel
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => { 
   console.log(`Server running on http://127.0.0.1:${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
   console.log('CORS Origins:', corsOrigin);
