@@ -1,4 +1,6 @@
-const mongoose = require('mongoose');
+// models/BasicComponent.js
+
+import mongoose from 'mongoose';
 
 const commentSchema = new mongoose.Schema(
   {
@@ -24,4 +26,4 @@ const basicSchema = new mongoose.Schema(
   { timestamps: true } // Auto-manages createdAt and updatedAt
 );
 
-module.exports = mongoose.model('Basic', basicSchema);
+export default mongoose.model('Basic', basicSchema);

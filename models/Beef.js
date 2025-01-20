@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+// models/Beef.js
+import mongoose from 'mongoose';
 
 const beefSchema = new mongoose.Schema(
   {
@@ -11,4 +12,4 @@ const beefSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Beef', beefSchema);
+export default mongoose.model('Beef', beefSchema);

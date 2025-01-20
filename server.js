@@ -1,18 +1,19 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const helmet = require('helmet');
-const path = require('path');
-const fs = require('fs');
-const connectDB = require('./config/db.js');
-const upload = require('./middleware/fileUpload.js');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import helmet from 'helmet';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import connectDB from './config/db.js';
+import upload from './middleware/fileUpload.js';
 
 // Log Node.js version
 console.log('Node version:', process.version);
 
-// Create __dirname for CommonJS
-const __filename = __filename;
-const __dirname = __dirname;
+// Create __dirname for ES6 modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -68,8 +69,8 @@ app.use(
 );
 
 // Import routes
-const adminRoutes = require('./routes/adminRoutes.js');
-const contentRoutes = require('./routes/contentRoutes.js');
+import adminRoutes from './routes/adminRoutes.js';
+import contentRoutes from './routes/contentRoutes.js';
 
 // Mount routes
 app.use('/api/admin', adminRoutes);
@@ -125,4 +126,4 @@ app.listen(PORT, '127.0.0.1', () => {
   console.log('CORS Origins:', corsOrigin);
 });
 
-module.exports = app;
+export default app;

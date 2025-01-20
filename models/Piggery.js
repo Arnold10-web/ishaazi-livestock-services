@@ -1,5 +1,5 @@
 // models/Piggery.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const piggerySchema = new mongoose.Schema(
   {
@@ -12,4 +12,4 @@ const piggerySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Piggery', piggerySchema);
+export default mongoose.model('Piggery', piggerySchema);

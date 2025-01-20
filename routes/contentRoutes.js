@@ -1,7 +1,7 @@
-const express = require('express');
-const upload = require('../middleware/fileUpload.js');
-const authMiddleware = require('../middleware/authMiddleware.js');
-const {
+import express from 'express';
+import upload from '../middleware/fileUpload.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import {
   createBlog,
   getBlogs,
   getBlogById,
@@ -57,7 +57,7 @@ const {
   getGoatById,
   getAdminGoats,
   updateGoat,
-  deleteGoat,
+  deleteGoat, 
   createSubscriber,
   getSubscribers,
   deleteSubscriber,
@@ -66,7 +66,9 @@ const {
   updateNewsletter,
   deleteNewsletter,
   sendNewsletter,
-} = require('../controllers/contentController.js');
+
+ 
+} from '../controllers/contentController.js';
 
 const router = express.Router();
 
@@ -101,32 +103,48 @@ router.get('/news/:id', getNewsById);
 router.put('/news/:id', authMiddleware, upload.single('image'), updateNews);
 router.delete('/news/:id', authMiddleware, deleteNews);
 
+
 // Basic Routes
+
+// Create a new Basic media (video/audio)
 router.post(
   '/basics',
   authMiddleware,
   upload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'media', maxCount: 1 },
+    { name: 'image', maxCount: 1 }, // Optional thumbnail image
+    { name: 'media', maxCount: 1 }, // Required media file (video/audio)
   ]),
   createBasic
 );
+
+// Get all Basics (public view, supports pagination)
 router.get('/basics', getBasics);
+
+// Get all Basics for admin (admin view, supports pagination)
 router.get('/basics/admin', authMiddleware, getAdminBasics);
+
+// Get a single Basic media by ID
 router.get('/basics/:id', getBasicById);
+
+// Update a Basic media by ID
 router.put(
   '/basics/:id',
   authMiddleware,
   upload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'media', maxCount: 1 },
+    { name: 'image', maxCount: 1 }, // Optional updated thumbnail image
+    { name: 'media', maxCount: 1 }, // Optional updated media file (video/audio)
   ]),
   updateBasic
 );
-router.delete('/basics/:id', authMiddleware, deleteBasic);
-router.post('/basics/:id/comments', addComment);
-router.delete('/basics/:id/comments/:commentId', authMiddleware, deleteComment);
 
+// Delete a Basic media by ID
+router.delete('/basics/:id', authMiddleware, deleteBasic);
+
+// Add a comment to a Basic media
+router.post('/basics/:id/comments', addComment);
+
+// Delete a comment from a Basic media
+router.delete('/basics/:id/comments/:commentId', authMiddleware, deleteComment);
 // Farms Routes
 router.post('/farms', authMiddleware, upload.single('image'), createFarm);
 router.get('/farms', getFarms);
@@ -136,21 +154,11 @@ router.put('/farms/:id', authMiddleware, upload.single('image'), updateFarm);
 router.delete('/farms/:id', authMiddleware, deleteFarm);
 
 // Magazine Routes
-router.post(
-  '/magazines',
-  authMiddleware,
-  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]),
-  createMagazine
-);
+router.post('/magazines', authMiddleware, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), createMagazine);
 router.get('/magazines', getMagazines);
 router.get('/magazines/admin', authMiddleware, getAdminMagazines);
 router.get('/magazines/:id', getMagazineById);
-router.put(
-  '/magazines/:id',
-  authMiddleware,
-  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]),
-  updateMagazine
-);
+router.put('/magazines/:id', authMiddleware, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), updateMagazine);
 router.delete('/magazines/:id', authMiddleware, deleteMagazine);
 
 // Piggery Routes
@@ -185,6 +193,7 @@ router.get('/goats/:id', getGoatById);
 router.put('/goats/:id', authMiddleware, upload.single('image'), updateGoat);
 router.delete('/goats/:id', authMiddleware, deleteGoat);
 
+
 // Subscriber Routes
 router.get('/subscribers', authMiddleware, getSubscribers);
 router.post('/subscribers', createSubscriber);
@@ -197,4 +206,6 @@ router.put('/newsletters/:id', authMiddleware, updateNewsletter);
 router.delete('/newsletters/:id', authMiddleware, deleteNewsletter);
 router.post('/newsletters/:id/send', authMiddleware, sendNewsletter);
 
-module.exports = router;
+
+
+export default router;

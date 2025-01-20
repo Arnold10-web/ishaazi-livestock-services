@@ -1,8 +1,8 @@
-const Admin = require('../models/Admin.js');
-const jwt = require('jsonwebtoken');
+import Admin from '../models/Admin.js';
+import jwt from 'jsonwebtoken';
 
 // Admin Registration
-async function registerAdmin(req, res) {
+export async function registerAdmin(req, res) {
     const { username, password } = req.body;
 
     try {
@@ -24,7 +24,7 @@ async function registerAdmin(req, res) {
 }
 
 // Admin Login
-async function loginAdmin(req, res) {
+export async function loginAdmin(req, res) {
     const { username, password } = req.body;
     console.log('Login attempt:', { username }); // Debug log
 
@@ -55,19 +55,12 @@ async function loginAdmin(req, res) {
 }
 
 // Admin Logout
-function logoutAdmin(req, res) {
+export function logoutAdmin(req, res) {
     // Clear token on client-side, logout functionality is usually front-end driven
     res.status(200).json({ message: 'Admin logged out successfully' });
 }
 
 // Admin Dashboard (Protected)
-function getAdminDashboard(req, res) {
+export function getAdminDashboard(req, res) {
     res.status(200).json({ message: `Welcome to the admin dashboard, Admin ID: ${req.adminId}` });
 }
-
-module.exports = {
-    registerAdmin,
-    loginAdmin,
-    logoutAdmin,
-    getAdminDashboard,
-};
