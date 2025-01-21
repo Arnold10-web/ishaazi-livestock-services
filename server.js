@@ -29,11 +29,11 @@ console.log('CORS Origin:', corsOrigin);
 
 app.use(cors({
   origin: function (origin, callback) {
-    console.log("Request origin:", origin); // For debugging
-    if (!origin || whitelist.indexOf(origin) !== -1) {
+    console.log("Request origin:", origin); // Debugging
+    if (!origin || corsOrigin.includes(origin)) {  // ✅ Corrected
       callback(null, true);
     } else {
-      console.log("Blocked origin:", origin); // For debugging
+      console.log("Blocked origin:", origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -50,9 +50,14 @@ app.use(cors({
   maxAge: 86400
 }));
 
+app.use((req, res, next) => {
+  console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
+  next();
+});
+
 // Add these headers explicitly
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Origin', corsOrigin.includes(req.headers.origin) ? req.headers.origin : 'https://ishaazilivestockservices.com');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
@@ -99,6 +104,8 @@ app.use((req, res, next) => {
   console.log('Body:', req.body);
   next();
 });
+
+
 
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
