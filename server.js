@@ -164,5 +164,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('Environment:', process.env.NODE_ENV);
   console.log('CORS Origins:', corsOrigin);
 });
+console.log("Connected to MongoDB:", process.env.MONGO_URI);
 
 export default app;
