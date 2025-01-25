@@ -82,16 +82,27 @@ export const getBlogs = async (req, res) => {
 
   try {
     const query = admin ? {} : { published: true };
+
+    console.log("🔥 API HIT: Fetching blogs...");
+    console.log("🔍 Query:", query);
+
     const blogs = await Blog.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
+
+    console.log("✅ Blogs found:", blogs.length);
+    if (blogs.length > 0) console.log("Sample blog:", blogs[0]);
+
     const total = await Blog.countDocuments(query);
+
     sendResponse(res, true, 'Blogs retrieved successfully', { blogs, total, page, limit });
   } catch (error) {
+    console.error("❌ Error fetching blogs:", error);
     sendResponse(res, false, 'Failed to retrieve blogs', null, error.message);
   }
 };
+
 export const getAdminBlogs = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
