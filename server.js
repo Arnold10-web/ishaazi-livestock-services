@@ -30,30 +30,33 @@ console.log('CORS Origin:', corsOrigin);
 // Replace existing CORS configuration with this
 app.use(cors({
   origin: function (origin, callback) {
-    console.log("[CORS] Full origin check:", {
+    console.log("[CORS] Full origin details:", {
       origin, 
-      corsOrigin,
-      includes: corsOrigin.includes(origin)
+      headers: req.headers,
+      host: req.get('host')
     });
     
-    if (!origin || corsOrigin.includes(origin)) {
+    const allowedOrigins = [
+      'https://ishaazilivestockservices.com',
+      'https://ishaazi-livestock-services.onrender.com',
+      'http://localhost:3000'
+    ];
+
+    // Check host if origin is undefined
+    const requestHost = req.get('host');
+    const isAllowedHost = allowedOrigins.some(allowed => 
+      allowed.includes(requestHost)
+    );
+
+    if (!origin || isAllowedHost) {
       callback(null, true);
     } else {
-      console.log("[CORS] Blocked origin:", origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With',
-    'Accept',
-    'Origin'
-  ]
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
-
 app.use((req, res, next) => {
   console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
   next();
