@@ -27,31 +27,26 @@ const corsOrigin = process.env.NODE_ENV === 'production'
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 console.log('CORS Origin:', corsOrigin);
 
-// Replace existing CORS configuration with this
-app.use(cors({
-  origin: function (origin, cb, req) {
+
     const allowedOrigins = [
       'https://ishaazilivestockservices.com',
       'https://ishaazi-livestock-services.onrender.com',
       'http://localhost:3000'
     ];
 
-    console.log("[CORS] Checking:", { 
-      origin, 
-      host: req?.headers?.host 
-    });
-
-    if (!origin || allowedOrigins.includes(origin) || 
-        (req?.headers?.host && allowedOrigins.some(allowed => 
-          allowed.includes(req.headers.host)))) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
+    app.use(cors({
+      origin: function (origin, callback) {
+        console.log("[CORS] Checking origin:", origin);
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.log("[CORS] Blocked origin:", origin);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    }));
 app.use((req, res, next) => {
   console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
   next();
@@ -59,7 +54,12 @@ app.use((req, res, next) => {
 
 // Add these headers explicitly
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', corsOrigin.includes(req.headers.origin) ? req.headers.origin : 'https://ishaazilivestockservices.com');
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', 'https://ishaazilivestockservices.com');
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
@@ -151,8 +151,15 @@ app.use((req, res, next) => {
 
 // Global error-handling middleware with enhanced logging
 app.use((err, req, res, next) => {
-  console.error(`Error ${new Date().toISOString()}: ${err.message}`);
+  console.error(`Error ${new Date().toISOString()}:`);
+  console.error('Message:', err.message);
   console.error('Stack:', err.stack);
+  console.error('Request details:', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body
+  });
   res.status(500).json({
     message: 'Internal Server Error',
     error: process.env.NODE_ENV === 'production' ? null : err.message,
@@ -166,6 +173,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('Environment:', process.env.NODE_ENV);
   console.log('CORS Origins:', corsOrigin);
 });
-console.log("Connected to MongoDB:", process.env.MONGO_URI);
+console.log("Connected to MongoDB:");
 
 export default app;
