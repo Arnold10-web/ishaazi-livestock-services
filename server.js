@@ -27,13 +27,19 @@ const corsOrigin = process.env.NODE_ENV === 'production'
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 console.log('CORS Origin:', corsOrigin);
 
+// Replace existing CORS configuration with this
 app.use(cors({
   origin: function (origin, callback) {
-    console.log("Request origin:", origin); // Debugging
-    if (!origin || corsOrigin.includes(origin)) {  // ✅ Corrected
+    console.log("[CORS] Full origin check:", {
+      origin, 
+      corsOrigin,
+      includes: corsOrigin.includes(origin)
+    });
+    
+    if (!origin || corsOrigin.includes(origin)) {
       callback(null, true);
     } else {
-      console.log("Blocked origin:", origin);
+      console.log("[CORS] Blocked origin:", origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -45,9 +51,7 @@ app.use(cors({
     'X-Requested-With',
     'Accept',
     'Origin'
-  ],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400
+  ]
 }));
 
 app.use((req, res, next) => {
