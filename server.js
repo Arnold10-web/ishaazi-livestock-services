@@ -21,62 +21,28 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Updated CORS configuration
-const corsOrigin = process.env.NODE_ENV === 'production'
-  ? ['https://ishaazilivestockservices.com', 'https://ishaazi-livestock-services.onrender.com']
-  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
-console.log('CORS Origin:', corsOrigin);
-
-
-    const allowedOrigins = [
-      'https://ishaazilivestockservices.com',
-      'https://ishaazi-livestock-services.onrender.com',
-      'http://localhost:3000'
-    ];
-
-    app.use(cors({
-      origin: function (origin, callback) {
-        console.log("[CORS] Checking origin:", origin);
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          console.log("[CORS] Blocked origin:", origin);
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-    }));
+// Open CORS policy for now
+app.use(cors());
 app.use((req, res, next) => {
   console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
   next();
 });
 
-// Add these headers explicitly
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', 'https://ishaazilivestockservices.com');
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
-  next();
-});
-// Apply helmet after CORS
+// Apply security headers
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Parse incoming requests
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Database connection with error logging
-connectDB().catch((err) => {
-  console.error('Database connection failed:', err.message);
-  process.exit(1);
-});
+// Database connection
+connectDB()
+  .then(() => console.log("Connected to MongoDB"))
+  .catch(err => {
+    console.error('Database connection failed:', err.message);
+    process.exit(1);
+  });
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads', 'images');
@@ -90,24 +56,26 @@ app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.jpg')) res.set('Content-Type', 'image/jpeg');
-      else if (filePath.endsWith('.png')) res.set('Content-Type', 'image/png');
-      else if (filePath.endsWith('.gif')) res.set('Content-Type', 'image/gif');
-      else if (filePath.endsWith('.webp')) res.set('Content-Type', 'image/webp');
-      else res.set('Content-Type', 'application/octet-stream');
-    },
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp'
+      };
+      res.set('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+    }
   })
 );
 
-// Add this before your routes
+// Request logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
   console.log('Body:', req.body);
   next();
 });
-
-
 
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
@@ -122,7 +90,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'File upload failed', error: 'No file provided' });
   }
-
   res.status(201).json({
     message: 'File uploaded successfully',
     file: {
@@ -143,13 +110,7 @@ app.get('/', (req, res) => {
   res.send('Welcome to the Online Farming Magazine API');
 });
 
-// Enhanced error logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
-
-// Global error-handling middleware with enhanced logging
+// Global error-handling middleware
 app.use((err, req, res, next) => {
   console.error(`Error ${new Date().toISOString()}:`);
   console.error('Message:', err.message);
@@ -166,13 +127,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Updated port configuration for cPanel
+// Port configuration for cPanel
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => { 
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://127.0.0.1:${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
-  console.log('CORS Origins:', corsOrigin);
 });
-console.log("Connected to MongoDB:");
 
 export default app;
