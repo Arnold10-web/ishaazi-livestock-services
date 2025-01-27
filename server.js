@@ -22,7 +22,8 @@ dotenv.config();
 const app = express();
 
 // Open CORS policy for now
-app.use(cors());
+app.use(cors({ origin: '*' }));
+
 app.use((req, res, next) => {
   console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
   next();
