@@ -21,17 +21,36 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Open CORS policy for now
-app.use(cors({ origin: '*' }));
+// CORS Configuration
+const whitelist = [
+  'https://ishaazilivestockservices.com',
+  'https://www.ishaazilivestockservices.com',
+  'https://ishaazi-livestock-services.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
 
-app.use((req, res, next) => {
-  console.log(`[DEBUG] Incoming request from: ${req.headers.origin}`);
-  next();
-});
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Request origin:", origin); // For debugging
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log("Blocked origin:", origin); // For debugging
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.options('*', cors());
 
 // Apply security headers
-app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP to avoid blocking resources
+}));
 
 // Parse incoming requests
 app.use(express.json({ limit: '10mb' }));
