@@ -79,12 +79,20 @@ export const getBlogById = async (req, res) => {
 
 export const getBlogs = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
-  const isAdmin = admin === "true"; // Convert query param to boolean
-  const query = isAdmin ? {} : { published: true }; // Apply query filter
 
   try {
+    const query = admin ? {} : { published: true };
+
     console.log("🔥 API HIT: Fetching blogs...");
     console.log("🔍 Query:", query);
+
+    // Log the total number of blogs in the database
+    const totalBlogs = await Blog.countDocuments({});
+    console.log("Total blogs in database:", totalBlogs);
+
+    // Log the number of published blogs
+    const publishedBlogsCount = await Blog.countDocuments({ published: true });
+    console.log("Published blogs in database:", publishedBlogsCount);
 
     const blogs = await Blog.find(query)
       .sort({ createdAt: -1 })
@@ -102,8 +110,6 @@ export const getBlogs = async (req, res) => {
     sendResponse(res, false, 'Failed to retrieve blogs', null, error.message);
   }
 };
-
-
 export const getAdminBlogs = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
