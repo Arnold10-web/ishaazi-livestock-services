@@ -619,6 +619,7 @@ export const updateFarm = async (req, res) => {
   }
 };
 
+
 // Delete a farm
 export const deleteFarm = async (req, res) => {
   try {
@@ -914,10 +915,19 @@ export const updatePiggery = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+
+    // Parse metadata from JSON string to object inline
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
-      // Construct the relative path
+      // Construct the relative path for the image
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -927,6 +937,7 @@ export const updatePiggery = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 export const deletePiggery = async (req, res) => {
   try {
@@ -1043,7 +1054,15 @@ export const updateGoat = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
@@ -1055,6 +1074,7 @@ export const updateGoat = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 export const deleteGoat = async (req, res) => {
   try {
@@ -1168,10 +1188,12 @@ export const updateDairy = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    // Parse metadata to ensure it's stored as an object:
+    const parsedMetadata = parseMetadata(metadata);
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
-      // Construct the relative path
+      // Construct the relative path for the updated image
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -1181,6 +1203,7 @@ export const updateDairy = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 export const deleteDairy = async (req, res) => {
   try {
@@ -1290,12 +1313,13 @@ export const getAdminBeefs = async (req, res) => {
     sendResponse(res, false, 'Failed to retrieve admin beefs', null, error.message);
   }
 };
-
 export const updateBeef = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    // Parse the metadata string into an object
+    const parsedMetadata = parseMetadata(metadata);
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
