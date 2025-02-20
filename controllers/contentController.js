@@ -408,19 +408,26 @@ export const updateBasic = async (req, res) => {
     const { id } = req.params;
     const { title, description, fileType, metadata } = req.body;
 
-    // Extract uploaded files
+    // Extract uploaded files (if any)
     const files = req.files || {};
     const image = files.image?.[0];
     const media = files.media?.[0];
+
+    // Parse metadata inline
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
 
     const updateData = {
       title,
       description,
       fileType,
-      metadata: metadata ? JSON.parse(metadata) : undefined,
+      metadata: parsedMetadata,
     };
 
-    // Update file paths if new files are uploaded
     if (media) {
       updateData.fileUrl = `/uploads/media/${media.filename}`;
     }
@@ -438,6 +445,7 @@ export const updateBasic = async (req, res) => {
     sendResponse(res, false, 'Failed to update basic media', null, error.message);
   }
 };
+
 
 // Delete a Basic media
 export const deleteBasic = async (req, res) => {
@@ -767,13 +775,20 @@ export const updateMagazine = async (req, res) => {
     const { title, description, issue, price, discount, metadata, published } = req.body;
     const files = req.files || {};
 
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
     const updateData = {
       title,
       description,
       issue,
       price,
       discount,
-      metadata,
+      metadata: parsedMetadata,
       published,
     };
 
