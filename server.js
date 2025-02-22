@@ -106,19 +106,37 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/content', contentRoutes);
 
 // File upload route
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'File upload failed', error: 'No file provided' });
+app.post('/api/upload', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 },
+  { name: 'media', maxCount: 1 },
+  { name: 'audio', maxCount: 1 }
+]), (req, res) => {
+  const uploadedFiles = {};
+
+  // Process all supported file types
+  ['image', 'pdf', 'media', 'audio'].forEach(field => {
+    if (req.files && req.files[field]) {
+      uploadedFiles[field] = {
+        url: req.files[field][0].location,  // S3 URL
+        name: req.files[field][0].originalname,
+        type: req.files[field][0].mimetype,
+        size: req.files[field][0].size
+      };
+    }
+  });
+
+  // If no valid files were uploaded, return an error
+  if (Object.keys(uploadedFiles).length === 0) {
+    return res.status(400).json({ message: 'File upload failed', error: 'No valid files provided' });
   }
+
   res.status(201).json({
-    message: 'File uploaded successfully',
-    file: {
-      path: `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`,
-      name: req.file.originalname,
-      type: req.file.mimetype,
-    },
+    message: 'Files uploaded successfully',
+    files: uploadedFiles,
   });
 });
+
 
 // Health check route
 app.get('/health', (req, res) => {
