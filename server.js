@@ -3,13 +3,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import upload from './middleware/fileUpload.js';
-
-// Log Node.js version
-console.log('Node version:', process.version);
 
 // Create __dirname for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -64,14 +60,7 @@ connectDB()
     process.exit(1);
   });
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads', 'images');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Uploads images directory created.');
-}
-
-// Serve static files
+// Serve static files (if needed)
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
@@ -105,38 +94,22 @@ import contentRoutes from './routes/contentRoutes.js';
 app.use('/api/admin', adminRoutes);
 app.use('/api/content', contentRoutes);
 
-// File upload route
-app.post('/api/upload', upload.fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'pdf', maxCount: 1 },
-  { name: 'media', maxCount: 1 },
-  { name: 'audio', maxCount: 1 }
-]), (req, res) => {
-  const uploadedFiles = {};
-
-  // Process all supported file types
-  ['image', 'pdf', 'media', 'audio'].forEach(field => {
-    if (req.files && req.files[field]) {
-      uploadedFiles[field] = {
-        url: req.files[field][0].location,  // S3 URL
-        name: req.files[field][0].originalname,
-        type: req.files[field][0].mimetype,
-        size: req.files[field][0].size
-      };
-    }
-  });
-
-  // If no valid files were uploaded, return an error
-  if (Object.keys(uploadedFiles).length === 0) {
-    return res.status(400).json({ message: 'File upload failed', error: 'No valid files provided' });
+// File upload route (aligned with local setup)
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'File upload failed', error: 'No file provided' });
   }
 
   res.status(201).json({
-    message: 'Files uploaded successfully',
-    files: uploadedFiles,
+    message: 'File uploaded successfully',
+    file: {
+      url: req.file.location, // S3 URL
+      name: req.file.originalname,
+      type: req.file.mimetype,
+      size: req.file.size,
+    },
   });
 });
-
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -165,7 +138,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Port configuration for cPanel
+// Port configuration
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://127.0.0.1:${PORT}`);
