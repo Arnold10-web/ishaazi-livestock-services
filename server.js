@@ -3,9 +3,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import upload from './middleware/fileUpload.js';
+
+// Log Node.js version
+console.log('Node version:', process.version);
 
 // Create __dirname for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +64,14 @@ connectDB()
     process.exit(1);
   });
 
-// Serve static files (if needed)
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads', 'images');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Uploads images directory created.');
+}
+
+// Serve static files
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
@@ -94,19 +105,17 @@ import contentRoutes from './routes/contentRoutes.js';
 app.use('/api/admin', adminRoutes);
 app.use('/api/content', contentRoutes);
 
-// File upload route (aligned with local setup)
+// File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'File upload failed', error: 'No file provided' });
   }
-
   res.status(201).json({
     message: 'File uploaded successfully',
     file: {
-      url: req.file.location, // S3 URL
+      path: `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`,
       name: req.file.originalname,
       type: req.file.mimetype,
-      size: req.file.size,
     },
   });
 });
@@ -138,7 +147,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Port configuration
+// Port configuration for cPanel
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://127.0.0.1:${PORT}`);
