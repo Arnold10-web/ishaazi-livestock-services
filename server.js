@@ -25,7 +25,7 @@ const app = express();
 const whitelist = [
   'https://ishaazilivestockservices.com',
   'https://www.ishaazilivestockservices.com',
-  'https://ishaazi-livestock-services.onrender.com',
+  'https://ishaazi-livestock-services-production.up.railway.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000'
 ];
