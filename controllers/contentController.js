@@ -265,7 +265,6 @@ export const updateNews = async (req, res) => {
     let updateData = { title, content, metadata, published };
 
     if (req.file) {
-      // Construct the relative path
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -447,6 +446,8 @@ export const updateBasic = async (req, res) => {
 };
 
 
+
+
 // Delete a Basic media
 export const deleteBasic = async (req, res) => {
   try {
@@ -626,6 +627,7 @@ export const updateFarm = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 
 // Delete a farm
@@ -811,6 +813,7 @@ export const updateMagazine = async (req, res) => {
   }
 };
 
+
 // Delete a magazine
 export const deleteMagazine = async (req, res) => {
   try {
@@ -954,6 +957,7 @@ export const updatePiggery = async (req, res) => {
 };
 
 
+
 export const deletePiggery = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1089,6 +1093,7 @@ export const updateGoat = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 
 export const deleteGoat = async (req, res) => {
@@ -1349,6 +1354,7 @@ export const updateBeef = async (req, res) => {
     sendResponse(res, false, 'Failed to update beef content', null, error.message);
   }
 };
+
 
 export const deleteBeef = async (req, res) => {
   try {
