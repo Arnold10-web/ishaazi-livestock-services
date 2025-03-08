@@ -34,6 +34,7 @@ const parseMetadata = (metadata) => {
 const sendResponse = (res, success, message, data = null, error = null) => {
   res.status(success ? 200 : 500).json({ success, message, data, error });
 };
+
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
@@ -301,6 +302,7 @@ export const deleteNews = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete news' });
   }
 };
+
 // ----- BASIC CRUD OPERATIONS -----
 
 // Create a new Basic media
