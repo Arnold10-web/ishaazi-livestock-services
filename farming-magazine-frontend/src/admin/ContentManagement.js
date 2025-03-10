@@ -24,6 +24,20 @@ import NewsletterList from '../components/NewsletterList';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+const DELETE_ENDPOINTS = {
+  blogs: 'DELETE_BLOG',
+  news: 'DELETE_NEWS',
+  magazines: 'DELETE_MAGAZINE',
+  basics: 'DELETE_BASIC',
+  farms: 'DELETE_FARM',
+  piggeries: 'DELETE_PIGGERY',
+  dairies: 'DELETE_DAIRY',
+  goats: 'DELETE_GOAT',
+  beefs: 'DELETE_BEEF',
+  newsletters: 'DELETE_NEWSLETTER',
+  subscribers: 'DELETE_SUBSCRIBER',
+};
+
 const ContentManagement = ({ activeTab }) => {
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,17 +73,22 @@ const ContentManagement = ({ activeTab }) => {
   };
 
   
-  // Delete handler for removing content
   const handleDelete = async (id) => {
     try {
-      const endpoint = API_ENDPOINTS[`DELETE_${activeTab.toUpperCase().slice(0, -1)}`](id);
+      const deleteKey = DELETE_ENDPOINTS[activeTab];
+      if (!deleteKey) {
+        throw new Error(`No delete endpoint configured for ${activeTab}`);
+      }
+      // Call the corresponding endpoint function from API_ENDPOINTS with the provided id
+      const endpoint = API_ENDPOINTS[deleteKey](id);
       await axios.delete(endpoint, { headers: getAuthHeader() });
       fetchContent();
     } catch (err) {
-      console.error(`Error deleting ${activeTab.slice(0, -1)}:`, err);
-      setError(`Failed to delete ${activeTab.slice(0, -1)}. Please try again.`);
+      console.error(`Error deleting ${activeTab}:`, err);
+      setError(`Failed to delete ${activeTab}. Please try again.`);
     }
   };
+  
 
   // Delete handler for removing a specific comment
   const handleDeleteComment = async (basicId, commentId) => {

@@ -4,7 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
-import '../css/FarmForm.css';
+
 const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -47,7 +47,6 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
 
   useEffect(() => {
     initializeQuill();
-
     return () => {
       if (quillEditor) {
         quillEditor.off('text-change');
@@ -85,7 +84,6 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
     e.preventDefault();
     const description = quillEditor ? quillEditor.root.innerHTML : '';
 
-    // Validate required fields
     if (!name.trim() || !price || !location.trim() || !description.trim()) {
       setError('All fields are required.');
       return;
@@ -126,15 +124,18 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="farm-form">
-      <h3>{editingFarm ? 'Edit Farm' : 'Add New Farm'}</h3>
-      {error && <div className="error">{error}</div>}
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
+      <h3 className="text-xl font-semibold">
+        {editingFarm ? 'Edit Farm' : 'Add New Farm'}
+      </h3>
+      {error && <div className="text-red-500">{error}</div>}
       <input
         type="text"
         placeholder="Farm Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
       <input
         type="text"
@@ -142,6 +143,7 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
         value={location}
         onChange={(e) => setLocation(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
       <input
         type="number"
@@ -149,14 +151,27 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
         value={price}
         onChange={(e) => setPrice(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
-      <input type="file" onChange={handleImageChange} />
+      <input
+        type="file"
+        onChange={handleImageChange}
+        className="w-full"
+      />
       {imagePreview && (
-        <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px', marginTop: '10px' }} />
+        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
       )}
-     <div ref={quillRef} className="quill-editor" style={{ height: '300px', marginBottom: '1rem' }}></div>
-      <button type="submit">{editingFarm ? 'Update Farm' : 'Add Farm'}</button>
-      {editingFarm && <button type="button" onClick={resetForm}>Cancel Edit</button>}
+      <div ref={quillRef} className="h-72 border rounded" />
+      <div className="flex space-x-2">
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          {editingFarm ? 'Update Farm' : 'Add Farm'}
+        </button>
+        {editingFarm && (
+          <button type="button" onClick={resetForm} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            Cancel Edit
+          </button>
+        )}
+      </div>
     </form>
   );
 };

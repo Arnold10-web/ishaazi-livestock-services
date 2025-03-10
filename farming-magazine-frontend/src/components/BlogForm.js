@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
-import '../css/BlogForm.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
@@ -18,7 +17,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
   useEffect(() => {
     if (editingBlog) {
       setTitle(editingBlog.title);
-      setMetadata(JSON.stringify(editingBlog.metadata));
+      setMetadata(editingBlog.metadata ? JSON.stringify(editingBlog.metadata) : '{}');
       setImagePreview(editingBlog.imageUrl);
       if (quillEditor) {
         quillEditor.root.innerHTML = editingBlog.content;
@@ -32,12 +31,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
         theme: 'snow',
         placeholder: 'Write your blog content here...',
         modules: {
-          toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            ['link', 'image'],
-            ['clean'],
-          ],
+          toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link', 'image'], ['clean']],
         },
       });
       setQuillEditor(editor);
@@ -46,7 +40,6 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
 
   useEffect(() => {
     initializeQuill();
-
     return () => {
       if (quillEditor) {
         quillEditor.off('text-change');
@@ -83,13 +76,11 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     e.preventDefault();
     const content = quillEditor ? quillEditor.root.innerHTML : '';
 
-    // Validate required fields
     if (!title.trim() || !content.trim()) {
       setError('Title and content are required.');
       return;
     }
 
-    // Validate metadata JSON
     try {
       JSON.parse(metadata);
     } catch (err) {
@@ -106,19 +97,13 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     try {
       setError('');
       if (editingBlog) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_BLOG}/${editingBlog._id}`, formData, {
-          headers: {
-            ...getAuthHeader(),
-            'Content-Type': 'multipart/form-data',
-          },
+        await axios.put(API_ENDPOINTS.UPDATE_BLOG(editingBlog._id), formData, {
+          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
         });
         alert('Blog updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_BLOG, formData, {
-          headers: {
-            ...getAuthHeader(),
-            'Content-Type': 'multipart/form-data',
-          },
+          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
         });
         alert('Blog created successfully!');
       }
@@ -131,40 +116,38 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="blog-form">
-      <h3>{editingBlog ? 'Edit Blog' : 'Create Blog'}</h3>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <h3 className="text-xl font-semibold mb-4">{editingBlog ? 'Edit Blog' : 'Create Blog'}</h3>
+      {error && <div className="text-red-500 mb-3">{error}</div>}
       <input
         type="text"
         placeholder="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
+        className="w-full p-2 border rounded mb-3"
       />
       <textarea
         placeholder="Metadata (JSON)"
         value={metadata}
         onChange={(e) => setMetadata(e.target.value)}
+        className="w-full p-2 border rounded mb-3"
       />
-<div className="file-input-wrapper">
-  <input
-    type="file"
-    onChange={handleImageChange}
-    accept="image/*"
-    id="file-input"
-    style={{ display: 'none' }}
-  />
-  <label htmlFor="file-input" className="file-input-button">
-    Choose Image
-  </label>
-  <span className="file-name">{image ? image.name : 'No file chosen'}</span>
-</div>
-      {imagePreview && (
-        <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px', marginTop: '10px' }} />
+      <div className="mb-3">
+        <input type="file" onChange={handleImageChange} accept="image/*" className="hidden" id="file-input" />
+        <label htmlFor="file-input" className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded">Choose Image</label>
+        <span className="ml-2">{image ? image.name : 'No file chosen'}</span>
+      </div>
+      {imagePreview && <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />}
+      <div ref={quillRef} className="h-72 border rounded mb-3"></div>
+      <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mr-2">
+        {editingBlog ? 'Update Blog' : 'Create Blog'}
+      </button>
+      {editingBlog && (
+        <button type="button" onClick={resetForm} className="bg-gray-500 text-white px-4 py-2 rounded">
+          Cancel Edit
+        </button>
       )}
-     <div ref={quillRef} className="blog-form-quill" style={{ height: '300px', marginBottom: '1rem' }}></div>
-      <button type="submit">{editingBlog ? 'Update Blog' : 'Create Blog'}</button>
-      {editingBlog && <button type="button" onClick={resetForm}>Cancel Edit</button>}
     </form>
   );
 };

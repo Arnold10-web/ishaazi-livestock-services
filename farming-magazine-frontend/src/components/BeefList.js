@@ -1,29 +1,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../css/BeefList.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, Edit2, Trash2, ArrowRight } from 'lucide-react';
 
-const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit }) => {
+
+const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+  // Utility function to handle image load errors
   const handleImageError = (e) => {
     console.error('Image failed to load:', e.target.src);
-    e.target.src = '/placeholder-image.jpg'; // Replace with a default placeholder image
+    e.target.src = '/placeholder-image.jpg';
   };
 
+  // Utility function to truncate HTML content
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
-    
-    // Create a temporary element to parse the HTML
     const tempElement = document.createElement('div');
     tempElement.innerHTML = content;
-    
-    // Extract text content
     let text = tempElement.textContent || tempElement.innerText;
-    
-    // Truncate the text
-    text = text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-    
-    return text;
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
+  // Utility function to format dates
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -32,47 +29,125 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit }) => {
     });
   };
 
+  // Skeleton loader for beef items with shimmer effect
+  const BeefSkeleton = () => (
+    <div className="relative overflow-hidden rounded-xl bg-white shadow-sm p-4">
+      <div className="animate-pulse space-y-4">
+        <div className="h-48 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg" />
+        <div className="space-y-2">
+          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4" />
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/4" />
+          <div className="space-y-2">
+            <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded" />
+            <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-5/6" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    </div>
+  );
+
+  // Empty state with animation when no beef data is available
+  if (beefs.length === 0 && !isLoading) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+        >
+          <AlertCircle className="w-16 h-16 text-blue-400/80" />
+        </motion.div>
+        <h3 className="mt-6 text-2xl font-semibold text-gray-800">No Beef Information Found</h3>
+        <p className="mt-2 text-gray-600">Check back soon for updates!</p>
+      </motion.div>
+    );
+  }
+
+  // Loading state with a skeleton grid
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+        {[1, 2, 3].map((i) => (
+          <BeefSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="beef-list">
-      {beefs.length > 0 ? (
-        beefs.map((beef) => (
-          <article key={beef._id} className="beef-item">
-            {beef.imageUrl && (
-              <div className="beef-image-container">
-                <img
-                  src={`${apiBaseUrl}${beef.imageUrl}`}
-                  alt={beef.title}
-                  className="beef-image"
-                  onError={handleImageError}
-                  crossOrigin="anonymous"
-                />
-              </div>
-            )}
-            <div className="beef-content">
-              <Link to={`/beef/${beef._id}`} className="beef-link">
-                <h2 className="beef-title">{beef.title}</h2>
-              </Link>
-              <p className="beef-date">{formatDate(beef.createdAt)}</p>
-              <p className="beef-excerpt">{truncateContent(beef.content)}</p>
-              <Link to={`/beef/${beef._id}`} className="read-more">
-                Read More
-              </Link>
-              {isAdmin && (
-                <div className="admin-actions">
-                  <button onClick={() => onEdit(beef._id)} className="update-btn">
-                    Edit
-                  </button>
-                  <button onClick={() => onDelete(beef._id)} className="delete-btn">
-                    Delete
-                  </button>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence mode="popLayout">
+          {beefs.map((beef, index) => (
+            <motion.article
+              key={beef._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ delay: index * 0.1 }}
+              className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden beef-item"
+            >
+              {beef.imageUrl && (
+                <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
+                  <motion.img
+                    src={`${apiBaseUrl}${beef.imageUrl}`}
+                    alt={beef.title}
+                    onError={handleImageError}
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-cover"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.4 }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
               )}
-            </div>
-          </article>
-        ))
-      ) : (
-        <p className="no-beefs">No beef information available at the moment. Check back soon!</p>
-      )}
+              <div className="p-6 beef-content">
+                <Link to={`/beef/${beef._id}`} className="block group/title">
+                  <h2 className="text-xl font-semibold text-gray-800 group-hover/title:text-blue-600 transition-colors duration-200">
+                    {beef.title}
+                  </h2>
+                </Link>
+                <time className="block mt-2 text-sm text-gray-500">
+                  {formatDate(beef.createdAt)}
+                </time>
+                <p className="mt-3 text-gray-600 line-clamp-3">
+                  {truncateContent(beef.content)}
+                </p>
+                <Link to={`/beef/${beef._id}`} className="inline-flex items-center gap-1.5 text-blue-600 font-medium group/link mt-4">
+                  Read More
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/link:translate-x-1" />
+                </Link>
+                {isAdmin && (
+                  <div className="mt-4 flex gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => onEdit(beef._id)}
+                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors duration-200"
+                      aria-label="Edit beef"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => onDelete(beef._id)}
+                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors duration-200"
+                      aria-label="Delete beef"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </motion.button>
+                  </div>
+                )}
+              </div>
+            </motion.article>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

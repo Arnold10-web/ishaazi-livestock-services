@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import '../css/style.css';
 
+
 const HeroSection = () => {
   const [latestBlogs, setLatestBlogs] = useState([]);
-  const [hasPurchased, setHasPurchased] = useState(false); // Track purchase status
+  // const [hasPurchased, setHasPurchased] = useState(false); // Track purchase status
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
@@ -21,50 +22,50 @@ const HeroSection = () => {
     fetchLatestBlogs();
   }, []);
 
-  const handlePayment = async () => {
-    try {
-      // TODO: Integrate with real payment gateway
-      // Example integration placeholder:
-      /*
-      const paymentGateway = new PaymentGateway({
-        apiKey: process.env.PAYMENT_GATEWAY_API_KEY,
-        merchantId: process.env.MERCHANT_ID
-      });
+  // const handlePayment = async () => {
+  //   try {
+  //     // TODO: Integrate with real payment gateway
+  //     // Example integration placeholder:
+  //     /*
+  //     const paymentGateway = new PaymentGateway({
+  //       apiKey: process.env.PAYMENT_GATEWAY_API_KEY,
+  //       merchantId: process.env.MERCHANT_ID
+  //     });
       
-      const payment = await paymentGateway.createPayment({
-        amount: 10000,
-        currency: 'UGX',
-        description: 'Ishaazi Magazine Purchase'
-      });
+  //     const payment = await paymentGateway.createPayment({
+  //       amount: 10000,
+  //       currency: 'UGX',
+  //       description: 'Ishaazi Magazine Purchase'
+  //     });
       
-      if (payment.status === 'success') {
-        setHasPurchased(true);
-        // Store purchase record in database
-      }
-      */
+  //     if (payment.status === 'success') {
+  //       setHasPurchased(true);
+  //       // Store purchase record in database
+  //     }
+  //     */
 
-      // For demonstration, we'll just set hasPurchased to true
-      alert('This is a dummy payment implementation. Replace with actual payment gateway integration.');
-      setHasPurchased(true);
-    } catch (error) {
-      console.error('Payment failed:', error);
-      alert('Payment failed. Please try again.');
-    }
-  };
+  //     // For demonstration, we'll just set hasPurchased to true
+  //     alert('This is a dummy payment implementation. Replace with actual payment gateway integration.');
+  //     setHasPurchased(true);
+  //   } catch (error) {
+  //     console.error('Payment failed:', error);
+  //     alert('Payment failed. Please try again.');
+  //   }
+  // };
 
-  const handleDownload = () => {
-    // TODO: Implement secure download logic after payment verification
-    if (hasPurchased) {
-      // Example secure download implementation:
-      /*
-      const downloadUrl = await generateSecureDownloadUrl(magazineId);
-      window.location.href = downloadUrl;
-      */
-      alert('Download started! (Demo implementation)');
-    } else {
-      alert('Please purchase the magazine first to download.');
-    }
-  };
+  // const handleDownload = () => {
+  //   // TODO: Implement secure download logic after payment verification
+  //   if (hasPurchased) {
+  //     // Example secure download implementation:
+  //     /*
+  //     const downloadUrl = await generateSecureDownloadUrl(magazineId);
+  //     window.location.href = downloadUrl;
+  //     */
+  //     alert('Download started! (Demo implementation)');
+  //   } else {
+  //     alert('Please purchase the magazine first to download.');
+  //   }
+  // };
 
   const truncateContent = (content, maxLength = 100) => {
     if (!content) return '';
@@ -88,7 +89,7 @@ const HeroSection = () => {
         </div>
       </div>
 
-      <div className="hero-magazine">
+      {/* <div className="hero-magazine">
         <div className="magazine-card">
           <img src="/images/ishaazicover.png" alt="Magazine Cover" />
           <div className="card-content">
@@ -102,7 +103,7 @@ const HeroSection = () => {
             )}
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Rest of the component remains the same */}
       <div className="latest-blogs-section">
@@ -118,29 +119,11 @@ const HeroSection = () => {
           ))}
         </div>
       </div>
+   
+</section>   
 
-      <div className="services-section">
-        <h2>Our Services</h2>
-        <div className="service-cards">
-          <div className="service-card">
-            <img src="/images/service1.jpg" alt="Service 1" />
-            <h3>Media coverage for agriculture events</h3>
-            <p>At Ishaazi Livestock Services, we offer comprehensive media coverage for agriculture events across East Africa.</p>
-          </div>
-          <div className="service-card">
-            <img src="/images/service2.jpg" alt="Service 2" />
-            <h3>Farmer and Farmer Group Trainings</h3>
-            <p>Empowering farmers is at the heart of our mission. We offer a variety of training programs designed to equip farmers with the skills and knowledge they need to succeed.</p>
-          </div>
-          <div className="service-card">
-            <img src="/images/consultancy.png" alt="Service 3" />
-            <h3>Consultancy</h3>
-            <p>Our team of experienced consultants provides tailored solutions to meet the unique needs of our clients. We offer a range of consultancy services, including farm management, production optimization, animal health, market analysis, and strategic planning.</p>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 };
+
 
 export default HeroSection;

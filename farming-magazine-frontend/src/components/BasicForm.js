@@ -4,7 +4,6 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
-import '../css/BasicForm.css';
 
 const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const [title, setTitle] = useState('');
@@ -21,7 +20,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     if (editingBasic) {
       setTitle(editingBasic.title);
       setFileType(editingBasic.fileType);
-      setMetadata(JSON.stringify(editingBasic.metadata));
+      setMetadata(editingBasic.metadata ? JSON.stringify(editingBasic.metadata) : '{}');
       setImagePreview(editingBasic.imageUrl);
       if (quillEditor) {
         quillEditor.root.innerHTML = editingBasic.description;
@@ -49,7 +48,6 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
 
   useEffect(() => {
     initializeQuill();
-
     return () => {
       if (quillEditor) {
         quillEditor.off('text-change');
@@ -62,9 +60,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     setImage(file);
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     } else {
       setImagePreview(null);
@@ -93,13 +89,11 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     e.preventDefault();
     const description = quillEditor ? quillEditor.root.innerHTML : '';
 
-    // Validate required fields
     if (!title.trim() || !fileType || !description.trim()) {
       setError('Title, file type, and description are required.');
       return;
     }
 
-    // Validate metadata JSON
     try {
       JSON.parse(metadata);
     } catch (err) {
@@ -123,7 +117,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     try {
       setError('');
       if (editingBasic) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_BASIC(editingBasic._id)}`, formData, {
+        await axios.put(API_ENDPOINTS.UPDATE_BASIC(editingBasic._id), formData, {
           headers: {
             ...getAuthHeader(),
             'Content-Type': 'multipart/form-data',
@@ -148,20 +142,24 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="basic-form">
-      <h3>{editingBasic ? 'Edit Basic Component' : 'Create Basic Component'}</h3>
-      {error && <div className="error-message">{error}</div>}
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
+      <h3 className="text-xl font-semibold">
+        {editingBasic ? 'Edit Basic Component' : 'Create Basic Component'}
+      </h3>
+      {error && <div className="text-red-500">{error}</div>}
       <input
         type="text"
         placeholder="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
       <select
         value={fileType}
         onChange={(e) => setFileType(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       >
         <option value="">Select File Type</option>
         <option value="video">Video</option>
@@ -171,15 +169,40 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
         placeholder="Metadata (JSON)"
         value={metadata}
         onChange={(e) => setMetadata(e.target.value)}
+        className="w-full p-2 border rounded"
       />
-      <input type="file" onChange={handleImageChange} accept="image/*" />
-      <input type="file" onChange={handleMediaChange} accept="video/*,audio/*" />
+      <div className="space-y-2">
+        <input
+          type="file"
+          onChange={handleImageChange}
+          accept="image/*"
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="file"
+          onChange={handleMediaChange}
+          accept="video/*,audio/*"
+          className="w-full p-2 border rounded"
+        />
+      </div>
       {imagePreview && (
-        <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px', marginTop: '10px' }} />
+        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
       )}
-      <div ref={quillRef} className="quill-editor" style={{ height: '300px', marginBottom: '1rem' }}></div>
-      <button type="submit">{editingBasic ? 'Update Component' : 'Create Component'}</button>
-      {editingBasic && <button type="button" onClick={resetForm}>Cancel Edit</button>}
+      <div ref={quillRef} className="h-72 border rounded" />
+      <div className="flex space-x-2">
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          {editingBasic ? 'Update Component' : 'Create Component'}
+        </button>
+        {editingBasic && (
+          <button
+            type="button"
+            onClick={resetForm}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Cancel Edit
+          </button>
+        )}
+      </div>
     </form>
   );
 };

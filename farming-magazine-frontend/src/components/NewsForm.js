@@ -4,7 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
-import '../css/NewsForm.css';
+
 const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   const [title, setTitle] = useState('');
   const [metadata, setMetadata] = useState('{}');
@@ -45,7 +45,6 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
 
   useEffect(() => {
     initializeQuill();
-
     return () => {
       if (quillEditor) {
         quillEditor.off('text-change');
@@ -58,9 +57,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     setImage(file);
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     } else {
       setImagePreview(null);
@@ -82,13 +79,11 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     e.preventDefault();
     const content = quillEditor ? quillEditor.root.innerHTML : '';
 
-    // Validate required fields
     if (!title.trim() || !content.trim()) {
       setError('Title and content are required.');
       return;
     }
 
-    // Validate metadata JSON
     try {
       JSON.parse(metadata);
     } catch (err) {
@@ -130,28 +125,47 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="news-form">
-      <h3>{editingNews ? 'Edit News' : 'Create News'}</h3>
-      {error && <div className="error-message">{error}</div>}
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
+      <h3 className="text-xl font-semibold">
+        {editingNews ? 'Edit News' : 'Create News'}
+      </h3>
+      {error && <div className="text-red-500">{error}</div>}
       <input
         type="text"
         placeholder="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
       <textarea
         placeholder="Metadata (JSON)"
         value={metadata}
         onChange={(e) => setMetadata(e.target.value)}
+        className="w-full p-2 border rounded"
       />
-      <input type="file" onChange={handleImageChange} />
+      <input type="file" onChange={handleImageChange} className="w-full" />
       {imagePreview && (
-        <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px', marginTop: '10px' }} />
+        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
       )}
-       <div ref={quillRef} className="quill-editor" style={{ height: '300px' }}></div>
-      <button type="submit">{editingNews ? 'Update News' : 'Create News'}</button>
-      {editingNews && <button type="button" onClick={resetForm}>Cancel Edit</button>}
+      <div ref={quillRef} className="h-72 border rounded" />
+      <div className="flex space-x-2">
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {editingNews ? 'Update News' : 'Create News'}
+        </button>
+        {editingNews && (
+          <button
+            type="button"
+            onClick={resetForm}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Cancel Edit
+          </button>
+        )}
+      </div>
     </form>
   );
 };

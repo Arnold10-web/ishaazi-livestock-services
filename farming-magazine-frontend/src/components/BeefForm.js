@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
-import '../css/BeefForm.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
@@ -46,7 +45,6 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
 
   useEffect(() => {
     initializeQuill();
-
     return () => {
       if (quillEditor) {
         quillEditor.off('text-change');
@@ -129,40 +127,52 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="beef-form">
-      <h3>{editingBeef ? 'Edit Beef Farming Content' : 'Create Beef Farming Content'}</h3>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
+      <h3 className="text-xl font-semibold">
+        {editingBeef ? 'Edit Beef Farming Content' : 'Create Beef Farming Content'}
+      </h3>
+      {error && <div className="text-red-500">{error}</div>}
       <input
         type="text"
         placeholder="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
+        className="w-full p-2 border rounded"
       />
       <textarea
         placeholder="Metadata (JSON)"
         value={metadata}
         onChange={(e) => setMetadata(e.target.value)}
+        className="w-full p-2 border rounded"
       />
-      <div className="file-input-wrapper">
+      <div className="flex items-center space-x-2">
         <input
           type="file"
           onChange={handleImageChange}
           accept="image/*"
           id="file-input"
-          style={{ display: 'none' }}
+          className="hidden"
         />
-        <label htmlFor="file-input" className="file-input-button">
+        <label htmlFor="file-input" className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded">
           Choose Image
         </label>
-        <span className="file-name">{image ? image.name : 'No file chosen'}</span>
+        <span className="text-gray-600">{image ? image.name : 'No file chosen'}</span>
       </div>
       {imagePreview && (
-        <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px', marginTop: '10px' }} />
+        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
       )}
-      <div ref={quillRef} className="beef-form-quill" style={{ height: '300px', marginBottom: '1rem' }}></div>
-      <button type="submit">{editingBeef ? 'Update Beef Farming Content' : 'Create Beef Farming Content'}</button>
-      {editingBeef && <button type="button" onClick={resetForm}>Cancel Edit</button>}
+      <div ref={quillRef} className="h-72 border rounded" />
+      <div className="flex space-x-2">
+        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+          {editingBeef ? 'Update Beef Farming Content' : 'Create Beef Farming Content'}
+        </button>
+        {editingBeef && (
+          <button type="button" onClick={resetForm} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            Cancel Edit
+          </button>
+        )}
+      </div>
     </form>
   );
 };

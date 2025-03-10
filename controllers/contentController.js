@@ -34,6 +34,7 @@ const parseMetadata = (metadata) => {
 const sendResponse = (res, success, message, data = null, error = null) => {
   res.status(success ? 200 : 500).json({ success, message, data, error });
 };
+
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
@@ -82,13 +83,31 @@ export const getBlogs = async (req, res) => {
 
   try {
     const query = admin ? {} : { published: true };
+
+    console.log("🔥 API HIT: Fetching blogs...");
+    console.log("🔍 Query:", query);
+
+    // Log the total number of blogs in the database
+    const totalBlogs = await Blog.countDocuments({});
+    console.log("Total blogs in database:", totalBlogs);
+
+    // Log the number of published blogs
+    const publishedBlogsCount = await Blog.countDocuments({ published: true });
+    console.log("Published blogs in database:", publishedBlogsCount);
+
     const blogs = await Blog.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
+
+    console.log("✅ Blogs found:", blogs.length);
+    if (blogs.length > 0) console.log("Sample blog:", blogs[0]);
+
     const total = await Blog.countDocuments(query);
+
     sendResponse(res, true, 'Blogs retrieved successfully', { blogs, total, page, limit });
   } catch (error) {
+    console.error("❌ Error fetching blogs:", error);
     sendResponse(res, false, 'Failed to retrieve blogs', null, error.message);
   }
 };
@@ -247,7 +266,6 @@ export const updateNews = async (req, res) => {
     let updateData = { title, content, metadata, published };
 
     if (req.file) {
-      // Construct the relative path
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -284,6 +302,7 @@ export const deleteNews = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete news' });
   }
 };
+
 // ----- BASIC CRUD OPERATIONS -----
 
 // Create a new Basic media
@@ -390,19 +409,26 @@ export const updateBasic = async (req, res) => {
     const { id } = req.params;
     const { title, description, fileType, metadata } = req.body;
 
-    // Extract uploaded files
+    // Extract uploaded files (if any)
     const files = req.files || {};
     const image = files.image?.[0];
     const media = files.media?.[0];
+
+    // Parse metadata inline
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
 
     const updateData = {
       title,
       description,
       fileType,
-      metadata: metadata ? JSON.parse(metadata) : undefined,
+      metadata: parsedMetadata,
     };
 
-    // Update file paths if new files are uploaded
     if (media) {
       updateData.fileUrl = `/uploads/media/${media.filename}`;
     }
@@ -420,6 +446,9 @@ export const updateBasic = async (req, res) => {
     sendResponse(res, false, 'Failed to update basic media', null, error.message);
   }
 };
+
+
+
 
 // Delete a Basic media
 export const deleteBasic = async (req, res) => {
@@ -601,6 +630,8 @@ export const updateFarm = async (req, res) => {
   }
 };
 
+
+
 // Delete a farm
 export const deleteFarm = async (req, res) => {
   try {
@@ -748,13 +779,20 @@ export const updateMagazine = async (req, res) => {
     const { title, description, issue, price, discount, metadata, published } = req.body;
     const files = req.files || {};
 
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
     const updateData = {
       title,
       description,
       issue,
       price,
       discount,
-      metadata,
+      metadata: parsedMetadata,
       published,
     };
 
@@ -776,6 +814,7 @@ export const updateMagazine = async (req, res) => {
     sendResponse(res, false, 'Failed to update magazine', null, error.message);
   }
 };
+
 
 // Delete a magazine
 export const deleteMagazine = async (req, res) => {
@@ -896,10 +935,19 @@ export const updatePiggery = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+
+    // Parse metadata from JSON string to object inline
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
-      // Construct the relative path
+      // Construct the relative path for the image
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -909,6 +957,8 @@ export const updatePiggery = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+
 
 export const deletePiggery = async (req, res) => {
   try {
@@ -1025,7 +1075,15 @@ export const updateGoat = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid metadata format' });
+    }
+
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
@@ -1037,6 +1095,8 @@ export const updateGoat = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+
 
 export const deleteGoat = async (req, res) => {
   try {
@@ -1150,10 +1210,12 @@ export const updateDairy = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    // Parse metadata to ensure it's stored as an object:
+    const parsedMetadata = parseMetadata(metadata);
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
-      // Construct the relative path
+      // Construct the relative path for the updated image
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
@@ -1163,6 +1225,7 @@ export const updateDairy = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 export const deleteDairy = async (req, res) => {
   try {
@@ -1272,12 +1335,13 @@ export const getAdminBeefs = async (req, res) => {
     sendResponse(res, false, 'Failed to retrieve admin beefs', null, error.message);
   }
 };
-
 export const updateBeef = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    // Parse the metadata string into an object
+    const parsedMetadata = parseMetadata(metadata);
+    let updateData = { title, content, metadata: parsedMetadata, published };
 
     if (req.file) {
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;
@@ -1292,6 +1356,7 @@ export const updateBeef = async (req, res) => {
     sendResponse(res, false, 'Failed to update beef content', null, error.message);
   }
 };
+
 
 export const deleteBeef = async (req, res) => {
   try {
@@ -1433,4 +1498,3 @@ export const sendNewsletter = async (req, res) => {
     res.status(500).json({ message: 'Error sending newsletter' });
   }
 };
-

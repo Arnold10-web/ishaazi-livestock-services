@@ -1,16 +1,16 @@
 // src/pages/Home.js
 import React from 'react';
-import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
 import Footer from '../components/Footer';
-
+import ServicesSection from '../components/ServicesSection';
+import '../css/style.css';
 const Home = () => (
 
     <div className="main-content">
-    <Header showAd={true} />
+ 
       <HeroSection />
      
-     
+      <ServicesSection />   
       <Footer />
     </div>
    
