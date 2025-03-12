@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import PiggeryList from '../components/PiggeryList';
-import Footer from '../components/Footer';
+
 
 
 const PiggeryPage = () => {
@@ -48,7 +48,7 @@ const PiggeryPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading piggery information...</p>
         </div>
-        <Footer />
+   
       </div>
     );
   }
@@ -87,7 +87,7 @@ const PiggeryPage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+      
       </div>
     );
   }
@@ -116,7 +116,7 @@ const PiggeryPage = () => {
         {/* Render the PiggeryList component with fetched data */}
         <PiggeryList piggeries={piggeries} apiBaseUrl={API_BASE_URL} />
       </main>
-      <Footer />
+   
     </motion.div>
   );
 };

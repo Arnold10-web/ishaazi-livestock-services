@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import BeefList from '../components/BeefList';
 
-import Footer from '../components/Footer';
+
 
 
 const BeefPage = () => {
@@ -48,7 +48,7 @@ const BeefPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading beef information...</p>
         </div>
-        <Footer />
+   
       </div>
     );
   }
@@ -87,7 +87,7 @@ const BeefPage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+     
       </div>
     );
   }
@@ -116,7 +116,7 @@ const BeefPage = () => {
         {/* Render the BeefList component */}
         <BeefList beefs={beefs} apiBaseUrl={API_BASE_URL} />
       </main>
-      <Footer />
+      
     </motion.div>
   );
 };

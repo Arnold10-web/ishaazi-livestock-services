@@ -9,12 +9,12 @@ const FarmPost = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
   
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ishaazi-livestock-services-production.up.railway.app';
   
   useEffect(() => {
     const fetchFarm = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/content/farm/${id}`);
+        const response = await axios.get(`${API_BASE_URL}/api/content/farms/${id}`);
         setFarm(response.data.data);
         setLoading(false);
       } catch (err) {

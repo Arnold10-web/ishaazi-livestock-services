@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import MagazineList from '../components/MagazineList';
-import Footer from '../components/Footer';
+
 
 
 const MagazinePage = () => {
@@ -117,7 +117,7 @@ const MagazinePage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading magazines...</p>
         </div>
-        <Footer />
+    
       </div>
     );
   }
@@ -156,7 +156,7 @@ const MagazinePage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+    
       </div>
     );
   }
@@ -192,7 +192,7 @@ const MagazinePage = () => {
           processingPurchase={processingPurchase}
         />
       </main>
-      <Footer />
+   
     </motion.div>
   );
 };

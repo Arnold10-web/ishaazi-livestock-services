@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Loader2, AlertCircle } from 'lucide-react';
-import Footer from '../components/Footer';
 import BasicList from '../components/BasicList';
 
 const BasicPage = () => {
@@ -13,94 +12,142 @@ const BasicPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [retryCount, setRetryCount] = useState(0);
+  const [hasData, setHasData] = useState(false);
+  
+  // Use refs to prevent unnecessary re-renders
+  const isMountedRef = useRef(true);
+  const isLoadingRef = useRef(false);
+  const requestTimeoutRef = useRef(null);
+  const lastFetchTimeRef = useRef(0);
+  
+  // Throttle constants
+  const THROTTLE_MS = 2000; // Minimum time between fetches
 
   // Ensure the API_BASE_URL is consistent throughout the app
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  // Create a stable axios instance with increased timeout
-  const axiosInstance = axios.create({
+  // Create a stable axios instance
+  const axiosInstance = useRef(axios.create({
     baseURL: API_BASE_URL,
-    timeout: 30000, // Increased from 15000 to 30000
+    timeout: 30000,
     headers: {
       'Accept': 'application/json',
       'Cache-Control': 'no-cache'
     }
-  });
+  })).current;
 
-  // Fetch basics with pagination using useCallback for memoization
-  const fetchBasics = useCallback(async () => {
-    try {
-      // Only show loading indicator on initial load or page change, not on retries
-      if (basics.length === 0 || retryCount === 0) {
-        setLoading(true);
-      }
-      
-      const response = await axiosInstance.get(`/api/content/basics?page=${page}&limit=5`);
-      
-      if (response.data && response.data.data) {
-        const { basics = [], totalPages = 1 } = response.data.data;
-        
-        // Process media items to ensure they're properly formatted
-        const processedBasics = basics.map(item => ({
-          ...item,
-          comments: Array.isArray(item.comments) ? item.comments : [],
-          // Don't add timestamp to prevent unnecessary reloads
-          imageUrl: item.imageUrl || null,
-          fileUrl: item.fileUrl || null,
-          // Ensure we have proper file type information
-          fileType: item.fileType || (
-            item.fileUrl?.toLowerCase().endsWith('.mp4') || 
-            item.fileUrl?.toLowerCase().endsWith('.webm') || 
-            item.fileUrl?.toLowerCase().endsWith('.mov') ? 'video' :
-            item.fileUrl?.toLowerCase().endsWith('.mp3') || 
-            item.fileUrl?.toLowerCase().endsWith('.wav') ? 'audio' : null
-          )
-        }));
-        
-        setBasics(processedBasics);
-        setTotalPages(totalPages);
-        setError(null);
-        setRetryCount(0);
-      } else {
-        throw new Error('Invalid response format from server');
-      }
-    } catch (err) {
-      console.error('Error fetching basics:', err);
-      // Keep existing data if we have it
-      if (basics.length === 0) {
-        setError(err.message === 'timeout of 30000ms exceeded' 
-          ? 'The server is taking too long to respond. Please try again later.' 
-          : 'Failed to fetch content. Please try again later.');
-      } else {
-        // Show toast or non-intrusive error if we already have data
-        console.warn('Error refreshing data, but using cached data');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [API_BASE_URL, page, axiosInstance, basics.length, retryCount]);
-
-  useEffect(() => {
-    const controller = new AbortController();
+  // Throttled fetch function
+  const throttledFetch = useCallback((fn) => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
     
-    const fetchData = async () => {
-      try {
-        await fetchBasics();
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted');
-        } else {
-          console.error('Fetch error:', error);
+    // Clear any pending timeouts
+    if (requestTimeoutRef.current) {
+      clearTimeout(requestTimeoutRef.current);
+    }
+    
+    // If we've fetched recently, wait before fetching again
+    if (timeSinceLastFetch < THROTTLE_MS) {
+      requestTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          lastFetchTimeRef.current = Date.now();
+          fn();
         }
+      }, THROTTLE_MS - timeSinceLastFetch);
+      return;
+    }
+    
+    // Otherwise fetch immediately
+    lastFetchTimeRef.current = now;
+    fn();
+  }, []);
+
+  // Fetch basics with pagination
+  const fetchBasics = useCallback(() => {
+    // Prevent multiple simultaneous requests
+    if (isLoadingRef.current) return;
+    
+    // Fetch function that will be throttled
+    const doFetch = async () => {
+      if (!isMountedRef.current) return;
+      
+      isLoadingRef.current = true;
+      
+      try {
+        // Only show loading state on initial load
+        if (!hasData) {
+          setLoading(true);
+        }
+        
+        const response = await axiosInstance.get(`/api/content/basics?page=${page}&limit=5`);
+        
+        if (!isMountedRef.current) return;
+        
+        if (response.data && response.data.data) {
+          const { basics = [], totalPages = 1 } = response.data.data;
+          
+          // Process media items
+          const processedBasics = basics.map(item => ({
+            ...item,
+            comments: Array.isArray(item.comments) ? item.comments : [],
+            imageUrl: item.imageUrl || null,
+            fileUrl: item.fileUrl || null,
+            fileType: item.fileType || (
+              item.fileUrl?.toLowerCase().endsWith('.mp4') || 
+              item.fileUrl?.toLowerCase().endsWith('.webm') || 
+              item.fileUrl?.toLowerCase().endsWith('.mov') ? 'video' :
+              item.fileUrl?.toLowerCase().endsWith('.mp3') || 
+              item.fileUrl?.toLowerCase().endsWith('.wav') ? 'audio' : null
+            )
+          }));
+          
+          if (isMountedRef.current) {
+            setBasics(processedBasics);
+            setTotalPages(totalPages);
+            setError(null);
+            setRetryCount(0);
+            setHasData(true);
+          }
+        } else {
+          throw new Error('Invalid response format from server');
+        }
+      } catch (err) {
+        if (!isMountedRef.current) return;
+        
+        console.error('Error fetching basics:', err);
+        
+        if (!hasData) {
+          setError(err.message === 'timeout of 30000ms exceeded' 
+            ? 'The server is taking too long to respond. Please try again later.' 
+            : 'Failed to fetch content. Please try again later.');
+        } else {
+          console.warn('Error refreshing data, but using cached data');
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        isLoadingRef.current = false;
       }
     };
     
-    fetchData();
+    // Throttle the fetch
+    throttledFetch(doFetch);
+  }, [API_BASE_URL, page, axiosInstance, hasData, throttledFetch]);
+
+  // Effect for initial fetch and cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    fetchBasics();
     
     return () => {
-      controller.abort();
+      isMountedRef.current = false;
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+      }
     };
-  }, [fetchBasics, page]);
+  }, [fetchBasics]);
 
   // Handle adding a comment with optimistic updates
   const handleAddComment = async (basicId, content) => {
@@ -131,27 +178,29 @@ const BasicPage = () => {
 
   // Handle retry with exponential backoff
   const handleRetry = () => {
+    if (isLoadingRef.current) return;
+    
     setRetryCount(prev => prev + 1);
     fetchBasics();
   };
 
   // Pagination handlers with smooth scroll
   const goToNextPage = useCallback(() => {
-    if (page < totalPages) {
+    if (page < totalPages && !isLoadingRef.current) {
       setPage(prevPage => prevPage + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [page, totalPages]);
 
   const goToPrevPage = useCallback(() => {
-    if (page > 1) {
+    if (page > 1 && !isLoadingRef.current) {
       setPage(prevPage => prevPage - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [page]);
 
   // Render the loading state with an animated spinner
-  if (loading && basics.length === 0) {
+  if (loading && !hasData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -166,13 +215,13 @@ const BasicPage = () => {
             <p className="mt-2 text-gray-500">Retrying... (Attempt {retryCount})</p>
           )}
         </div>
-        <Footer />
+  
       </div>
     );
   }
 
   // Render the error state with an animated error container and a retry button
-  if (error && basics.length === 0) {
+  if (error && !hasData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
@@ -187,12 +236,13 @@ const BasicPage = () => {
             <button
               onClick={handleRetry}
               className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+              disabled={isLoadingRef.current}
             >
               Try Again
             </button>
           </motion.div>
-        </div>
-        <Footer />
+     </div>
+        
       </div>
     );
   }
@@ -228,7 +278,7 @@ const BasicPage = () => {
         />
 
         {/* Show loading indicator for subsequent page loads */}
-        {loading && basics.length > 0 && (
+        {loading && hasData && (
           <div className="flex justify-center my-4">
             <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
             <span className="ml-2 text-gray-600">Refreshing...</span>
@@ -236,7 +286,7 @@ const BasicPage = () => {
         )}
 
         {/* Error message if we failed to refresh but have data */}
-        {error && basics.length > 0 && (
+        {error && hasData && (
           <div className="bg-amber-50 border border-amber-200 rounded-md p-3 flex items-center justify-between my-4">
             <div className="flex items-center">
               <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
@@ -245,6 +295,7 @@ const BasicPage = () => {
             <button 
               onClick={handleRetry}
               className="text-amber-600 hover:text-amber-800 text-sm font-medium"
+              disabled={isLoadingRef.current}
             >
               Retry
             </button>
@@ -274,7 +325,7 @@ const BasicPage = () => {
           </div>
         )}
       </main>
-      <Footer />
+   
     </motion.div>
   );
 };

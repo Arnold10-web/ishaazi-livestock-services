@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Search, Calendar, Filter } from 'lucide-react';
 import NewsList from '../components/NewsList';
-import Footer from '../components/Footer';
+
 
 const NewsPage = () => {
   const [news, setNews] = useState([]);
@@ -80,7 +80,7 @@ const NewsPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading latest news...</p>
         </div>
-        <Footer />
+    
       </div>
     );
   }
@@ -119,7 +119,7 @@ const NewsPage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+    
       </div>
     );
   }
@@ -220,7 +220,7 @@ const NewsPage = () => {
         )}
       </main>
 
-      <Footer />
+   
     </motion.div>
   );
 };

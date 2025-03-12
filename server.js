@@ -8,10 +8,12 @@ import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import upload from './middleware/fileUpload.js';
 
+// Near the top of your server.js
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 // Log Node.js version
 console.log('Node version:', process.version);
 
-// Create __dirname for ES6 modules
+// Create __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,36 +23,24 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// CORS Configuration
-const whitelist = [
-  'https://ishaazilivestockservices.com',
-  'https://www.ishaazilivestockservices.com',
-  'https://ishaazi-livestock-services-production.up.railway.app',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-];
+// CORS Configuration - Dynamic based on environment
+const corsOrigin = process.env.NODE_ENV === 'production' 
+  ? process.env.FRONTEND_URL 
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    console.log("Request origin:", origin); // For debugging
-    if (!origin || whitelist.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log("Blocked origin:", origin); // For debugging
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'cache-control', 'Accept', 'Origin', 'if-none-match', 'Range'],
-  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'], // Expose headers for video streaming
+  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'], // For video streaming
 }));
 
 app.options('*', cors());
 
 // Apply security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP to avoid blocking resources
+  contentSecurityPolicy: false, // Disable CSP to avoid blocking resources in development
   crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin resource sharing
 }));
 
@@ -92,11 +82,6 @@ app.get('/uploads/media/:filename', (req, res) => {
     // Get file size
     const fileSize = stats.size;
     const range = req.headers.range;
-    
-    // Set CORS headers for video streaming
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://ishaazilivestockservices.com');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     
     // Get file extension for content type
     const ext = path.extname(videoPath).toLowerCase();
@@ -184,13 +169,17 @@ app.use(
   })
 );
 
-// Request logger
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
-  if (req.method !== 'GET') console.log('Body:', req.body);
-  next();
-});
+// Request logger (only in development)
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    if (req.file) {
+      console.log('Uploaded file details:', req.file);
+    }
+    if (req.method !== 'GET') console.log('Body:', req.body);
+    next();
+  });
+}
 
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
@@ -242,9 +231,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Port configuration for cPanel
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => {
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
   console.log(`Server running on http://127.0.0.1:${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
 });

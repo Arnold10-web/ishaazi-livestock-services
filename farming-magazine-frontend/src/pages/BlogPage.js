@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Search, Filter, ArrowUpDown } from 'lucide-react';
 import BlogList from '../components/BlogList';
-import Footer from '../components/Footer';
+
 
 const BlogPage = () => {
   const [blogs, setBlogs] = useState([]);
@@ -66,7 +66,7 @@ const BlogPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading amazing content...</p>
         </div>
-        <Footer />
+     
       </div>
     );
   }
@@ -105,7 +105,7 @@ const BlogPage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+       
       </div>
     );
   }
@@ -187,7 +187,7 @@ const BlogPage = () => {
         )}
       </main>
 
-      <Footer />
+    
     </motion.div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
 import Home from './pages/Home';
 import NewsPage from './pages/NewsPage';
 import NewsPost from './pages/NewsPost';
@@ -12,9 +12,9 @@ import BlogPost from './pages/BlogPost';
 import FarmPage from './pages/FarmPage';
 import FarmPost from './pages/FarmPost';
 import BasicPage from './pages/BasicPage';
-// import GoatPost from './pages/GoatPost';
 import MagazinePage from './pages/MagazinePage';
 import GoatPage from './pages/GoatPage';
+import GoatPost from './pages/GoatPost';
 import BeefPage from './pages/BeefPage';
 import BeefPost from './pages/BeefPost';
 import DairyPage from './pages/DairyPage';
@@ -22,18 +22,45 @@ import DairyPost from './pages/DairyPost';
 import PiggeryPage from './pages/PiggeryPage';
 import PiggeryPost from './pages/PiggeryPost';
 import NotFound from './pages/NotFound';
-import NewsletterPage from './pages/NewsletterPage'; // Import NewsletterPage
-import SubscriberPage from './pages/SubscriberPage'; // Import SubscriberPage
 import Contact from './pages/Contact';
 import Header from './components/Header';
+import Footer from './components/Footer';
+
+// Layout component with Header and Footer
+const MainLayout = () => (
+  <>
+    <Header />
+    <main className="relative flex-grow">
+      <Outlet />
+    </main>
+    <Footer />
+  </>
+);
+
+// Layout for admin pages (no header/footer)
+const AdminLayout = () => (
+  <main className="min-h-screen">
+    <Outlet />
+  </main>
+);
 
 const App = () => (
   <Router>
-   <div className="min-h-screen">
-      <Header />
-      <main className="relative">
-        <Routes>
-          {/* Public Routes */}
+    <div className="min-h-screen flex flex-col">
+      <Routes>
+        {/* Admin Routes without Header/Footer */}
+        <Route element={<AdminLayout />}>
+          <Route path="/login" element={<AdminAuth type="login" />} />
+          <Route path="/register" element={<AdminAuth type="register" />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+       </Route>
+
+        {/* Public Routes with Header/Footer */}
+        <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/news" element={<NewsPage />} />
           <Route path="/news/:id" element={<NewsPost />} />
@@ -45,7 +72,7 @@ const App = () => (
           <Route path="/farm" element={<FarmPage />} />
           <Route path="/farm/:id" element={<FarmPost />} />
           <Route path="/goats" element={<GoatPage />} />
-          {/* <Route path="/goat/:id" element={<GoatPost />} /> */}
+          <Route path="/goat/:id" element={<GoatPost />} />
           <Route path="/beef" element={<BeefPage />} />
           <Route path="/beef/:id" element={<BeefPost />} />
           <Route path="/dairy" element={<DairyPage />} />
@@ -53,39 +80,9 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/piggery" element={<PiggeryPage />} />
           <Route path="/piggery/:id" element={<PiggeryPost />} />
-          <Route path="/login" element={<AdminAuth type="login" />} />
-          <Route path="/register" element={<AdminAuth type="register" />} />
-
-          {/* Protected Admin Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/newsletters"
-            element={
-              <ProtectedRoute>
-                <NewsletterPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/subscribers"
-            element={
-              <ProtectedRoute>
-                <SubscriberPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Catch-All Route */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
+        </Route>
+      </Routes>
     </div>
   </Router>
 );
