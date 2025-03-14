@@ -1,5 +1,5 @@
 import React from 'react';
-import '../css/SubscriberList.css';
+
 
 const SubscriberList = ({ subscribers, onDelete }) => {
   return (

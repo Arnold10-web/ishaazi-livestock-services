@@ -1,5 +1,5 @@
 import React from 'react';
-import '../css/NewsletterList.css';
+
 
 const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, onSend }) => {
   const truncateContent = (content, maxLength = 150) => {

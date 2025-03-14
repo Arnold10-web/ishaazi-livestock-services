@@ -125,48 +125,84 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
-      <h3 className="text-xl font-semibold">
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg space-y-6 transition-all duration-300 ease-in-out">
+      <h3 className="text-2xl font-bold text-gray-800 mb-6">
         {editingDairy ? 'Edit Dairy Farming Content' : 'Create Dairy Farming Content'}
       </h3>
-      {error && <div className="text-red-500">{error}</div>}
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
-        className="w-full p-2 border rounded"
-      />
-      <textarea
-        placeholder="Metadata (JSON)"
-        value={metadata}
-        onChange={(e) => setMetadata(e.target.value)}
-        className="w-full p-2 border rounded"
-      />
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          onChange={handleImageChange}
-          accept="image/*"
-          id="file-input"
-          className="hidden"
-        />
-        <label htmlFor="file-input" className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded">
-          Choose Image
-        </label>
-        <span className="text-gray-600">{image ? image.name : 'No file chosen'}</span>
-      </div>
-      {imagePreview && (
-        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
+      
+      {error && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+          <p>{error}</p>
+        </div>
       )}
-      <div ref={quillRef} className="h-72 border rounded" />
-      <div className="flex space-x-2">
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+      
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input
+            id="title"
+            type="text"
+            placeholder="Enter title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="metadata" className="block text-sm font-medium text-gray-700 mb-1">Metadata (JSON)</label>
+          <textarea
+            id="metadata"
+            placeholder="Enter metadata in JSON format"
+            value={metadata}
+            onChange={(e) => setMetadata(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out h-24"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="file-input" className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              onChange={handleImageChange}
+              accept="image/*"
+              id="file-input"
+              className="hidden"
+            />
+            <label
+              htmlFor="file-input"
+              className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-150 ease-in-out"
+            >
+              Choose Image
+            </label>
+            <span className="text-gray-600 text-sm">{image ? image.name : 'No file chosen'}</span>
+          </div>
+          {imagePreview && (
+            <img src={imagePreview} alt="Preview" className="mt-4 max-w-xs rounded-md shadow-md" />
+          )}
+        </div>
+        
+        <div>
+          <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+          <div ref={quillRef} id="content" className="h-72 border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500" />
+        </div>
+      </div>
+      
+      <div className="flex space-x-4 pt-4">
+        <button
+          type="submit"
+          className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out"
+        >
           {editingDairy ? 'Update Dairy Farming Content' : 'Create Dairy Farming Content'}
         </button>
         {editingDairy && (
-          <button type="button" onClick={resetForm} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+          <button
+            type="button"
+            onClick={resetForm}
+            className="bg-gray-500 text-white px-6 py-3 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150 ease-in-out"
+          >
             Cancel Edit
           </button>
         )}

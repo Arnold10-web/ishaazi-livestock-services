@@ -17,3 +17,4 @@ frontend/build/
 
 # Ignore .DS_Store (macOS users)
 .DS_Store
+.qodo

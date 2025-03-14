@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import SubscriberList from '../components/SubscriberList';
-import '../css/SubscriberPage.css';
+
 
 const SubscriberPage = () => {
   const [subscribers, setSubscribers] = useState([]);

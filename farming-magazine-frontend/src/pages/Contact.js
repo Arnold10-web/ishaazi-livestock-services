@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import '../css/Contact.css'
+
 const Contact = () => {
   const [formState, setFormState] = useState({
     name: '',

@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import '../css/style.css';
-
 
 const HeroSection = () => {
   const [latestBlogs, setLatestBlogs] = useState([]);
-  // const [hasPurchased, setHasPurchased] = useState(false); // Track purchase status
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
@@ -22,51 +19,6 @@ const HeroSection = () => {
     fetchLatestBlogs();
   }, []);
 
-  // const handlePayment = async () => {
-  //   try {
-  //     // TODO: Integrate with real payment gateway
-  //     // Example integration placeholder:
-  //     /*
-  //     const paymentGateway = new PaymentGateway({
-  //       apiKey: process.env.PAYMENT_GATEWAY_API_KEY,
-  //       merchantId: process.env.MERCHANT_ID
-  //     });
-      
-  //     const payment = await paymentGateway.createPayment({
-  //       amount: 10000,
-  //       currency: 'UGX',
-  //       description: 'Ishaazi Magazine Purchase'
-  //     });
-      
-  //     if (payment.status === 'success') {
-  //       setHasPurchased(true);
-  //       // Store purchase record in database
-  //     }
-  //     */
-
-  //     // For demonstration, we'll just set hasPurchased to true
-  //     alert('This is a dummy payment implementation. Replace with actual payment gateway integration.');
-  //     setHasPurchased(true);
-  //   } catch (error) {
-  //     console.error('Payment failed:', error);
-  //     alert('Payment failed. Please try again.');
-  //   }
-  // };
-
-  // const handleDownload = () => {
-  //   // TODO: Implement secure download logic after payment verification
-  //   if (hasPurchased) {
-  //     // Example secure download implementation:
-  //     /*
-  //     const downloadUrl = await generateSecureDownloadUrl(magazineId);
-  //     window.location.href = downloadUrl;
-  //     */
-  //     alert('Download started! (Demo implementation)');
-  //   } else {
-  //     alert('Please purchase the magazine first to download.');
-  //   }
-  // };
-
   const truncateContent = (content, maxLength = 100) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
@@ -76,54 +28,73 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="hero-section">
-      <div className="hero-content">
-        <h1>Ishaazi Magazine, Empowering Farmers</h1>
-        <p>
-          Welcome to Ishaazi Magazine, your go-to source for the latest news, trends,<br/>
+    <section className="bg-gradient-to-br from-gray-50 to-white py-16 px-4">
+      {/* Hero content */}
+      <div className="max-w-6xl mx-auto text-center mb-16 animate-fade-in-up">
+        <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-green-700 mb-6">
+          Ishaazi Livestock Services, Empowering Farmers
+        </h1>
+        <p className="text-gray-600 text-lg md:text-xl max-w-3xl mx-auto mb-10">
+          Welcome to Ishaazi Livestock Services, your go-to source for the latest news, trends,
           cutting-edge developments, expert insights, and in-depth analysis about the livestock industry.
         </p>
-        <div className="hero-buttons">
-          <a href="/services" className="btn-primary">Explore Services</a>
-          <a href="/magazine" className="btn-secondary">Read Our Magazine</a>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link 
+            to="/services" 
+            className="px-8 py-3 bg-amber-500 text-white font-medium rounded-full hover:bg-amber-600 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            Explore Services
+          </Link>
+          <Link 
+            to="/magazine" 
+            className="px-8 py-3 bg-transparent text-green-700 font-medium border-2 border-green-700 rounded-full hover:bg-green-700 hover:text-white transform hover:-translate-y-1 transition-all duration-300"
+          >
+            Read Our Magazine
+          </Link>
         </div>
       </div>
 
-      {/* <div className="hero-magazine">
-        <div className="magazine-card">
-          <img src="/images/ishaazicover.png" alt="Magazine Cover" />
-          <div className="card-content">
-            <h2>Farmer's Magazine</h2>
-            <p>Get the latest edition now!</p>
-            <p className="price">shs10,000 /copy</p>
-            {!hasPurchased ? (
-              <button onClick={handlePayment} className="btn btn-dark">Pay Now</button>
-            ) : (
-              <button onClick={handleDownload} className="btn btn-success">Download Magazine</button>
-            )}
-          </div>
+      {/* Latest Blogs Section */}
+      <div className="max-w-6xl mx-auto mt-16 animate-fade-in">
+        <div className="flex justify-center mb-10">
+          <Link to="/blog" className="text-2xl font-serif font-bold text-green-700 hover:text-green-800 transition-colors duration-300 relative group">
+            Our Blogs
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 group-hover:w-full transition-all duration-300"></span>
+          </Link>
         </div>
-      </div> */}
-
-      {/* Rest of the component remains the same */}
-      <div className="latest-blogs-section">
-        <h2><Link to="/blog" className="btn-primary">Our Blogs</Link></h2>
-        <div className="blog-cards">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {latestBlogs.map((blog) => (
-            <div key={blog._id} className="blog-card">
-              <img src={`${API_BASE_URL}${blog.imageUrl}`} alt={blog.title} />
-              <h3>{blog.title}</h3>
-              <p>{truncateContent(blog.content)}</p>
-              <Link to={`/blog/${blog._id}`} className="read-more">Read More</Link>
+            <div 
+              key={blog._id} 
+              className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+            >
+              <div className="overflow-hidden">
+                <img 
+                  src={`${API_BASE_URL}${blog.imageUrl}`} 
+                  alt={blog.title} 
+                  className="w-full h-48 object-cover transition-transform duration-500 hover:scale-105"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-green-700 mb-3">{blog.title}</h3>
+                <p className="text-gray-600 mb-4">{truncateContent(blog.content)}</p>
+                <Link 
+                  to={`/blog/${blog._id}`} 
+                  className="text-amber-500 font-medium hover:text-amber-600 transition-colors duration-300 inline-flex items-center"
+                >
+                  Read More
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </Link>
+              </div>
             </div>
           ))}
         </div>
       </div>
-   
-</section>   
-
+    </section>
   );
 };
-
 
 export default HeroSection;
