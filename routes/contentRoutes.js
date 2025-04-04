@@ -66,8 +66,12 @@ import {
   updateNewsletter,
   deleteNewsletter,
   sendNewsletter,
-
- 
+  createEvent,
+  getEvents,
+  getEventById,
+  getAdminEvents,
+  updateEvent,
+  deleteEvent, 
 } from '../controllers/contentController.js';
 
 const router = express.Router();
@@ -206,6 +210,13 @@ router.put('/newsletters/:id', authMiddleware, updateNewsletter);
 router.delete('/newsletters/:id', authMiddleware, deleteNewsletter);
 router.post('/newsletters/:id/send', authMiddleware, sendNewsletter);
 
+// Event Routes
+router.post('/events', authMiddleware, upload.single('image'), createEvent);
+router.get('/events', getEvents);
+router.get('/events/admin', authMiddleware, getAdminEvents);
+router.get('/events/:id', getEventById);
+router.put('/events/:id', authMiddleware, upload.single('image'), updateEvent);
+router.delete('/events/:id', authMiddleware, deleteEvent);
 
 
 export default router;
