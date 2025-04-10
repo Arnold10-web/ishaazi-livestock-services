@@ -1,16 +1,11 @@
-// src/pages/FarmPage.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Loader2, Search } from 'lucide-react';
 import FarmList from '../components/FarmList';
 
-import Footer from '../components/Footer';
-
 
 const FarmPage = () => {
-  // State hooks for farms data, loading, error, and filters
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,9 +39,18 @@ const FarmPage = () => {
     fetchFarms();
   }, [API_BASE_URL]);
 
+  // Handle price filter input with comma-separated formatting
+  const handlePriceFilterChange = (e) => {
+    // Remove non-digit characters and allow commas
+    const value = e.target.value.replace(/[^0-9,]/g, '');
+    setPriceFilter(value);
+  };
+
   // Filter farms based on search term, price, and location
   const filteredFarms = farms.filter((farm) => {
-    const matchesPrice = !priceFilter || farm.price <= parseInt(priceFilter);
+    // Remove commas and convert to number for price comparison
+    const maxPrice = priceFilter ? Number(priceFilter.replace(/,/g, '')) : null;
+    const matchesPrice = !maxPrice || farm.price <= maxPrice;
     const matchesLocation = !locationFilter || farm.location.toLowerCase().includes(locationFilter.toLowerCase());
     const matchesSearch =
       !searchTerm ||
@@ -58,7 +62,6 @@ const FarmPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-   
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <motion.div
             animate={{ rotate: 360 }}
@@ -68,7 +71,7 @@ const FarmPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading farms...</p>
         </div>
-        <Footer />
+
       </div>
     );
   }
@@ -77,7 +80,6 @@ const FarmPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-      
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -107,7 +109,7 @@ const FarmPage = () => {
             </button>
           </motion.div>
         </div>
-        <Footer />
+     
       </div>
     );
   }
@@ -119,7 +121,6 @@ const FarmPage = () => {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-gray-50"
     >
-      
       <main className="container mx-auto px-4 py-8">
         {/* Page Heading */}
         <motion.div
@@ -150,10 +151,10 @@ const FarmPage = () => {
           {/* Price and Location Filters */}
           <div className="space-x-4">
             <input
-              type="number"
-              placeholder="Max Price"
+              type="text"
+              placeholder="Max Price (UGX)"
               value={priceFilter}
-              onChange={(e) => setPriceFilter(e.target.value)}
+              onChange={handlePriceFilterChange}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <input
@@ -169,7 +170,7 @@ const FarmPage = () => {
         {/* Render the filtered list of farms */}
         <FarmList farms={filteredFarms} apiBaseUrl={API_BASE_URL} />
       </main>
-      <Footer />
+  
     </motion.div>
   );
 };

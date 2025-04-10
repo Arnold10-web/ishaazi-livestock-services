@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+
 
 const Contact = () => {
   const [formState, setFormState] = useState({
@@ -17,7 +16,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
-     <Header showAd={true} />
+   
       <main className="container mx-auto px-4 py-12 max-w-4xl">
         <section className="space-y-8">
           {/* Animated Header Section */}
@@ -133,7 +132,7 @@ const Contact = () => {
           </form>
         </section>
       </main>
-      <Footer />
+ 
     </div>
   );
 };

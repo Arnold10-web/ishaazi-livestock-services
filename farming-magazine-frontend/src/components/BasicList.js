@@ -1,6 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Edit2, Trash2, Image, Video, Music } from 'lucide-react';
+import ReactPlayer from 'react-player';
+import { 
+  AlertCircle, Download, MessageSquare, Play, Pause, Volume2, VolumeX,
+  ChevronDown, ChevronUp, Edit2, Trash2, SkipBack, SkipForward
+} from 'lucide-react';
+
+const formatTime = (seconds) => {
+  if (isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
 
 const BasicList = ({
   basics = [],
@@ -13,373 +24,381 @@ const BasicList = ({
   isLoading
 }) => {
   const [newComment, setNewComment] = useState({});
-  const [mediaErrors, setMediaErrors] = useState({});
-  const [loadedMedia, setLoadedMedia] = useState({});
-  
-  // Track if component is mounted to prevent state updates after unmount
-  const isMounted = useRef(true);
-  
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
+  const [playingId, setPlayingId] = useState(null);
+  const audioRefs = useRef({});
+  const PLACEHOLDER_IMAGE = '/images/placeholder-media.png';
+
+  // Strip HTML tags helper
+  const stripHtmlTags = useCallback((html) => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
   }, []);
 
-  // Use local placeholders that are guaranteed to be in your public folder
-  const PLACEHOLDER_IMAGE = '/placeholder-media.jpg';
-
-  // Simple error handler for images
-  const handleImageError = (e) => {
-    e.target.src = PLACEHOLDER_IMAGE;
-  };
-
-  // Media URL helper function with proper error handling
-  const getMediaUrl = (url) => {
+  // Media URL handler
+  const getMediaUrl = useCallback((url) => {
     if (!url) return PLACEHOLDER_IMAGE;
-    
     try {
-      // If the URL already starts with http:// or https:// or // (protocol-relative URL), return it as is
-      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
-        return url;
-      }
-      
-      // Otherwise, prepend the API base URL
-      const baseUrl = apiBaseUrl || 'https://ishaazi-livestock-services-production.up.railway.app';
-      const baseUrlWithoutTrailingSlash = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      const urlWithLeadingSlash = url.startsWith('/') ? url : `/${url}`;
-      
-      return `${baseUrlWithoutTrailingSlash}${urlWithLeadingSlash}`;
-    } catch (error) {
-      console.error('Error processing media URL:', error);
+      return url.startsWith('http') ? url : `${apiBaseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    } catch {
       return PLACEHOLDER_IMAGE;
     }
-  };
+  }, [apiBaseUrl]);
 
-  // Mark media as loaded to prevent flickering
-  const handleMediaLoad = (id, mediaType = 'image') => {
-    if (isMounted.current) {
-      setLoadedMedia(prev => ({...prev, [id]: mediaType}));
-    }
-  };
-
-  // Mark media as errored without causing re-render loops
-  const handleMediaError = (e, id, mediaType = 'image') => {
-    e.preventDefault(); // Prevent default error behavior
-    console.error(`Media failed to load for item ${id}:`, e.target.src || e.target.currentSrc);
+  // Download handler
+  const handleDownload = useCallback((item) => {
+    const url = item.fileUrl || item.imageUrl;
+    const ext = item.fileType === 'video' ? 'mp4' : 
+               item.fileType === 'audio' ? 'mp3' : 'jpg';
+    const filename = `${item.title || 'download'}.${ext}`;
     
-    if (!mediaErrors[id] && isMounted.current) {
-      setMediaErrors(prev => {
-        if (prev[id]) return prev;
-        return {...prev, [id]: mediaType};
-      });
-    }
-  };
+    const link = document.createElement('a');
+    link.href = getMediaUrl(url);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [getMediaUrl]);
 
-  // Dedicated error handler for video
-  const handleVideoError = (e, id) => {
-    console.error(`Video failed to load for item ${id}:`, e.target.src || e.target.currentSrc);
-    
-    if (isMounted.current) {
-      setMediaErrors(prev => ({...prev, [id]: 'video'}));
-    }
-  };
+  // Comment handlers
+  const handleCommentChange = useCallback((itemId, content) => {
+    setNewComment(prev => ({ ...prev, [itemId]: content }));
+  }, []);
 
-  // Dedicated error handler for audio
-  const handleAudioError = (e, id) => {
-    console.error(`Audio failed to load for item ${id}:`, e.target.src || e.target.currentSrc);
-    
-    if (isMounted.current) {
-      setMediaErrors(prev => ({...prev, [id]: 'audio'}));
-    }
-  };
-
-  // Truncate long descriptions
-  const truncateContent = (content, maxLength = 150) => {
-    if (!content) return '';
-    
-    if (typeof content === 'string') {
-      return content.length > maxLength ? `${content.substring(0, maxLength)}...` : content;
-    }
-    
-    // Handle HTML content safely
-    try {
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = String(content);
-      let text = tempElement.textContent || tempElement.innerText;
-      return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-    } catch (error) {
-      console.error('Error truncating content:', error);
-      return '';
-    }
-  };
-
-  // Format dates with error handling
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No date available';
-    
-    try {
-      const date = new Date(dateString);
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
-  };
-
-  // Update the comment state for a specific Basic item
-  const handleCommentChange = (basicId, content) => {
-    setNewComment((prev) => ({ ...prev, [basicId]: content }));
-  };
-
-  // Submit a new comment for a specific Basic item
-  const handleCommentSubmit = (basicId) => {
-    const content = newComment[basicId]?.trim();
+  const handleCommentSubmit = useCallback((itemId) => {
+    const content = newComment[itemId]?.trim();
     if (content && onAddComment) {
-      onAddComment(basicId, content);
-      setNewComment((prev) => ({ ...prev, [basicId]: '' }));
+      onAddComment(itemId, content);
+      setNewComment(prev => ({ ...prev, [itemId]: '' }));
     }
+  }, [newComment, onAddComment]);
+
+  const toggleDescription = useCallback((itemId) => {
+    setExpandedDescriptions(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  }, []);
+
+  // Audio Player Component
+  const AudioPlayer = ({ item }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [volume, setVolume] = useState(0.7);
+    const [isMuted, setIsMuted] = useState(false);
+    const audioRef = useRef(null);
+
+    const togglePlay = () => {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setPlayingId(null);
+      } else {
+        audioRef.current.play();
+        setPlayingId(item._id);
+      }
+      setIsPlaying(!isPlaying);
+    };
+
+    const handleTimeUpdate = () => {
+      setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+    };
+
+    const handleSeek = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const seekPos = (e.clientX - rect.left) / rect.width;
+      audioRef.current.currentTime = seekPos * audioRef.current.duration;
+    };
+
+    const handleVolumeChange = (e) => {
+      const newVolume = parseFloat(e.target.value);
+      audioRef.current.volume = newVolume;
+      setVolume(newVolume);
+      setIsMuted(newVolume === 0);
+    };
+
+    const toggleMute = () => {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    };
+
+    return (
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+        {/* Cover Art */}
+        {item.imageUrl && (
+          <div className="relative aspect-square overflow-hidden">
+            <img
+              src={getMediaUrl(item.imageUrl)}
+              alt={item.title}
+              className="w-full h-full object-cover"
+              onError={(e) => e.target.src = PLACEHOLDER_IMAGE}
+            />
+          </div>
+        )}
+
+        {/* Audio Controls */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={togglePlay}
+              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <button onClick={toggleMute} aria-label={isMuted ? "Unmute" : "Mute"}>
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-20 accent-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div 
+              className="h-2 bg-gray-300 dark:bg-gray-600 rounded-full cursor-pointer"
+              onClick={handleSeek}
+            >
+              <div 
+                className="h-full bg-blue-500 rounded-full"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+              <span>{formatTime(audioRef.current?.duration || 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        <audio
+          ref={audioRef}
+          src={getMediaUrl(item.fileUrl)}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={() => {
+            setIsPlaying(false);
+            setPlayingId(null);
+          }}
+          onDurationChange={handleTimeUpdate}
+          preload="metadata"
+        />
+      </div>
+    );
   };
 
-  // Skeleton loader with shimmer effect for loading state
-  const BasicSkeleton = () => (
-    <div className="relative overflow-hidden rounded-xl bg-white shadow-sm p-4">
-      <div className="animate-pulse space-y-4">
-        <div className="h-48 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg" />
-        <div className="space-y-2">
-          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/4" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded" />
-        </div>
-      </div>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+  // Video Player Component
+  const VideoPlayer = ({ item }) => (
+    <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
+      <ReactPlayer
+        url={getMediaUrl(item.fileUrl)}
+        playing={playingId === item._id}
+        controls
+        width="100%"
+        height="100%"
+        className="absolute top-0 left-0"
+        light={item.imageUrl ? getMediaUrl(item.imageUrl) : true}
+        playIcon={
+          <div className="bg-white/80 hover:bg-white rounded-full p-3 shadow-lg">
+            <Play className="text-gray-900" size={24} />
+          </div>
+        }
+        onClickPreview={() => setPlayingId(item._id)}
+      />
     </div>
   );
 
-  // Empty state with animation when no basics are available
+  // Loading and Empty States
+  if (isLoading && basics.length === 0) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden animate-pulse">
+            <div className="aspect-video bg-gray-200 dark:bg-gray-700" />
+            <div className="p-4 space-y-3">
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (basics.length === 0 && !isLoading) {
     return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center"
-      >
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
-        >
-          <AlertCircle className="w-16 h-16 text-blue-400/80" />
-        </motion.div>
-        <h3 className="mt-6 text-2xl font-semibold text-gray-800">No Media Available</h3>
-        <p className="mt-2 text-gray-600">Check back soon for updates!</p>
-      </motion.div>
-    );
-  }
-
-  // Loading state with a skeleton grid
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-        {[1, 2].map((i) => (
-          <BasicSkeleton key={i} />
-        ))}
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertCircle className="w-16 h-16 text-gray-400 mb-4" />
+        <h3 className="text-xl font-medium text-gray-800 dark:text-white">No content available</h3>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Check back later or add some content</p>
       </div>
     );
   }
-
-  // Media placeholder components for better fallbacks
-  const ImagePlaceholder = ({title}) => (
-    <div className="bg-gray-100 h-64 flex items-center justify-center rounded-t-xl">
-      <div className="text-center p-4">
-        <Image className="mx-auto h-12 w-12 text-gray-400" />
-        <p className="mt-2 text-sm text-gray-500">Image not available</p>
-        <p className="text-xs text-gray-400">{title || "Media"}</p>
-      </div>
-    </div>
-  );
-
-  const VideoPlaceholder = ({title}) => (
-    <div className="bg-gray-100 aspect-video flex items-center justify-center rounded">
-      <div className="text-center p-4">
-        <Video className="mx-auto h-12 w-12 text-gray-400" />
-        <p className="mt-2 text-sm text-gray-500">Video not available</p>
-        <p className="text-xs text-gray-400">{title || "Media"}</p>
-      </div>
-    </div>
-  );
-
-  const AudioPlaceholder = ({title}) => (
-    <div className="bg-gray-100 p-4 flex items-center justify-center rounded">
-      <div className="text-center">
-        <Music className="mx-auto h-10 w-10 text-gray-400" />
-        <p className="mt-2 text-sm text-gray-500">Audio not available</p>
-        <p className="text-xs text-gray-400">{title || "Media"}</p>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="basic-list container mx-auto px-4 py-8">
-      <AnimatePresence mode="wait">
-        {basics.map((basic, index) => (
-          <motion.article
-            key={basic._id || `basic-${index}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="basic-item bg-white rounded-xl shadow-sm overflow-hidden mb-6"
-          >
-            {/* Image Section */}
-            {basic.imageUrl && (
-              <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
-                {mediaErrors[basic._id]?.includes('image') ? (
-                  <ImagePlaceholder title={basic.title} />
-                ) : (
-                  <motion.img
-                    src={getMediaUrl(basic.imageUrl)}
-                    alt={basic.title || "Media"}
-                    onError={(e) => handleMediaError(e, basic._id, 'image')}
-                    onLoad={() => handleMediaLoad(basic._id, 'image')}
-                    crossOrigin="anonymous"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+    <div className="container mx-auto px-4 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-12"
+      >
+
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence>
+          {basics.map((item) => (
+            <motion.div
+              key={item._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+            >
+              {/* Media Player */}
+              {item.fileType === 'video' ? (
+                <VideoPlayer item={item} />
+              ) : (
+                <AudioPlayer item={item} />
+              )}
+
+              {/* Content Details */}
+              <div className="p-4 space-y-4">
+                <div>
+                  <h3 className="font-medium text-lg text-gray-900 dark:text-white line-clamp-2">
+                    {item.title || "Untitled"}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Description with Read More/Less */}
+                {item.description && (
+                  <div>
+                    <p className="text-gray-700 dark:text-gray-300 text-sm">
+                      {expandedDescriptions[item._id] 
+                        ? stripHtmlTags(item.description)
+                        : `${stripHtmlTags(item.description).substring(0, 200)}${stripHtmlTags(item.description).length > 200 ? '...' : ''}`
+                      }
+                    </p>
+                    {stripHtmlTags(item.description).length > 200 && (
+                      <button
+                        onClick={() => toggleDescription(item._id)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-1 flex items-center"
+                      >
+                        {expandedDescriptions[item._id] ? 'Show less' : 'Show more'}
+                        {expandedDescriptions[item._id] ? (
+                          <ChevronUp className="ml-1" size={16} />
+                        ) : (
+                          <ChevronDown className="ml-1" size={16} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Download Button */}
+                <button
+                  onClick={() => handleDownload(item)}
+                  className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+                >
+                  <Download size={16} className="mr-2" />
+                  Download
+                </button>
+
+                {/* Comments Section */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <MessageSquare className="text-blue-500" size={18} />
+                    <h3 className="font-medium text-gray-800 dark:text-white">Comments</h3>
+                  </div>
+
+                  {/* Comments List */}
+                  <div className="space-y-3 mb-4">
+                    {item.comments?.length > 0 ? (
+                      item.comments.map((comment) => (
+                        <div key={comment._id} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <p className="text-gray-800 dark:text-gray-200 text-sm">
+                              {comment.content}
+                            </p>
+                            {isAdmin && (
+                              <button
+                                onClick={() => onDeleteComment(item._id, comment._id)}
+                                className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                                aria-label="Delete comment"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 dark:text-gray-400 text-sm italic text-center py-2">
+                        No comments yet
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Add Comment */}
+                  <div className="mt-4">
+                    <textarea
+                      value={newComment[item._id] || ''}
+                      onChange={(e) => handleCommentChange(item._id, e.target.value)}
+                      placeholder="Add a comment..."
+                      className="w-full p-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      rows={2}
+                    />
+                    <button
+                      onClick={() => handleCommentSubmit(item._id)}
+                      disabled={!newComment[item._id]?.trim()}
+                      className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Post Comment
+                    </button>
+                  </div>
+                </div>
+
+                {/* Admin Actions */}
+                {isAdmin && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 flex space-x-3">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(item._id)}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center"
+                      >
+                        <Edit2 size={16} className="mr-2" />
+                        Edit
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(item._id)}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-            
-            {/* Basic Details */}
-            <div className="basic-content p-6">
-              <h2 className="basic-title text-2xl font-semibold text-gray-800">{basic.title || "Untitled"}</h2>
-              <p className="basic-date text-sm text-gray-500 mt-1">{formatDate(basic.createdAt)}</p>
-              <p className="basic-description text-gray-600 mt-3">{truncateContent(basic.description)}</p>
-              
-              {/* Media (Video or Audio) */}
-              {basic.fileUrl && (
-                <div className="basic-media-container mt-4">
-                  {basic.fileType === 'video' ? (
-                    mediaErrors[basic._id] === 'video' ? (
-                      <VideoPlaceholder title={basic.title} />
-                    ) : (
-                      <div className="video-wrapper relative pt-[56.25%] bg-gray-100 rounded overflow-hidden">
-                        <video
-                          controls
-                          playsInline
-                          className="absolute top-0 left-0 w-full h-full rounded"
-                          preload="metadata"
-                          onError={(e) => handleVideoError(e, basic._id)}
-                          onLoad={() => handleMediaLoad(basic._id, 'video')}
-                          crossOrigin="anonymous"
-                        >
-                          <source src={getMediaUrl(basic.fileUrl)} type="video/mp4" />
-                          Your browser does not support the video tag.
-                        </video>
-                      </div>
-                    )
-                  ) : basic.fileType === 'audio' && (
-                    mediaErrors[basic._id] === 'audio' ? (
-                      <AudioPlaceholder title={basic.title} />
-                    ) : (
-                      <div className="audio-wrapper relative">
-                        <audio
-                          controls
-                          className="basic-audio w-full mt-2"
-                          preload="metadata"
-                          onError={(e) => handleAudioError(e, basic._id)}
-                          onLoad={() => handleMediaLoad(basic._id, 'audio')}
-                          crossOrigin="anonymous"
-                        >
-                          <source src={getMediaUrl(basic.fileUrl)} type="audio/mpeg" />
-                          Your browser does not support the audio tag.
-                        </audio>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-
-              {/* Comments Section */}
-              <div className="basic-comments-section mt-4">
-                <h4 className="text-lg font-medium text-gray-700">Comments:</h4>
-                <ul className="basic-comments list-disc pl-5 mt-2">
-                  {basic.comments && basic.comments.length > 0 ? (
-                    basic.comments.map((comment, commentIndex) => (
-                      <li key={comment._id || comment.id || `comment-${basic._id}-${commentIndex}`} className="basic-comment flex items-center justify-between">
-                        <span>{comment.content}</span>
-                        {isAdmin && onDeleteComment && (
-                          <button
-                            onClick={() => onDeleteComment(basic._id, comment._id)}
-                            className="delete-comment-btn text-red-600 hover:text-red-800 text-sm ml-2"
-                            aria-label="Delete comment"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-gray-500">No comments yet.</li>
-                  )}
-                </ul>
-              </div>
-
-              {/* Add Comment Section */}
-              <div className="add-comment mt-4">
-                <textarea
-                  value={newComment[basic._id] || ''}
-                  onChange={(e) => handleCommentChange(basic._id, e.target.value)}
-                  placeholder="Write a comment..."
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-                <button
-                  onClick={() => handleCommentSubmit(basic._id)}
-                  className="submit-comment-btn mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
-                  disabled={!newComment[basic._id]?.trim()}
-                >
-                  Post Comment
-                </button>
-              </div>
-
-              {/* Admin Actions */}
-              {isAdmin && (
-                <div className="admin-actions mt-4 flex space-x-4">
-                  {onEdit && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onEdit(basic._id)}
-                      className="update-btn px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 mr-2 inline-block" />
-                      Edit
-                    </motion.button>
-                  )}
-                  {onDelete && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onDelete(basic._id)}
-                      className="delete-btn px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2 inline-block" />
-                      Delete Basic
-                    </motion.button>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.article>
-        ))}
-      </AnimatePresence>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

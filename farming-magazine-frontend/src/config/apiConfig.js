@@ -84,15 +84,23 @@ GET_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
 UPDATE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
 DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
 
-CREATE_SUBSCRIBER: `${BASE_URL}/api/content/subscribers`,
-GET_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
-DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
+  // Event Management
+  CREATE_EVENT: `${BASE_URL}/api/content/events`,
+  GET_EVENTS: `${BASE_URL}/api/content/events`,
+  GET_ADMIN_EVENTS: `${BASE_URL}/api/content/events/admin`,
+  GET_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
+  UPDATE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
+  DELETE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
+  
+// CREATE_SUBSCRIBER: `${BASE_URL}/api/content/subscribers`,
+// GET_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
+// DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
 
-CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
-GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
-UPDATE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
-DELETE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
-SEND_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}/send`
+// CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
+// GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
+// UPDATE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
+// DELETE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
+// SEND_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}/send`
 
 };
 

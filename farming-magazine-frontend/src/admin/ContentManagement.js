@@ -18,6 +18,8 @@ import GoatForm from '../components/GoatForm';
 import GoatList from '../components/GoatList';
 import BeefForm from '../components/BeefForm';
 import BeefList from '../components/BeefList';
+import EventForm from '../components/EventForm';
+import EventList from '../components/EventList';
 import SubscriberList from '../components/SubscriberList';
 import NewsletterForm from '../components/NewsletterForm';
 import NewsletterList from '../components/NewsletterList';
@@ -36,6 +38,7 @@ const DELETE_ENDPOINTS = {
   beefs: 'DELETE_BEEF',
   newsletters: 'DELETE_NEWSLETTER',
   subscribers: 'DELETE_SUBSCRIBER',
+  events: 'DELETE_EVENT',
 };
 
 const ContentStats = ({ activeTab, content }) => {
@@ -48,6 +51,7 @@ const ContentStats = ({ activeTab, content }) => {
       case 'news':
       case 'magazines':
       case 'farms':
+      case 'events':
       case 'newsletters':
         return [
           { label: 'Total Items', value: content.length, icon: 'list', color: 'teal' },
@@ -288,6 +292,15 @@ const ContentManagement = ({ activeTab }) => {
               onClose={handleFormClose}
             />
           );
+          case 'events':
+            return (
+              <EventForm 
+                refreshEvents={fetchContent}
+                editingEvent={editingItem}
+                setEditingEvent={setEditingItem}
+                onClose={handleFormClose}
+              />
+            );
         case 'newsletters':
           return (
             <NewsletterForm
@@ -326,6 +339,8 @@ const ContentManagement = ({ activeTab }) => {
           return <DairyList dairies={content} {...commonProps} />;
         case 'goats':
           return <GoatList goats={content} {...commonProps} />;
+        case 'events':
+            return <EventList events={content} {...commonProps} />;
         case 'beefs':
           return <BeefList beefs={content} {...commonProps} />;
         case 'newsletters':

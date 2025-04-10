@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Search, Calendar, Filter } from 'lucide-react';
+import { Loader2, Search, Calendar } from 'lucide-react';
 import NewsList from '../components/NewsList';
-
 
 const NewsPage = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const newsPerPage = 8;
@@ -35,8 +33,6 @@ const NewsPage = () => {
     fetchNews();
   }, [API_BASE_URL]);
 
-  const categories = ['Technology', 'Business', 'Science', 'World', 'Sports'];
-
   const dateFilters = [
     { label: 'All Time', value: 'all' },
     { label: 'Today', value: 'today' },
@@ -44,11 +40,10 @@ const NewsPage = () => {
     { label: 'This Month', value: 'month' }
   ];
 
-  // Filter news based on search, category, and date
+  // Filter news based on search and date
   const filteredNews = news.filter(article => {
     const matchesSearch = article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          article.summary?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
     
     const articleDate = new Date(article.publishedAt);
     const today = new Date();
@@ -57,7 +52,7 @@ const NewsPage = () => {
       (dateFilter === 'week' && articleDate >= new Date(today - 7 * 24 * 60 * 60 * 1000)) ||
       (dateFilter === 'month' && articleDate.getMonth() === today.getMonth());
 
-    return matchesSearch && matchesCategory && matchesDate;
+    return matchesSearch && matchesDate;
   });
 
   // Pagination
@@ -66,11 +61,9 @@ const NewsPage = () => {
   const currentNews = filteredNews.slice(indexOfFirstNews, indexOfLastNews);
   const totalPages = Math.ceil(filteredNews.length / newsPerPage);
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-       
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <motion.div
             animate={{ rotate: 360 }}
@@ -80,16 +73,13 @@ const NewsPage = () => {
           </motion.div>
           <p className="mt-4 text-gray-600 font-medium">Loading latest news...</p>
         </div>
-    
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-     
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -119,7 +109,6 @@ const NewsPage = () => {
             </button>
           </motion.div>
         </div>
-    
       </div>
     );
   }
@@ -130,8 +119,6 @@ const NewsPage = () => {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-gray-50"
     >
-   
-      
       <main className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -161,20 +148,8 @@ const NewsPage = () => {
             />
           </div>
 
-          {/* Category and Date Filters */}
+          {/* Date Filter */}
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Categories</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
             <div className="flex-1 min-w-[200px]">
               <select
                 value={dateFilter}
@@ -193,6 +168,7 @@ const NewsPage = () => {
           <NewsList 
             news={currentNews} 
             apiBaseUrl={API_BASE_URL}
+            searchTerm={searchTerm}
           />
         </AnimatePresence>
 
@@ -219,8 +195,6 @@ const NewsPage = () => {
           </div>
         )}
       </main>
-
-   
     </motion.div>
   );
 };

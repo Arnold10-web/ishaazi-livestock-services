@@ -100,7 +100,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     try {
       setError('');
       if (editingNews) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_NEWS}/${editingNews._id}`, formData, {
+        await axios.put(API_ENDPOINTS.UPDATE_NEWS(editingNews._id), formData,{
           headers: {
             ...getAuthHeader(),
             'Content-Type': 'multipart/form-data',

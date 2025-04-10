@@ -100,7 +100,7 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
     try {
       setError('');
       if (editingGoat) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_GOAT}/${editingGoat._id}`, formData, {
+        await axios.put(API_ENDPOINTS.UPDATE_GOAT(editingGoat._id), formData,{
           headers: {
             ...getAuthHeader(),
             'Content-Type': 'multipart/form-data',

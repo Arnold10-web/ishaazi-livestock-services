@@ -93,7 +93,7 @@ const fileFilter = (req, file, cb) => {
 
 // File size limits
 const limits = {
-  fileSize: 50 * 1024 * 1024, // 50MB max file size
+  fileSize: 500 * 1024 * 1024, // 500MB max file size
 };
 
 // Multer configuration with added error handling

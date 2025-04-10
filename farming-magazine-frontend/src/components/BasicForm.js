@@ -142,68 +142,182 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
-      <h3 className="text-xl font-semibold">
-        {editingBasic ? 'Edit Basic Component' : 'Create Basic Component'}
-      </h3>
-      {error && <div className="text-red-500">{error}</div>}
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
-        className="w-full p-2 border rounded"
-      />
-      <select
-        value={fileType}
-        onChange={(e) => setFileType(e.target.value)}
-        required
-        className="w-full p-2 border rounded"
-      >
-        <option value="">Select File Type</option>
-        <option value="video">Video</option>
-        <option value="audio">Audio</option>
-      </select>
-      <textarea
-        placeholder="Metadata (JSON)"
-        value={metadata}
-        onChange={(e) => setMetadata(e.target.value)}
-        className="w-full p-2 border rounded"
-      />
-      <div className="space-y-2">
-        <input
-          type="file"
-          onChange={handleImageChange}
-          accept="image/*"
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="file"
-          onChange={handleMediaChange}
-          accept="video/*,audio/*"
-          className="w-full p-2 border rounded"
-        />
+    <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6">
+        <h3 className="text-2xl font-bold text-white">
+          {editingBasic ? 'Edit Basic Component' : 'Create Basic Component'}
+        </h3>
       </div>
-      {imagePreview && (
-        <img src={imagePreview} alt="Preview" className="max-w-xs mt-2" />
-      )}
-      <div ref={quillRef} className="h-72 border rounded" />
-      <div className="flex space-x-2">
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          {editingBasic ? 'Update Component' : 'Create Component'}
-        </button>
-        {editingBasic && (
-          <button
-            type="button"
-            onClick={resetForm}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-          >
-            Cancel Edit
-          </button>
+
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md dark:bg-red-900/30 dark:border-red-400" role="alert">
+            <p className="text-red-700 dark:text-red-300 font-medium">{error}</p>
+          </div>
         )}
-      </div>
-    </form>
+
+        <div className="space-y-2">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            placeholder="Enter title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            aria-required="true"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="fileType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            File Type
+          </label>
+          <select
+            id="fileType"
+            value={fileType}
+            onChange={(e) => setFileType(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+          >
+            <option value="">Select File Type</option>
+            <option value="video">Video</option>
+            <option value="audio">Audio</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Metadata (JSON)
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
+          </label>
+          <textarea
+            id="metadata"
+            placeholder='{"key": "value"}'
+            value={metadata}
+            onChange={(e) => setMetadata(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out font-mono text-sm"
+            rows="3"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Image
+          </label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              onChange={handleImageChange}
+              accept="image/*"
+              className="hidden"
+              id="image"
+            />
+            <label
+              htmlFor="image"
+              className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200 cursor-pointer flex items-center dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Choose Image
+            </label>
+            <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+              {image ? image.name : 'No file chosen'}
+            </span>
+          </div>
+
+          {imagePreview && (
+            <div className="mt-4 relative">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="max-h-64 rounded-lg object-cover border border-gray-200 dark:border-gray-700 shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setImage(null);
+                  setImagePreview(null);
+                }}
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                aria-label="Remove image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="media" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Media File
+          </label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              onChange={handleMediaChange}
+              accept="video/*,audio/*"
+              className="hidden"
+              id="media"
+            />
+            <label
+              htmlFor="media"
+              className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200 cursor-pointer flex items-center dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Choose Media
+            </label>
+            <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+              {media ? media.name : 'No file chosen'}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+          </label>
+          <div
+            className="rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+          >
+            <div ref={quillRef} className="h-72 bg-white dark:bg-gray-700"></div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-4">
+          <button
+            type="submit"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            {editingBasic ? 'Update Component' : 'Create Component'}
+          </button>
+
+          {editingBasic && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 flex items-center dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Cancel Edit
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 };
 

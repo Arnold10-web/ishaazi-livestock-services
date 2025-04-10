@@ -5,30 +5,22 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import BasicList from '../components/BasicList';
 
 const BasicPage = () => {
-  // State hooks for basics data, loading, error, and pagination
   const [basics, setBasics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [retryCount, setRetryCount] = useState(0);
   const [hasData, setHasData] = useState(false);
   
-  // Use refs to prevent unnecessary re-renders
   const isMountedRef = useRef(true);
   const isLoadingRef = useRef(false);
   const requestTimeoutRef = useRef(null);
   const lastFetchTimeRef = useRef(0);
   
-  // Throttle constants
-  const THROTTLE_MS = 2000; // Minimum time between fetches
+  const THROTTLE_MS = 2000;
 
-  // Ensure the API_BASE_URL is consistent throughout the app
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-  // Create a stable axios instance
   const axiosInstance = useRef(axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
     timeout: 30000,
     headers: {
       'Accept': 'application/json',
@@ -36,17 +28,14 @@ const BasicPage = () => {
     }
   })).current;
 
-  // Throttled fetch function
   const throttledFetch = useCallback((fn) => {
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
     
-    // Clear any pending timeouts
     if (requestTimeoutRef.current) {
       clearTimeout(requestTimeoutRef.current);
     }
     
-    // If we've fetched recently, wait before fetching again
     if (timeSinceLastFetch < THROTTLE_MS) {
       requestTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
@@ -57,24 +46,19 @@ const BasicPage = () => {
       return;
     }
     
-    // Otherwise fetch immediately
     lastFetchTimeRef.current = now;
     fn();
   }, []);
 
-  // Fetch basics with pagination
   const fetchBasics = useCallback(() => {
-    // Prevent multiple simultaneous requests
     if (isLoadingRef.current) return;
     
-    // Fetch function that will be throttled
     const doFetch = async () => {
       if (!isMountedRef.current) return;
       
       isLoadingRef.current = true;
       
       try {
-        // Only show loading state on initial load
         if (!hasData) {
           setLoading(true);
         }
@@ -86,26 +70,22 @@ const BasicPage = () => {
         if (response.data && response.data.data) {
           const { basics = [], totalPages = 1 } = response.data.data;
           
-          // Process media items
           const processedBasics = basics.map(item => ({
             ...item,
             comments: Array.isArray(item.comments) ? item.comments : [],
             imageUrl: item.imageUrl || null,
             fileUrl: item.fileUrl || null,
-            fileType: item.fileType || (
-              item.fileUrl?.toLowerCase().endsWith('.mp4') || 
+            fileType: item.fileUrl?.toLowerCase().endsWith('.mp4') || 
               item.fileUrl?.toLowerCase().endsWith('.webm') || 
               item.fileUrl?.toLowerCase().endsWith('.mov') ? 'video' :
               item.fileUrl?.toLowerCase().endsWith('.mp3') || 
               item.fileUrl?.toLowerCase().endsWith('.wav') ? 'audio' : null
-            )
           }));
           
           if (isMountedRef.current) {
             setBasics(processedBasics);
             setTotalPages(totalPages);
             setError(null);
-            setRetryCount(0);
             setHasData(true);
           }
         } else {
@@ -120,8 +100,6 @@ const BasicPage = () => {
           setError(err.message === 'timeout of 30000ms exceeded' 
             ? 'The server is taking too long to respond. Please try again later.' 
             : 'Failed to fetch content. Please try again later.');
-        } else {
-          console.warn('Error refreshing data, but using cached data');
         }
       } finally {
         if (isMountedRef.current) {
@@ -131,14 +109,11 @@ const BasicPage = () => {
       }
     };
     
-    // Throttle the fetch
     throttledFetch(doFetch);
-  }, [API_BASE_URL, page, axiosInstance, hasData, throttledFetch]);
+  }, [page, axiosInstance, hasData, throttledFetch]);
 
-  // Effect for initial fetch and cleanup
   useEffect(() => {
     isMountedRef.current = true;
-    
     fetchBasics();
     
     return () => {
@@ -149,11 +124,9 @@ const BasicPage = () => {
     };
   }, [fetchBasics]);
 
-  // Handle adding a comment with optimistic updates
   const handleAddComment = async (basicId, content) => {
     if (!basicId || !content) return;
     
-    // Optimistically update the UI
     const updatedBasics = basics.map(basic => {
       if (basic._id === basicId) {
         return {
@@ -167,24 +140,18 @@ const BasicPage = () => {
     
     try {
       await axiosInstance.post(`/api/content/basics/${basicId}/comments`, { content });
-      // Don't refetch data, just keep the optimistic update
     } catch (err) {
       console.error('Error adding comment:', err);
-      // Revert the optimistic update
       setBasics(basics);
       alert('Failed to add comment. Please try again.');
     }
   };
 
-  // Handle retry with exponential backoff
   const handleRetry = () => {
     if (isLoadingRef.current) return;
-    
-    setRetryCount(prev => prev + 1);
     fetchBasics();
   };
 
-  // Pagination handlers with smooth scroll
   const goToNextPage = useCallback(() => {
     if (page < totalPages && !isLoadingRef.current) {
       setPage(prevPage => prevPage + 1);
@@ -199,28 +166,31 @@ const BasicPage = () => {
     }
   }, [page]);
 
-  // Render the loading state with an animated spinner
   if (loading && !hasData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          >
-            <Loader2 className="w-12 h-12 text-blue-500" />
-          </motion.div>
-          <p className="mt-4 text-gray-600 font-medium">Loading content...</p>
-          {retryCount > 0 && (
-            <p className="mt-2 text-gray-500">Retrying... (Attempt {retryCount})</p>
-          )}
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center mb-12">
+            <div className="h-10 bg-gray-200 rounded w-64 mx-auto mb-4 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-96 mx-auto animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="h-64 bg-gray-200"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-  
       </div>
     );
   }
 
-  // Render the error state with an animated error container and a retry button
   if (error && !hasData) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -231,31 +201,34 @@ const BasicPage = () => {
             className="bg-red-50 rounded-lg p-6 max-w-md w-full text-center"
           >
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Oops! Something went wrong</h2>
-            <p className="text-gray-600">{error}</p>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Unable to load content</h2>
+            <p className="text-gray-700 mb-4">{error}</p>
             <button
               onClick={handleRetry}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+              className="px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium"
               disabled={isLoadingRef.current}
             >
-              Try Again
+              {isLoadingRef.current ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Retrying...
+                </span>
+              ) : 'Try Again'}
             </button>
           </motion.div>
-     </div>
-        
+        </div>
       </div>
     );
   }
 
-  // Main content with a fade-in transition
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
       className="min-h-screen bg-gray-50"
     >
       <main className="container mx-auto px-4 py-8">
-        {/* Page Header */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -263,38 +236,35 @@ const BasicPage = () => {
           className="text-center mb-12"
         >
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Explore Our Media</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-700 max-w-2xl mx-auto">
             Discover our latest media content and engage with our community.
           </p>
         </motion.div>
 
-        {/* Render the BasicList component with comment functionality */}
         <BasicList
           basics={basics}
-          apiBaseUrl={API_BASE_URL}
+          apiBaseUrl={axiosInstance.defaults.baseURL}
           isAdmin={false}
           onAddComment={handleAddComment}
           isLoading={loading}
         />
 
-        {/* Show loading indicator for subsequent page loads */}
         {loading && hasData && (
-          <div className="flex justify-center my-4">
+          <div className="flex justify-center items-center bg-white shadow-md rounded-lg px-6 py-4 my-6">
             <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-            <span className="ml-2 text-gray-600">Refreshing...</span>
+            <span className="ml-3 text-gray-700 font-medium">Refreshing content...</span>
           </div>
         )}
 
-        {/* Error message if we failed to refresh but have data */}
         {error && hasData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 flex items-center justify-between my-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between my-6">
             <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
-              <p className="text-amber-700 text-sm">Couldn't refresh content. Using cached data.</p>
+              <AlertCircle className="h-5 w-5 text-amber-500 mr-3" />
+              <p className="text-amber-700">Couldn't refresh content. Using cached data.</p>
             </div>
             <button 
               onClick={handleRetry}
-              className="text-amber-600 hover:text-amber-800 text-sm font-medium"
+              className="text-amber-600 hover:text-amber-800 font-medium bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-md transition-colors"
               disabled={isLoadingRef.current}
             >
               Retry
@@ -302,30 +272,28 @@ const BasicPage = () => {
           </div>
         )}
 
-        {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-4 mt-8">
+          <div className="flex items-center justify-center space-x-6 mt-10">
             <button
               disabled={page <= 1 || loading}
               onClick={goToPrevPage}
-              className="px-4 py-2 rounded bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+              className="px-5 py-2.5 rounded-lg bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors font-medium shadow-sm"
             >
               Previous
             </button>
-            <span className="text-gray-700">
+            <span className="text-gray-700 font-medium">
               Page {page} of {totalPages}
             </span>
             <button
               disabled={page >= totalPages || loading}
               onClick={goToNextPage}
-              className="px-4 py-2 rounded bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+              className="px-5 py-2.5 rounded-lg bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors font-medium shadow-sm"
             >
               Next
             </button>
           </div>
         )}
       </main>
-   
     </motion.div>
   );
 };

@@ -100,7 +100,8 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     try {
       setError('');
       if (editingDairy) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_DAIRY}/${editingDairy._id}`, formData, {
+       
+        await axios.put(API_ENDPOINTS.UPDATE_DAIRY(editingDairy._id), formData,{
           headers: {
             ...getAuthHeader(),
             'Content-Type': 'multipart/form-data',

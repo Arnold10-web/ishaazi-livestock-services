@@ -15,7 +15,8 @@ function getIconForTab(tab) {
     beefs: 'drumstick-bite',
     piggeries: 'piggy-bank',
     newsletters: 'envelope',
-    subscribers: 'users'
+    subscribers: 'users',
+    events: 'calendar-alt'
   };
   return icons[tab] || 'cog';
 }
@@ -46,7 +47,8 @@ const AdminDashboard = () => {
     { id: 'beefs', label: 'Beef' },
     { id: 'piggeries', label: 'Piggery' },
     { id: 'newsletters', label: 'Newsletters' },
-    { id: 'subscribers', label: 'Subscribers' }
+    { id: 'subscribers', label: 'Subscribers' },
+    { id: 'events', label: 'Events' },
   ];
 
   return (
@@ -80,15 +82,19 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Navigation Sidebar */}
+        {/* Navigation Sidebar - Fixed for scrolling */}
         <nav className={`${
           sidebarCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'
-        } fixed lg:relative lg:w-64 h-full bg-white shadow-xl transition-transform duration-300 ease-in-out z-30 w-64 border-r border-gray-200`}>
-          <div className="p-4 space-y-1">
-            <div className="text-gray-600 font-medium py-2 px-4 mb-4 border-b border-gray-200">
+        } fixed lg:relative lg:w-64 h-screen bg-white shadow-xl transition-transform duration-300 ease-in-out z-30 w-64 border-r border-gray-200 flex flex-col`}>
+          <div className="p-4 border-b border-gray-200">
+            <div className="text-gray-600 font-medium py-2 px-2">
               <i className="fas fa-th-large mr-2"></i>
               DASHBOARD
             </div>
+          </div>
+          
+          {/* Scrollable tabs container */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -107,7 +113,9 @@ const AdminDashboard = () => {
               </button>
             ))}
           </div>
-          <div className="absolute bottom-0 w-full p-4 border-t border-gray-200 bg-gray-50">
+          
+          {/* Footer stays at bottom */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
             <div className="text-gray-600 text-xs text-center">
               <p>© 2025 Ishaazi Livestock Services</p>
               <p>Version 2.0</p>

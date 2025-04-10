@@ -102,7 +102,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
     try {
       setError('');
       if (editingBeef) {
-        await axios.put(`${API_ENDPOINTS.UPDATE_BEEF}/${editingBeef._id}`, formData, {
+        await axios.put(API_ENDPOINTS.UPDATE_BEEF(editingBeef._id), formData,{
           headers: {
             ...getAuthHeader(),
             'Content-Type': 'multipart/form-data',

@@ -2,6 +2,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import Blog from '../models/Blog.js';
+import Event from '../models/Event.js';
 import News from '../models/News.js';
 import Basic from '../models/Basic.js';
 import Farm from '../models/Farm.js';
@@ -1496,5 +1497,185 @@ export const sendNewsletter = async (req, res) => {
     res.status(200).json({ message: 'Newsletter sent successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error sending newsletter' });
+  }
+};
+
+// ----- EVENT CRUD -----
+export const createEvent = async (req, res) => {
+  try {
+    const { title, description, startDate, endDate, location, metadata, published } = req.body;
+    let imageUrl = null;
+
+    // Check required fields
+    if (!title || !description || !startDate) {
+      return sendResponse(res, false, 'Title, description, and start date are required.');
+    }
+
+    if (req.file) {
+      // Construct the relative path
+      imageUrl = `/uploads/images/${req.file.filename}`;
+    }
+
+    // Safely parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (err) {
+      console.error("Metadata parsing error:", err);
+      return sendResponse(res, false, 'Invalid metadata format. Please provide valid JSON.');
+    }
+
+    const newEvent = new Event({
+      title,
+      description,
+      startDate,
+      endDate: endDate || null,
+      location: location || "",
+      imageUrl,
+      metadata: parsedMetadata,
+      published: published !== undefined ? published : true
+    });
+
+    const savedEvent = await newEvent.save();
+    sendResponse(res, true, 'Event created successfully', savedEvent);
+  } catch (error) {
+    console.error("Error creating event:", error);
+    sendResponse(res, false, 'Failed to create event', null, error.message);
+  }
+};
+
+export const getEventById = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+    res.json({ success: true, data: event });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+export const getEvents = async (req, res) => {
+  const { page = 1, limit = 10, admin } = req.query;
+
+  try {
+    const query = admin ? {} : { published: true };
+
+    console.log("🔥 API HIT: Fetching events...");
+    console.log("🔍 Query:", query);
+
+    const totalEvents = await Event.countDocuments({});
+    console.log("Total events in database:", totalEvents);
+
+    const publishedEventsCount = await Event.countDocuments({ published: true });
+    console.log("Published events in database:", publishedEventsCount);
+
+    // Updated sort to use startDate instead of date
+    const events = await Event.find(query)
+      .sort({ startDate: 1 }) // Sort by startDate ascending
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    console.log("✅ Events found:", events.length);
+    if (events.length > 0) console.log("Sample event:", events[0]);
+
+    const total = await Event.countDocuments(query);
+
+    sendResponse(res, true, 'Events retrieved successfully', { events, total, page, limit });
+  } catch (error) {
+    console.error("❌ Error fetching events:", error);
+    sendResponse(res, false, 'Failed to retrieve events', null, error.message);
+  }
+};
+
+export const getAdminEvents = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  
+  try {
+    // Updated sort to use startDate instead of date
+    const events = await Event.find()
+      .sort({ startDate: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
+    const count = await Event.countDocuments();
+
+    res.json({
+      events,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, startDate, endDate, location, metadata, published } = req.body;
+    
+    // Safely parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid metadata format. Please provide valid JSON.' });
+    }
+    
+    let updateData = { 
+      title, 
+      description, 
+      startDate,
+      endDate,
+      location,
+      metadata: parsedMetadata,
+      published
+    };
+
+    if (req.file) {
+      // Construct the relative path
+      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!updatedEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    sendResponse(res, true, 'Event updated successfully', updatedEvent);
+  } catch (error) {
+    console.error("Error updating event:", error);
+    sendResponse(res, false, 'Failed to update event', null, error.message);
+  }
+};
+
+export const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const event = await Event.findById(id);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Delete the associated image file if it exists
+    if (event.imageUrl) {
+      const imagePath = path.join(__dirname, '..', event.imageUrl);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    // Delete the event from the database
+    await Event.findByIdAndDelete(id);
+
+    res.json({ message: 'Event deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ message: 'Failed to delete event' });
   }
 };

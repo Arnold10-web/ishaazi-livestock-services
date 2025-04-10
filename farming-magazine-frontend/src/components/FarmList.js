@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Edit2, Trash2, ArrowRight } from 'lucide-react';
 
-
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('en-UG', {
+    style: 'currency',
+    currency: 'UGX',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 const FarmList = ({ farms, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
   // Utility: Handle image load errors
   const handleImageError = (e) => {
@@ -77,17 +84,17 @@ const FarmList = ({ farms, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence mode="popLayout">
-          {farms.map((farm, index) => (
-            <motion.article
-              key={farm._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.1 }}
-              className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden farm-item"
-            >
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AnimatePresence mode="popLayout">
+        {farms.map((farm, index) => (
+          <motion.article
+            key={farm._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ delay: index * 0.1 }}
+            className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden farm-item"
+          >
               {farm.imageUrl && (
                 <div className="farm-image-container relative">
                   <motion.img
@@ -102,14 +109,14 @@ const FarmList = ({ farms, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
               )}
-              <div className="farm-content p-6">
+             <div className="farm-content p-6">
                 <Link to={`/farm/${farm._id}`} className="farm-link block">
                   <h2 className="farm-name text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200">
                     {farm.name}
                   </h2>
                 </Link>
                 <p className="farm-date text-sm text-gray-500 mt-1">{formatDate(farm.createdAt)}</p>
-                <p className="farm-price text-gray-600 mt-2">Price: ${farm.price}</p>
+                <p className="farm-price text-gray-600 mt-2">Price: {formatPrice(farm.price)}</p>
                 <p className="farm-location text-gray-600">Location: {farm.location}</p>
                 <p className="farm-description text-gray-600 mt-2">
                   {truncateDescription(farm.description)}
