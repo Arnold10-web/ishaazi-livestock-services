@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   AlertCircle, 
@@ -15,14 +15,18 @@ import {
   Milk,
   X,
   Maximize,
-  Printer,
   Facebook,
   Twitter,
   Linkedin,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ChevronUp,
+  Heart,
+  Eye
 } from 'lucide-react';
+import RecentPosts from '../components/RecentPosts';
 
 const DairyPost = () => {
+  const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -142,9 +146,7 @@ const DairyPost = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Removed print functionality as requested
 
   const scrollToHeading = (id) => {
     const element = document.getElementById(id);
@@ -222,13 +224,13 @@ const DairyPost = () => {
           </h2>
           <p className="text-center text-gray-600 dark:text-gray-300 mb-6">{error}</p>
           <div className="text-center">
-            <Link 
-              to="/dairy" 
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            <button 
+              onClick={() => navigate('/dairy', { replace: true })}
+              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-md"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </Link>
+              Back to Dairy Articles
+            </button>
           </div>
         </div>
       </div>
@@ -244,13 +246,13 @@ const DairyPost = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">Article Not Found</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">The article you're looking for doesn't exist.</p>
-          <Link 
-            to="/dairy" 
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          <button 
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Browse Articles
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -259,9 +261,9 @@ const DairyPost = () => {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Reading Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-blue-100 dark:bg-gray-700 z-50">
+      <div className="fixed top-0 left-0 right-0 h-1 bg-red-100 dark:bg-gray-700 z-50">
         <div 
-          className="h-full bg-blue-600 transition-all duration-150" 
+          className="h-full bg-red-600 transition-all duration-150" 
           style={{ width: `${readingProgress}%` }}
         ></div>
       </div>
@@ -294,20 +296,20 @@ const DairyPost = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content Column */}
           <div className="lg:col-span-2">
-            <Link 
-              to="/dairies" 
-              className="inline-flex items-center text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 mb-6 transition-colors"
+            <button
+              onClick={() => navigate('/dairy', { replace: true })}
+              className="inline-flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg shadow-sm mb-6 transition-colors border border-blue-200 dark:border-blue-800/50"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </Link>
+              Back to Dairy Articles
+            </button>
 
             <article className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden" ref={articleRef}>
               <div className="p-6 md:p-8">
                 <header className="mb-8">
-                  {article.metadata?.type && (
-                    <span className="inline-block bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium mb-4">
-                      {article.metadata.type}
+                  {article.metadata?.cutType && (
+                    <span className="inline-block bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-200 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                      {article.metadata.cutType}
                     </span>
                   )}
 
@@ -316,27 +318,13 @@ const DairyPost = () => {
                   </h1>
 
                   <div className="flex flex-wrap items-center gap-4 text-gray-600 dark:text-gray-400 mb-6 text-sm">
-                    {article.metadata?.owner && (
-                      <div className="flex items-center">
-                        <User className="mr-2 h-4 w-4 text-blue-500" />
-                        <span>Owner: {article.metadata.owner}</span>
-                      </div>
-                    )}
-
                     <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4 text-blue-500" />
+                      <Calendar className="mr-2 h-4 w-4 text-red-500" />
                       <span>Published: {formatDate(article.createdAt)}</span>
                     </div>
 
-                    {article.metadata?.location && (
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4 text-blue-500" />
-                        <span>{article.metadata.location}</span>
-                      </div>
-                    )}
-
                     <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 text-blue-500" />
+                      <Clock className="mr-2 h-4 w-4 text-red-500" />
                       <span>{estimateReadTime(article.content)}</span>
                     </div>
                   </div>
@@ -350,13 +338,7 @@ const DairyPost = () => {
                       <span>Share</span>
                     </button>
 
-                    <button 
-                      onClick={handlePrint}
-                      className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Printer className="h-4 w-4" />
-                      <span>Print</span>
-                    </button>
+
 
                     <div className="flex items-center gap-2">
                       <button 
@@ -423,50 +405,49 @@ const DairyPost = () => {
 
                 <div 
                   className="prose prose-lg max-w-none dark:prose-invert 
-                    prose-img:rounded-lg prose-img:shadow-md prose-a:text-blue-600 dark:prose-a:text-blue-400
+                    prose-img:rounded-lg prose-img:shadow-md prose-a:text-red-600 dark:prose-a:text-red-400
                     prose-headings:scroll-mt-20 print:prose-sm"
                   dangerouslySetInnerHTML={{ __html: article.content }} 
                 />
 
-                {/* Production Statistics */}
-                {article.metadata?.productionStats && (
-                  <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/30 rounded-xl shadow-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <BarChart2 className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-                      Production Statistics
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(article.metadata.productionStats).map(([key, value]) => (
-                        <div key={key} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                          <h3 className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                          <p className="text-gray-800 dark:text-white font-semibold">{value}</p>
-                        </div>
-                      ))}
-                    </div>
+                {/* Product Details */}
+                <div className="mt-8 p-6 bg-red-50 dark:bg-red-900/30 rounded-xl shadow-sm">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <Beef className="w-5 h-5 mr-2 text-red-600 dark:text-red-400" />
+                    Product Details
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {article.metadata?.cutType && (
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300">Cut Type</h3>
+                        <p className="text-gray-800 dark:text-white font-semibold">{article.metadata.cutType}</p>
+                      </div>
+                    )}
+                    {article.metadata?.grade && (
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300">Grade</h3>
+                        <p className="text-gray-800 dark:text-white font-semibold">{article.metadata.grade}</p>
+                      </div>
+                    )}
+                    {article.metadata?.weight && (
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300">Weight</h3>
+                        <p className="text-gray-800 dark:text-white font-semibold">{article.metadata.weight}</p>
+                      </div>
+                    )}
+                    {article.metadata?.pricePerPound && (
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300">Price per lb</h3>
+                        <p className="text-gray-800 dark:text-white font-semibold">${article.metadata.pricePerPound}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* Herd Information */}
-                {article.metadata?.herdInfo && (
-                  <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/30 rounded-xl shadow-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <Milk className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-                      Herd Information
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(article.metadata.herdInfo).map(([key, value]) => (
-                        <div key={key} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                          <h3 className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                          <p className="text-gray-800 dark:text-white font-semibold">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {article.metadata?.tags && article.metadata.tags.length > 0 && (
                   <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex flex-wrap gap-2 items-center">
+                      <Tag className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
                       {article.metadata.tags.map((tag, index) => (
                         <span 
                           key={index} 
@@ -488,7 +469,7 @@ const DairyPost = () => {
             {headings.length > 0 && (
               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm sticky top-6">
                 <div className="flex items-center mb-6">
-                  <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <BookOpen className="h-5 w-5 text-red-600 dark:text-red-400 mr-3" />
                   <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Table of Contents</h2>
                 </div>
                 <nav className="space-y-2">
@@ -498,7 +479,7 @@ const DairyPost = () => {
                       onClick={() => scrollToHeading(heading.id)}
                       className={`block text-left w-full px-2 py-1 rounded text-sm transition-colors
                         ${heading.level === 'h2' ? 'font-medium text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-400 ml-3'}
-                        hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700`}
+                        hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700`}
                     >
                       {heading.text}
                     </button>
@@ -507,68 +488,12 @@ const DairyPost = () => {
               </div>
             )}
 
-            {/* Owner Card */}
-            {article.metadata?.owner && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-                <div className="flex items-center mb-4">
-                  <User className="h-12 w-12 text-blue-600 dark:text-blue-400 mr-4" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{article.metadata.owner}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Dairy Owner</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {article.metadata?.ownerBio || "Experienced dairy farmer with a passion for quality livestock."}
-                </p>
-              </div>
-            )}
-
-            {/* Recent Articles */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-              <div className="flex items-center mb-6">
-                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Articles</h2>
-              </div>
-              <div className="space-y-4">
-                {recentArticles.length > 0 ? (
-                  recentArticles.map(item => (
-                    <Link 
-                      key={item._id} 
-                      to={`/dairies/${item._id}`}
-                      className="group block"
-                    >
-                      <div className="flex gap-4 items-start">
-                        {item.imageUrl && (
-                          <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden">
-                            <img
-                              src={`${API_BASE_URL}${item.imageUrl}`}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            <span>{formatDate(item.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No recent articles found</p>
-                )}
-              </div>
-            </div>
+            <RecentPosts posts={recentArticles} themeColor="#dc2626" contentType="beefs" />
 
             {/* Article Information */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
               <div className="flex items-center mb-6">
-                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                <BookOpen className="h-5 w-5 text-red-600 dark:text-red-400 mr-3" />
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Article Information</h2>
               </div>
               <div className="space-y-4 text-sm">
@@ -592,32 +517,7 @@ const DairyPost = () => {
         </div>
       </div>
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-            font-size: 12pt;
-          }
-          .no-print {
-            display: none !important;
-          }
-          a {
-            text-decoration: underline;
-            color: #0000EE;
-          }
-          a[href^="http"]:after {
-            content: " (" attr(href) ")";
-            font-size: 0.8em;
-            font-weight: normal;
-          }
-          img {
-            max-width: 100% !important;
-            height: auto !important;
-          }
-        }
-      `}</style>
+
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   AlertCircle, 
@@ -20,8 +20,10 @@ import {
   Linkedin,
   Link as LinkIcon
 } from 'lucide-react';
+import RecentPosts from '../components/RecentPosts';
 
 const PiggeryPost = () => {
+  const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -141,9 +143,7 @@ const PiggeryPost = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Removed print functionality as requested
 
   const scrollToHeading = (id) => {
     const element = document.getElementById(id);
@@ -221,13 +221,13 @@ const PiggeryPost = () => {
           </h2>
           <p className="text-center text-gray-600 dark:text-gray-300 mb-6">{error}</p>
           <div className="text-center">
-            <Link 
-              to="/piggery" 
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            <button 
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Articles
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -243,13 +243,13 @@ const PiggeryPost = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">Article Not Found</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">The article you're looking for doesn't exist.</p>
-          <Link 
-            to="/piggery" 
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          <button 
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Browse Articles
-          </Link>
+            Back to Articles
+          </button>
         </div>
       </div>
     );
@@ -293,13 +293,13 @@ const PiggeryPost = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content Column */}
           <div className="lg:col-span-2">
-            <Link 
-              to="/piggery" 
-              className="inline-flex items-center text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400 mb-6 transition-colors"
+            <button
+              onClick={() => navigate('/piggery', { replace: true })}
+              className="inline-flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg shadow-sm mb-6 transition-colors border border-emerald-200 dark:border-emerald-800/50"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </Link>
+              Back to Piggery Articles
+            </button>
 
             <article className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden" ref={articleRef}>
               <div className="p-6 md:p-8">
@@ -349,13 +349,7 @@ const PiggeryPost = () => {
                       <span>Share</span>
                     </button>
 
-                    <button 
-                      onClick={handlePrint}
-                      className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Printer className="h-4 w-4" />
-                      <span>Print</span>
-                    </button>
+
 
                     <div className="flex items-center gap-2">
                       <button 
@@ -423,7 +417,7 @@ const PiggeryPost = () => {
                 <div 
                   className="prose prose-lg max-w-none dark:prose-invert 
                     prose-img:rounded-lg prose-img:shadow-md prose-a:text-green-600 dark:prose-a:text-green-400
-                    prose-headings:scroll-mt-20 print:prose-sm"
+                    prose-headings:scroll-mt-20"
                   dangerouslySetInnerHTML={{ __html: article.content }} 
                 />
 
@@ -504,47 +498,7 @@ const PiggeryPost = () => {
               </div>
             )}
 
-            {/* Recent Articles */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-              <div className="flex items-center mb-6">
-                <BookOpen className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Articles</h2>
-              </div>
-              <div className="space-y-4">
-                {recentArticles.length > 0 ? (
-                  recentArticles.map(item => (
-                    <Link 
-                      key={item._id} 
-                      to={`/piggeries/${item._id}`}
-                      className="group block"
-                    >
-                      <div className="flex gap-4 items-start">
-                        {item.imageUrl && (
-                          <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden">
-                            <img
-                              src={`${API_BASE_URL}${item.imageUrl}`}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-800 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors line-clamp-2">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            <span>{formatDate(item.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No recent articles found</p>
-                )}
-              </div>
-            </div>
+            <RecentPosts posts={recentArticles} themeColor="#ec4899" contentType="piggeries" />
 
             {/* Article Information */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">

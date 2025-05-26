@@ -1407,14 +1407,23 @@ export const getSubscribers = async (req, res) => {
 // Add a subscriber
 export const createSubscriber = async (req, res) => {
   const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
   try {
+    const existingSubscriber = await Subscriber.findOne({ email });
+    if (existingSubscriber) {
+      return res.status(400).json({ message: 'Email is already subscribed' });
+    }
     const subscriber = new Subscriber({ email });
     await subscriber.save();
     res.status(201).json(subscriber);
   } catch (error) {
-    res.status(400).json({ message: 'Error adding subscriber' });
+    console.error('Error adding subscriber:', error);
+    res.status(500).json({ message: 'Internal server error while adding subscriber' });
   }
 };
+
 
 // Delete a subscriber
 export const deleteSubscriber = async (req, res) => {

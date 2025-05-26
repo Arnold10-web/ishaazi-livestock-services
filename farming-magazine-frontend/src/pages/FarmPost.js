@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   AlertCircle, 
@@ -9,14 +9,18 @@ import {
   Calendar, 
   DollarSign, 
   Share2, 
-  Heart 
+  Heart,
+  ArrowLeft
 } from 'lucide-react';
+import RecentPosts from '../components/RecentPosts';
 
 const FarmPost = () => {
+  const navigate = useNavigate();
   const [farm, setFarm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
+  const [recentFarms, setRecentFarms] = useState([]);
 
   const { id } = useParams();
   
@@ -81,6 +85,18 @@ const FarmPost = () => {
     fetchFarm();
   }, [id, API_BASE_URL]);
 
+  useEffect(() => {
+    const fetchRecentFarms = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/content/farms?limit=3&exclude=${id}&sort=-createdAt`);
+        setRecentFarms(response.data.data || []);
+      } catch (err) {
+        console.error('Error fetching recent farms:', err);
+      }
+    };
+    fetchRecentFarms();
+  }, [id, API_BASE_URL]);
+
   // Loading state
   if (loading) {
     return (
@@ -118,104 +134,119 @@ const FarmPost = () => {
   }
 
   return (
-    <article className="max-w-4xl mx-auto px-4 py-8 md:px-8">
-      {/* Header with title and actions */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <Wheat className="w-8 h-8 text-green-600 mr-3" />
-          <h1 className="text-4xl font-bold text-gray-900 leading-tight">
-            {farm.title}
-          </h1>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button 
-            onClick={handleShare}
-            className="text-gray-600 hover:text-green-600 transition-colors"
-            aria-label="Share farm listing"
+    <div className="container mx-auto px-4 py-8 md:px-8 max-w-7xl">
+      <div className="grid lg:grid-cols-3 gap-8">
+        <article className="lg:col-span-2">
+          {/* Header with title and actions */}
+          <button
+            onClick={() => navigate('/farm', { replace: true })}
+            className="inline-flex items-center px-4 py-2.5 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg shadow-sm mb-6 transition-all duration-200 border border-gray-200 dark:border-gray-700 font-medium group"
           >
-            <Share2 className="w-6 h-6" />
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Back to Farms
           </button>
-          <button 
-            onClick={() => setLiked(!liked)}
-            className={`transition-colors ${liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
-            aria-label="Like farm listing"
-          >
-            <Heart className={`w-6 h-6 ${liked ? 'fill-current' : ''}`} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Farm Image */}
-      {farm.imageUrl && (
-        <div className="relative w-full mb-8 rounded-lg overflow-hidden shadow-lg">
-          <img
-            src={`${API_BASE_URL}${farm.imageUrl}`}
-            alt={farm.title}
-            className="w-full h-[500px] object-cover"
-            crossOrigin="anonymous"
-          />
-        </div>
-      )}
-      
-      {/* Farm Details */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-green-50 p-4 rounded-lg flex items-center">
-          <DollarSign className="w-6 h-6 text-green-600 mr-3" />
-          <div>
-            <h3 className="text-sm text-gray-600">Price</h3>
-            <p className="text-xl font-bold text-green-800">{formatPrice(farm.price)}</p>
+          
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center">
+              <Wheat className="w-8 h-8 text-green-600 mr-3" />
+              <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+                {farm.title}
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={handleShare}
+                className="text-gray-600 hover:text-green-600 transition-colors"
+                aria-label="Share farm listing"
+              >
+                <Share2 className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => setLiked(!liked)}
+                className={`transition-colors ${liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
+                aria-label="Like farm listing"
+              >
+                <Heart className={`w-6 h-6 ${liked ? 'fill-current' : ''}`} />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg flex items-center">
-          <MapPin className="w-6 h-6 text-green-600 mr-3" />
-          <div>
-            <h3 className="text-sm text-gray-600">Location</h3>
-            <p className="text-xl font-bold text-green-800">{farm.location || 'Not specified'}</p>
-          </div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg flex items-center">
-          <Calendar className="w-6 h-6 text-green-600 mr-3" />
-          <div>
-            <h3 className="text-sm text-gray-600">Listed On</h3>
-            <p className="text-xl font-bold text-green-800">
-              {farm.createdAt ? formatDate(farm.createdAt) : 'Not available'}
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Farm Description */}
-      <div 
-        className="prose prose-lg max-w-none mb-8"
-        dangerouslySetInnerHTML={{ __html: farm.content }} 
-      />
-      
-      {/* Crop Information */}
-      {farm.cropInfo && (
-        <div className="mt-8 bg-green-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-green-900 mb-4">Crop Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(farm.cropInfo).map(([key, value]) => (
-              <div key={key} className="bg-white p-4 rounded-md shadow">
-                <p className="text-sm text-gray-600 capitalize">{key.replace('_', ' ')}</p>
-                <p className="text-lg font-medium text-green-900">{value}</p>
+          
+          {/* Farm Image */}
+          {farm.imageUrl && (
+            <div className="relative w-full mb-8 rounded-lg overflow-hidden shadow-lg">
+              <img
+                src={`${API_BASE_URL}${farm.imageUrl}`}
+                alt={farm.title}
+                className="w-full h-[500px] object-cover"
+                crossOrigin="anonymous"
+              />
+            </div>
+          )}
+          
+          {/* Farm Details */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-green-50 p-4 rounded-lg flex items-center">
+              <DollarSign className="w-6 h-6 text-green-600 mr-3" />
+              <div>
+                <h3 className="text-sm text-gray-600">Price</h3>
+                <p className="text-xl font-bold text-green-800">{formatPrice(farm.price)}</p>
               </div>
-            ))}
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg flex items-center">
+              <MapPin className="w-6 h-6 text-green-600 mr-3" />
+              <div>
+                <h3 className="text-sm text-gray-600">Location</h3>
+                <p className="text-xl font-bold text-green-800">{farm.location || 'Not specified'}</p>
+              </div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg flex items-center">
+              <Calendar className="w-6 h-6 text-green-600 mr-3" />
+              <div>
+                <h3 className="text-sm text-gray-600">Listed On</h3>
+                <p className="text-xl font-bold text-green-800">
+                  {farm.createdAt ? formatDate(farm.createdAt) : 'Not available'}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {/* Contact and Inquiry */}
-      <div className="mt-8 text-center">
-        <Link 
-          to="/contact" 
-          className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Inquire About This Farm
-        </Link>
+          
+          {/* Farm Description */}
+          <div 
+            className="prose prose-lg max-w-none mb-8"
+            dangerouslySetInnerHTML={{ __html: farm.content }} 
+          />
+          
+          {/* Crop Information */}
+          {farm.cropInfo && (
+            <div className="mt-8 bg-green-50 p-6 rounded-lg">
+              <h2 className="text-xl font-semibold text-green-900 mb-4">Crop Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(farm.cropInfo).map(([key, value]) => (
+                  <div key={key} className="bg-white p-4 rounded-md shadow">
+                    <p className="text-sm text-gray-600 capitalize">{key.replace('_', ' ')}</p>
+                    <p className="text-lg font-medium text-green-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Contact and Inquiry */}
+          <div className="mt-8 text-center">
+            <Link 
+              to="/contact" 
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Inquire About This Farm
+            </Link>
+          </div>
+        </article>
+        <aside className="space-y-6">
+          <RecentPosts posts={recentFarms} themeColor="#16a34a" contentType="farms" />
+        </aside>
       </div>
-    </article>
+    </div>
   );
 };
 
-export default FarmPost;
+export default FarmPost

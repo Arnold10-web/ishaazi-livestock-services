@@ -91,10 +91,10 @@ DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
   GET_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
   UPDATE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
   DELETE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
-  
-// CREATE_SUBSCRIBER: `${BASE_URL}/api/content/subscribers`,
-// GET_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
-// DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
+
+  CREATE_SUBSCRIBER: `${BASE_URL}/api/content/subscribers`,
+  GET_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
+  DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
 
 // CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
 // GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,

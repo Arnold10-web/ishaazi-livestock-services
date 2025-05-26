@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   AlertCircle, 
@@ -22,8 +22,10 @@ import {
   Linkedin,
   Link as LinkIcon
 } from 'lucide-react';
+import RecentPosts from '../components/RecentPosts';
 
 const BeefPost = () => {
+  const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -143,9 +145,7 @@ const BeefPost = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Removed print functionality as requested
 
   const scrollToHeading = (id) => {
     const element = document.getElementById(id);
@@ -223,13 +223,13 @@ const BeefPost = () => {
           </h2>
           <p className="text-center text-gray-600 dark:text-gray-300 mb-6">{error}</p>
           <div className="text-center">
-            <Link 
-              to="/beef" 
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            <button 
+              onClick={() => navigate('/beef', { replace: true })}
+              className="inline-flex items-center px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md font-medium group"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </Link>
+              <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              Back to Beef Articles
+            </button>
           </div>
         </div>
       </div>
@@ -245,13 +245,13 @@ const BeefPost = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">Article Not Found</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">The article you're looking for doesn't exist.</p>
-          <Link 
-            to="/beef" 
-            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          <button 
+            onClick={() => navigate('/beef', { replace: true })}
+            className="inline-flex items-center px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md font-medium group"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Browse Articles
-          </Link>
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Back to Beef Articles
+          </button>
         </div>
       </div>
     );
@@ -295,13 +295,13 @@ const BeefPost = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content Column */}
           <div className="lg:col-span-2">
-            <Link 
-              to="/beef" 
-              className="inline-flex items-center text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 mb-6 transition-colors"
+            <button
+              onClick={() => navigate('/beef', { replace: true })}
+              className="inline-flex items-center px-4 py-2.5 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg shadow-sm mb-6 transition-all duration-200 border border-gray-200 dark:border-gray-700 font-medium group"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </Link>
+              <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              Back to Beef Articles
+            </button>
 
             <article className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden" ref={articleRef}>
               <div className="p-6 md:p-8">
@@ -337,13 +337,7 @@ const BeefPost = () => {
                       <span>Share</span>
                     </button>
 
-                    <button 
-                      onClick={handlePrint}
-                      className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Printer className="h-4 w-4" />
-                      <span>Print</span>
-                    </button>
+
 
                     <div className="flex items-center gap-2">
                       <button 
@@ -493,47 +487,7 @@ const BeefPost = () => {
               </div>
             )}
 
-            {/* Recent Articles */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-              <div className="flex items-center mb-6">
-                <BookOpen className="h-5 w-5 text-red-600 dark:text-red-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Articles</h2>
-              </div>
-              <div className="space-y-4">
-                {recentArticles.length > 0 ? (
-                  recentArticles.map(item => (
-                    <Link 
-                      key={item._id} 
-                      to={`/beef/${item._id}`}
-                      className="group block"
-                    >
-                      <div className="flex gap-4 items-start">
-                        {item.imageUrl && (
-                          <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden">
-                            <img
-                              src={`${API_BASE_URL}${item.imageUrl}`}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-800 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-2">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            <span>{formatDate(item.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No recent articles found</p>
-                )}
-              </div>
-            </div>
+            <RecentPosts posts={recentArticles} themeColor="#dc2626" contentType="beefs" />
 
             {/* Article Information */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
@@ -562,32 +516,7 @@ const BeefPost = () => {
         </div>
       </div>
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-            font-size: 12pt;
-          }
-          .no-print {
-            display: none !important;
-          }
-          a {
-            text-decoration: underline;
-            color: #0000EE;
-          }
-          a[href^="http"]:after {
-            content: " (" attr(href) ")";
-            font-size: 0.8em;
-            font-weight: normal;
-          }
-          img {
-            max-width: 100% !important;
-            height: auto !important;
-          }
-        }
-      `}</style>
+
     </div>
   );
 };

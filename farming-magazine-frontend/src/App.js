@@ -26,6 +26,7 @@ import Contact from './pages/Contact';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import EventPage from './pages/EventPage';
+import SubscriberPage from './pages/SubscriberPage';
 
 // Layout component with Header and Footer
 const MainLayout = () => (
@@ -82,6 +83,7 @@ const App = () => (
           <Route path="/piggery" element={<PiggeryPage />} />
           <Route path="/piggery/:id" element={<PiggeryPost />} />
           <Route path="/events" element={<EventPage />} />
+          <Route path="/subscribe" element={<SubscriberPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
