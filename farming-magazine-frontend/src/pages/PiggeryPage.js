@@ -1,123 +1,124 @@
+// ========================
+// Redesigned PiggeryPost.js
+// ========================
+
+// (Already updated above)
+
+// ========================
+// Redesigned PiggeryPage.js
+// ========================
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Search, Filter, ChevronDown, RefreshCw } from 'lucide-react';
 import PiggeryList from '../components/PiggeryList';
 
-
-
 const PiggeryPage = () => {
-  // State hooks for piggeries, loading, and error management
   const [piggeries, setPiggeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const piggeryPerPage = 6;
 
-  // Base URL for the API
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  // Fetch piggeries data on component mount
   useEffect(() => {
-    const fetchPiggeries = async () => {
+    const fetchData = async () => {
       try {
-        setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/content/piggeries`);
-        setPiggeries(response.data.data.piggeries);
-        setError(null);
+        const res = await axios.get(`${API_BASE_URL}/api/content/piggeries`);
+        setPiggeries(res.data.data.piggeries);
       } catch (err) {
-        console.error('Error fetching piggeries:', err);
-        setError('Failed to fetch piggery information. Please try again later.');
+        console.error(err);
+        setError('Failed to fetch piggeries.');
       } finally {
         setLoading(false);
       }
     };
-
-    fetchPiggeries();
+    fetchData();
   }, [API_BASE_URL]);
 
-  // Loading state view with animated spinner
+  const filtered = piggeries.filter(p =>
+    p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const indexOfLast = currentPage * piggeryPerPage;
+  const indexOfFirst = indexOfLast - piggeryPerPage;
+  const currentPiggeries = filtered.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(filtered.length / piggeryPerPage);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-     
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          >
-            <Loader2 className="w-12 h-12 text-blue-500" />
-          </motion.div>
-          <p className="mt-4 text-gray-600 font-medium">Loading piggery information...</p>
-        </div>
-   
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  // Error state view with animated error message and retry button
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-   
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-red-50 rounded-lg p-6 max-w-md w-full text-center"
-          >
-            <svg
-              className="w-12 h-12 text-red-500 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Oops! Something went wrong</h2>
-            <p className="text-gray-600">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
-            >
-              Try Again
-            </button>
-          </motion.div>
-        </div>
-      
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 text-center">
+        <p className="text-lg text-red-500 font-semibold mb-4">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          <RefreshCw className="w-4 h-4 inline mr-2" />Retry
+        </button>
       </div>
     );
   }
 
-  // Main PiggeryPage content with fade-in transition
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-gray-50"
-    >
- 
-      <main className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Piggery Management</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Manage and monitor your piggeries effectively.
-          </p>
-        </motion.div>
-        {/* Render the PiggeryList component with fetched data */}
-        <PiggeryList piggeries={piggeries} apiBaseUrl={API_BASE_URL} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="bg-green-600 py-12 text-center text-white">
+        <h1 className="text-4xl font-bold">Piggery Records</h1>
+        <p className="mt-2 text-green-100">Explore detailed piggery information and stats</p>
+      </header>
+
+      <main className="container mx-auto px-4 py-10">
+        <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="relative w-full sm:w-auto flex-grow">
+            <Search className="absolute top-3 left-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search piggeries..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <button
+            className="inline-flex items-center gap-2 text-sm px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            disabled
+          >
+            <Filter className="w-4 h-4" /> Filters <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+
+        <AnimatePresence mode="wait">
+          <PiggeryList piggery={currentPiggeries} apiBaseUrl={API_BASE_URL} />
+        </AnimatePresence>
+
+        {totalPages > 1 && (
+          <div className="mt-12 flex justify-center items-center gap-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
+            >Previous</button>
+            <span className="text-gray-600 dark:text-gray-300">Page {currentPage} of {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
+            >Next</button>
+          </div>
+        )}
       </main>
-   
-    </motion.div>
+    </div>
   );
 };
 

@@ -1,17 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Edit2, Trash2, ArrowRight } from 'lucide-react';
-
+import { Edit2, Trash2, ArrowRight, Calendar, Tag, Eye, Heart } from 'lucide-react';
 
 const GoatList = ({ goats, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
-  // Utility: Handle image load errors
+  // Utility function for image error handling
   const handleImageError = (e) => {
-    console.error('Image failed to load:', e.target.src);
-    e.target.src = '/placeholder-image.jpg'; // Fallback image
+    e.target.src = '/placeholder-image.jpg';
   };
 
-  // Utility: Truncate HTML content
+  // Utility function to truncate HTML content
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
@@ -20,127 +18,134 @@ const GoatList = ({ goats, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  // Utility: Format date strings
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  // Utility function to format dates
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
 
-  // Skeleton loader with shimmer effect for loading state
+  // Simple skeleton loader component
   const GoatSkeleton = () => (
-    <div className="relative overflow-hidden rounded-xl bg-white shadow-sm p-4">
-      <div className="animate-pulse space-y-4">
-        <div className="h-48 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg" />
-        <div className="space-y-2">
-          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/4" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded" />
-        </div>
-      </div>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow animate-pulse space-y-4">
+      <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
     </div>
   );
 
-  // Empty state with animated icon when no goats exist
+  // Empty state
   if (goats.length === 0 && !isLoading) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center"
-      >
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+      <div className="text-center p-12 bg-white dark:bg-gray-800 rounded-2xl shadow">
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="w-12 h-12 mx-auto text-green-600 dark:text-green-400 mb-4"
         >
-          <AlertCircle className="w-16 h-16 text-blue-400/80" />
-        </motion.div>
-        <h3 className="mt-6 text-2xl font-semibold text-gray-800">No Goat Content Found</h3>
-        <p className="mt-2 text-gray-600">Check back soon for updates!</p>
-      </motion.div>
+          <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+          <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+          <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+          <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+        </svg>
+        <h3 className="text-xl font-bold text-gray-800 dark:text-white">No Goat Information Found</h3>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Check back later for goat farming content.</p>
+      </div>
     );
   }
 
-  // Loading state: Display a grid of skeleton loaders
+  // Loading state
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-        {[1, 2, 3].map((i) => (
-          <GoatSkeleton key={i} />
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => <GoatSkeleton key={i} />)}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence mode="popLayout">
-          {goats.map((goat, index) => (
-            <motion.article
-              key={goat._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.1 }}
-              className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden goat-item"
-            >
-              {goat.imageUrl && (
-                <div className="goat-image-container relative">
-                  <motion.img
-                    src={`${apiBaseUrl}${goat.imageUrl}`}
-                    alt={goat.title}
-                    className="goat-image w-full object-cover"
-                    onError={handleImageError}
-                    crossOrigin="anonymous"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.4 }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-              )}
-              <div className="goat-content p-6">
-                <Link to={`/goat/${goat._id}`} className="goat-link block">
-                  <h2 className="goat-title text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200">
-                    {goat.title}
-                  </h2>
-                </Link>
-                <p className="goat-date text-sm text-gray-500 mt-1">{formatDate(goat.createdAt)}</p>
-                <p className="goat-excerpt text-gray-600 mt-3">{truncateContent(goat.content)}</p>
-                <Link to={`/goat/${goat._id}`} className="read-more inline-flex items-center gap-1 text-blue-600 font-medium mt-4">
-                  Read More
-                  <ArrowRight className="w-4 h-4 transition-transform duration-300" />
-                </Link>
-                {isAdmin && (
-                  <div className="admin-actions mt-4 flex gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onEdit(goat._id)}
-                      className="update-btn p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors duration-200"
-                      aria-label="Edit goat"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onDelete(goat._id)}
-                      className="delete-btn p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors duration-200"
-                      aria-label="Delete goat"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </motion.button>
-                  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AnimatePresence mode="popLayout">
+        {goats.map((goat, index) => (
+          <motion.article
+            key={goat._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
+          >
+            {goat.imageUrl && (
+              <div className="relative overflow-hidden aspect-[16/9]">
+                <img
+                  src={`${apiBaseUrl}${goat.imageUrl}`}
+                  alt={goat.title}
+                  onError={handleImageError}
+                  className="w-full h-full object-cover"
+                />
+                
+                {goat.breed && (
+                  <span className="absolute top-4 left-4 bg-green-600 text-white text-xs px-3 py-1 rounded-full">
+                    <Tag className="inline w-3 h-3 mr-1" />{goat.breed}
+                  </span>
                 )}
               </div>
-            </motion.article>
-          ))}
-        </AnimatePresence>
-      </div>
+            )}
+            
+            <div className="p-5 flex-1 flex flex-col">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {formatDate(goat.createdAt)}
+              </div>
+              
+              <Link to={`/goat/${goat._id}`} className="group mb-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                  {goat.title}
+                </h2>
+              </Link>
+              
+              <p className="text-gray-600 dark:text-gray-300 text-sm flex-grow">
+                {truncateContent(goat.content)}
+              </p>
+              
+              <div className="mt-4 flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{Math.floor(Math.random() * 1000)}</span>
+                  <span className="flex items-center gap-1"><Heart className="w-4 h-4" />{Math.floor(Math.random() * 50)}</span>
+                </div>
+                <Link
+                  to={`/goat/${goat._id}`}
+                  className="inline-flex items-center text-green-600 dark:text-green-400 hover:underline"
+                >
+                  Read More <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+              
+              {isAdmin && (
+                <div className="mt-4 flex gap-2 justify-end">
+                  <button
+                    onClick={() => onEdit(goat._id)}
+                    className="p-2 rounded-full text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDelete(goat._id)}
+                    className="p-2 rounded-full text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.article>
+        ))}
+      </AnimatePresence>
     </div>
   );
 };

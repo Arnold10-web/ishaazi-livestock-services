@@ -1,558 +1,218 @@
+// ========================
+// Redesigned PiggeryPost.js
+// ========================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  AlertCircle, 
-  Loader2, 
-  ArrowLeft, 
-  Share2, 
-  Calendar, 
-  Clock,
-  BookOpen,
-  User,
-  MapPin,
-  Tag,
-  X,
-  Maximize,
-  Printer,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Link as LinkIcon
+import { motion } from 'framer-motion';
+import {
+  CalendarDays, Clock, ArrowLeft, Share2, Twitter, Facebook, Linkedin, BookOpen, X
 } from 'lucide-react';
 import RecentPosts from '../components/RecentPosts';
 
 const PiggeryPost = () => {
   const navigate = useNavigate();
-  const [article, setArticle] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [recentArticles, setRecentArticles] = useState([]);
-  const [expandedImage, setExpandedImage] = useState(null);
-  const [readingProgress, setReadingProgress] = useState(0);
-  const [headings, setHeadings] = useState([]);
   const { id } = useParams();
   const articleRef = useRef(null);
-  
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ishaazi-livestock-services-production.up.railway.app';
-  
+
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [recentPosts, setRecentPosts] = useState([]);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [headings, setHeadings] = useState([]);
+  const [expandedImage, setExpandedImage] = useState(null);
+
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPost = async () => {
       try {
-        setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/content/piggeries/${id}`);
-        setArticle(response.data.data);
-        document.title = `${response.data.data.title} | Piggery Articles`;
-        
-        const recentResponse = await axios.get(`${API_BASE_URL}/api/content/piggeries?limit=3&exclude=${id}&sort=-createdAt`);
-        setRecentArticles(recentResponse.data.data || []);
-        
-        setError(null);
+        const res = await axios.get(`${API_BASE_URL}/api/content/piggeries/${id}`);
+        const data = res.data.data;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.content, 'text/html');
+        const headingElements = Array.from(doc.querySelectorAll('h2, h3'));
+        headingElements.forEach((el, i) => (el.id = `heading-${i}`));
+        const extracted = headingElements.map((el, i) => ({
+          id: `heading-${i}`,
+          text: el.textContent,
+          level: el.tagName.toLowerCase()
+        }));
+        data.content = doc.body.innerHTML;
+
+        setPost(data);
+        setHeadings(extracted);
+
+        const recent = await axios.get(`${API_BASE_URL}/api/content/piggeries?limit=3`);
+        setRecentPosts(recent.data.data.piggeries.filter(p => p._id !== id));
       } catch (err) {
-        console.error('Error fetching article:', err);
-        setError('Failed to fetch article. Please try again later.');
+        console.error(err);
+        setError('Unable to load piggery details.');
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchData();
+    fetchPost();
     window.scrollTo(0, 0);
-  }, [id, API_BASE_URL]);
+  }, [id]);
 
   useEffect(() => {
-    if (!article?.content) return;
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(article.content, 'text/html');
-    const headingElements = Array.from(doc.querySelectorAll('h2, h3'));
-    const extractedHeadings = headingElements.map((heading, index) => ({
-      id: `heading-${index}`,
-      text: heading.textContent,
-      level: heading.tagName.toLowerCase(),
-    }));
-    setHeadings(extractedHeadings);
-
-    headingElements.forEach((heading, index) => {
-      heading.id = `heading-${index}`;
-    });
-    setArticle(prev => ({ ...prev, content: doc.body.innerHTML }));
-  }, [article]);
-
-  useEffect(() => {
-    const handleScroll = () => {
+    const onScroll = () => {
       if (!articleRef.current) return;
-      
       const articleHeight = articleRef.current.offsetHeight;
-      const windowHeight = window.innerHeight;
-      const scrollPosition = window.scrollY;
-      const progress = (scrollPosition / (articleHeight - windowHeight)) * 100;
+      const scrollY = window.scrollY;
+      const winHeight = window.innerHeight;
+      const progress = (scrollY / (articleHeight - winHeight)) * 100;
       setReadingProgress(Math.min(100, Math.max(0, progress)));
     };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(new Date(dateString));
+  const formatDate = (date) => new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+
+  const estimateReadTime = (html) => {
+    const text = html.replace(/<[^>]*>/g, '');
+    return `${Math.ceil(text.split(/\s+/).length / 200)} min read`;
   };
 
-  const estimateReadTime = (content) => {
-    if (!content) return '1 min read';
-    const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
-    return `${Math.ceil(wordCount / 200)} min read`;
-  };
-
-  const handleShare = (platform = null) => {
-    const shareUrl = window.location.href;
-    const shareTitle = article.title;
-    const shareText = article.metadata?.description || article.title;
-
-    if (platform) {
-      let url = '';
-      switch (platform) {
-        case 'twitter':
-          url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-          break;
-        case 'facebook':
-          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-          break;
-        case 'linkedin':
-          url = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}&summary=${encodeURIComponent(shareText)}`;
-          break;
-        default:
-          break;
-      }
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } else if (navigator.share) {
-      navigator.share({
-        title: shareTitle,
-        text: shareText,
-        url: shareUrl
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => alert('Link copied to clipboard!'))
-        .catch(console.error);
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const title = post.title;
+    const text = post.subtitle || post.title;
+    let shareUrl = '';
+    switch (platform) {
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+        break;
+      default:
+        navigator.clipboard.writeText(url).then(() => alert('Link copied!'));
+        return;
     }
+    window.open(shareUrl, '_blank');
   };
-
-  // Removed print functionality as requested
 
   const scrollToHeading = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleImageError = (e) => {
+    e.target.src = '/placeholder-image.jpg';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto px-4 py-12 max-w-7xl">
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="p-6 md:p-8 space-y-6">
-                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
-                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                  <div className="flex gap-4">
-                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                  </div>
-                  <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                  <div className="space-y-3">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" 
-                           style={{ width: `${Math.random() * 30 + 70}%` }}></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <aside className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm space-y-4">
-                <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="h-16 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                      <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm space-y-4">
-                <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            </aside>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <span className="text-gray-500 dark:text-white">Loading piggery...</span>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !post) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md max-w-md w-full">
-          <div className="flex items-center justify-center mb-6">
-            <AlertCircle className="h-16 w-16 text-red-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-4">
-            Oops! Something Went Wrong
-          </h2>
-          <p className="text-center text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-          <div className="text-center">
-            <button 
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Articles
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!article) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md max-w-md w-full text-center">
-          <div className="flex items-center justify-center mb-4">
-            <AlertCircle className="h-16 w-16 text-gray-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">Article Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">The article you're looking for doesn't exist.</p>
-          <button 
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Articles
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center text-red-500 bg-gray-50 dark:bg-gray-900">
+        {error || 'Post not found'}
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Reading Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-green-100 dark:bg-gray-700 z-50">
-        <div 
-          className="h-full bg-green-600 transition-all duration-150" 
-          style={{ width: `${readingProgress}%` }}
-        ></div>
-      </div>
+    <div className="bg-gray-50 dark:bg-gray-900">
+      <motion.div style={{ width: `${readingProgress}%` }} className="fixed top-0 left-0 h-1 bg-blue-600 z-50" />
 
-      {/* Expanded Image Modal */}
       {expandedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <button 
-            onClick={() => setExpandedImage(null)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
-          >
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <button onClick={() => setExpandedImage(null)} className="absolute top-4 right-4 text-white">
             <X className="h-8 w-8" />
           </button>
-          <div className="max-w-6xl max-h-[90vh] flex flex-col">
-            <img 
-              src={`${API_BASE_URL}${expandedImage}`} 
-              alt="Expanded view" 
-              className="max-w-full max-h-[80vh] object-contain"
-            />
-            {article.metadata?.imageCaption && (
-              <p className="text-white text-center mt-4 text-sm italic">
-                {article.metadata.imageCaption}
-              </p>
-            )}
-          </div>
+          <img
+            src={`${API_BASE_URL}${expandedImage}`}
+            alt="Expanded"
+            className="max-w-full max-h-[80vh] object-contain"
+            onError={handleImageError}
+          />
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-12 max-w-7xl">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content Column */}
-          <div className="lg:col-span-2">
-            <button
-              onClick={() => navigate('/piggery', { replace: true })}
-              className="inline-flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg shadow-sm mb-6 transition-colors border border-emerald-200 dark:border-emerald-800/50"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Piggery Articles
-            </button>
+      <div className="container mx-auto px-4 py-12 max-w-6xl grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8" ref={articleRef}>
+          <button
+            onClick={() => navigate('/piggery')}
+            className="inline-flex items-center px-4 py-2 text-sm text-blue-600 hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Piggery
+          </button>
 
-            <article className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden" ref={articleRef}>
-              <div className="p-6 md:p-8">
-                <header className="mb-8">
-                  {article.metadata?.type && (
-                    <span className="inline-block bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium mb-4">
-                      {article.metadata.type}
-                    </span>
-                  )}
-
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                    {article.title}
-                  </h1>
-
-                  <div className="flex flex-wrap items-center gap-4 text-gray-600 dark:text-gray-400 mb-6 text-sm">
-                    {article.metadata?.owner && (
-                      <div className="flex items-center">
-                        <User className="mr-2 h-4 w-4 text-green-500" />
-                        <span>Owner: {article.metadata.owner}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4 text-green-500" />
-                      <span>Published: {formatDate(article.createdAt)}</span>
-                    </div>
-
-                    {article.metadata?.location && (
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4 text-green-500" />
-                        <span>{article.metadata.location}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 text-green-500" />
-                      <span>{estimateReadTime(article.content)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button 
-                      onClick={() => handleShare()}
-                      className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <Share2 className="h-4 w-4" />
-                      <span>Share</span>
-                    </button>
-
-
-
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleShare('twitter')}
-                        className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        aria-label="Share on Twitter"
-                      >
-                        <Twitter className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleShare('facebook')}
-                        className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        aria-label="Share on Facebook"
-                      >
-                        <Facebook className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleShare('linkedin')}
-                        className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        aria-label="Share on LinkedIn"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleShare()}
-                        className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        aria-label="Copy link"
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </header>
-
-                {article.imageUrl && (
-                  <div className="mb-8 rounded-xl overflow-hidden relative group">
-                    <img 
-                      src={`${API_BASE_URL}${article.imageUrl}`} 
-                      alt={article.title} 
-                      className="w-full h-auto max-h-[500px] object-cover cursor-pointer"
-                      crossOrigin="anonymous"
-                      onClick={() => setExpandedImage(article.imageUrl)}
-                    />
-                    <button 
-                      onClick={() => setExpandedImage(article.imageUrl)}
-                      className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Expand image"
-                    >
-                      <Maximize className="h-5 w-5" />
-                    </button>
-                    {article.metadata?.imageCaption && (
-                      <p className="text-center text-gray-500 dark:text-gray-400 italic mt-2 text-sm">
-                        {article.metadata.imageCaption}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {article.description && (
-                  <p className="text-xl text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-                    {article.description}
-                  </p>
-                )}
-
-                <div 
-                  className="prose prose-lg max-w-none dark:prose-invert 
-                    prose-img:rounded-lg prose-img:shadow-md prose-a:text-green-600 dark:prose-a:text-green-400
-                    prose-headings:scroll-mt-20"
-                  dangerouslySetInnerHTML={{ __html: article.content }} 
+          <article className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow">
+            <div className="space-y-6">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{post.title}</h1>
+              <div className="flex gap-4 text-gray-600 dark:text-gray-400 text-sm">
+                <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" /> {formatDate(post.createdAt)}</span>
+                <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {estimateReadTime(post.content)}</span>
+              </div>
+              {post.imageUrl && (
+                <img
+                  src={`${API_BASE_URL}${post.imageUrl}`}
+                  alt={post.title}
+                  className="w-full rounded-lg cursor-pointer"
+                  onClick={() => setExpandedImage(post.imageUrl)}
+                  onError={handleImageError}
                 />
-
-                {/* Breeding Information */}
-                {article.metadata?.breedingInfo && (
-                  <div className="mt-8 p-6 bg-green-50 dark:bg-green-900/30 rounded-xl shadow-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <Tag className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
-                      Breeding Information
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(article.metadata.breedingInfo).map(([key, value]) => (
-                        <div key={key} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                          <h3 className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                          <p className="text-gray-800 dark:text-white font-semibold">{value}</p>
-                        </div>
-                      ))}
-                    </div>
+              )}
+              {post.subtitle && <p className="text-lg text-gray-700 dark:text-gray-300 italic">{post.subtitle}</p>}
+              <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                {post.breedingInfo?.map((item, i) => (
+                  <div key={i} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
+                    <h3 className="font-bold text-gray-800 dark:text-white">{item.label}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">{item.value}</p>
                   </div>
-                )}
-
-                {article.metadata?.tags && article.metadata.tags.length > 0 && (
-                  <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {article.metadata.tags.map((tag, index) => (
-                        <span 
-                          key={index} 
-                          className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1 rounded-full text-sm"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  </footer>
-                )}
+                ))}
               </div>
-            </article>
-          </div>
-
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            {/* Table of Contents */}
-            {headings.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm sticky top-6">
-                <div className="flex items-center mb-6">
-                  <BookOpen className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Table of Contents</h2>
-                </div>
-                <nav className="space-y-2">
-                  {headings.map((heading) => (
-                    <button
-                      key={heading.id}
-                      onClick={() => scrollToHeading(heading.id)}
-                      className={`block text-left w-full px-2 py-1 rounded text-sm transition-colors
-                        ${heading.level === 'h2' ? 'font-medium text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-400 ml-3'}
-                        hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700`}
-                    >
-                      {heading.text}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-            )}
-
-            {/* Owner Card */}
-            {article.metadata?.owner && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-                <div className="flex items-center mb-4">
-                  <User className="h-12 w-12 text-green-600 dark:text-green-400 mr-4" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{article.metadata.owner}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Farm Owner</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {article.metadata?.ownerBio || "Experienced pig farmer with a passion for quality livestock."}
-                </p>
-              </div>
-            )}
-
-            <RecentPosts posts={recentArticles} themeColor="#ec4899" contentType="piggeries" />
-
-            {/* Article Information */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-              <div className="flex items-center mb-6">
-                <BookOpen className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Article Information</h2>
-              </div>
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Reading Time</span>
-                  <span className="font-medium text-gray-800 dark:text-white">{estimateReadTime(article.content)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Published</span>
-                  <span className="font-medium text-gray-800 dark:text-white">{formatDate(article.createdAt)}</span>
-                </div>
-                {article.updatedAt && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Last Updated</span>
-                    <span className="font-medium text-gray-800 dark:text-white">{formatDate(article.updatedAt)}</span>
-                  </div>
-                )}
+              <div className="flex gap-3 items-center pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button onClick={() => handleShare()} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                  <Share2 className="h-4 w-4" /> Share
+                </button>
+                <button onClick={() => handleShare('twitter')} aria-label="Twitter"><Twitter className="h-4 w-4 text-gray-500" /></button>
+                <button onClick={() => handleShare('facebook')} aria-label="Facebook"><Facebook className="h-4 w-4 text-gray-500" /></button>
+                <button onClick={() => handleShare('linkedin')} aria-label="LinkedIn"><Linkedin className="h-4 w-4 text-gray-500" /></button>
               </div>
             </div>
-          </aside>
+          </article>
         </div>
-      </div>
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-            font-size: 12pt;
-          }
-          .no-print {
-            display: none !important;
-          }
-          a {
-            text-decoration: underline;
-            color: #0000EE;
-          }
-          a[href^="http"]:after {
-            content: " (" attr(href) ")";
-            font-size: 0.8em;
-            font-weight: normal;
-          }
-          img {
-            max-width: 100% !important;
-            height: auto !important;
-          }
-        }
-      `}</style>
+        <aside className="space-y-6 sticky top-20 self-start">
+          {headings.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+              <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center"><BookOpen className="w-5 h-5 mr-2" /> Table of Contents</h2>
+              <nav className="space-y-2">
+                {headings.map(heading => (
+                  <button
+                    key={heading.id}
+                    onClick={() => scrollToHeading(heading.id)}
+                    className={`block w-full text-left text-sm px-3 py-1 rounded hover:bg-blue-50 dark:hover:bg-gray-700 ${heading.level === 'h3' ? 'ml-4 text-gray-500' : 'text-gray-800 dark:text-white'}`}
+                  >
+                    {heading.text}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
+          <RecentPosts posts={recentPosts} themeColor="#3b82f6" />
+        </aside>
+      </div>
     </div>
   );
 };
