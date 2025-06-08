@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -43,6 +44,16 @@ app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP to avoid blocking resources in development
   crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin resource sharing
 }));
+
+// Rate limiting - more lenient for development
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests for dev, 100 for production
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 // Parse incoming requests
 app.use(express.json({ limit: '10mb' }));
@@ -184,10 +195,16 @@ if (process.env.NODE_ENV === 'development') {
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
 import contentRoutes from './routes/contentRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
+import emailTestRoutes from './routes/emailTestRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Mount routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/email', emailTestRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {

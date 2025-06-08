@@ -7,18 +7,42 @@ import { getAuthHeader } from '../utils/auth';
 
 const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
   const [title, setTitle] = useState('');
-  const [metadata, setMetadata] = useState('{}');
+  const [author, setAuthor] = useState('');
+  const [category, setCategory] = useState('General');
+  const [tags, setTags] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [summary, setSummary] = useState('');
+  const [published, setPublished] = useState(false);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
+  // Helper function to convert simple inputs to metadata JSON
+  const generateMetadata = () => {
+    const metadata = {};
+    if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
+    if (summary.trim()) metadata.summary = summary.trim();
+    if (author.trim()) metadata.author = author.trim();
+    return metadata;
+  };
+
   useEffect(() => {
     if (editingBlog) {
-      setTitle(editingBlog.title);
-      setMetadata(editingBlog.metadata ? JSON.stringify(editingBlog.metadata) : '{}');
+      setTitle(editingBlog.title || '');
+      setCategory(editingBlog.category || 'General');
+      setTags(editingBlog.tags ? editingBlog.tags.join(', ') : '');
+      setPublished(editingBlog.published || false);
       setImagePreview(editingBlog.imageUrl);
+      
+      // Extract metadata fields
+      if (editingBlog.metadata) {
+        setKeywords(editingBlog.metadata.keywords ? editingBlog.metadata.keywords.join(', ') : '');
+        setSummary(editingBlog.metadata.summary || '');
+        setAuthor(editingBlog.metadata.author || '');
+      }
+      
       if (quillEditor) {
         quillEditor.root.innerHTML = editingBlog.content;
       }
@@ -63,7 +87,12 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
 
   const resetForm = () => {
     setTitle('');
-    setMetadata('{}');
+    setAuthor('');
+    setCategory('General');
+    setTags('');
+    setKeywords('');
+    setSummary('');
+    setPublished(false);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
@@ -81,17 +110,19 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
       return;
     }
 
-    try {
-      JSON.parse(metadata);
-    } catch (err) {
-      setError('Invalid metadata JSON format.');
-      return;
-    }
+    // Generate metadata from user-friendly inputs
+    const metadata = generateMetadata();
+    
+    // Convert tags from comma-separated string to array
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
-    formData.append('metadata', metadata);
+    formData.append('category', category);
+    formData.append('tags', JSON.stringify(tagsArray));
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('published', published);
     if (image) formData.append('image', image);
 
     try {
@@ -130,35 +161,119 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
           </div>
         )}
         
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="blog-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Blog Title
+            </label>
+            <input
+              id="blog-title"
+              type="text"
+              placeholder="Enter blog title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+              aria-required="true"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Author
+            </label>
+            <input
+              id="author"
+              type="text"
+              placeholder="Enter author name"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Category
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            >
+              <option value="General">General</option>
+              <option value="Technology">Technology</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Livestock">Livestock</option>
+              <option value="Tips">Tips</option>
+              <option value="News">News</option>
+            </select>
+          </div>
+
+          <div className="space-y-2 flex items-end">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Publish immediately
+              </span>
+            </label>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label htmlFor="blog-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Blog Title
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Tags
           </label>
           <input
-            id="blog-title"
+            id="tags"
             type="text"
-            placeholder="Enter blog title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
+            placeholder="technology, farming, tips (separate with commas)"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
-            aria-required="true"
+            aria-describedby="tags-help"
           />
+          <p id="tags-help" className="text-xs text-gray-500 dark:text-gray-400">
+            Enter tags separated by commas (e.g., farming, technology, tips)
+          </p>
         </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="blog-metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Metadata (JSON)
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
-          </label>
-          <textarea
-            id="blog-metadata"
-            placeholder='{"tags": ["example", "blog"], "category": "tech"}'
-            value={metadata}
-            onChange={(e) => setMetadata(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out font-mono text-sm"
-            rows="3"
-          />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Keywords (for SEO)
+            </label>
+            <input
+              id="keywords"
+              type="text"
+              placeholder="blog tips, technology, farming"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Summary
+            </label>
+            <textarea
+              id="summary"
+              placeholder="Brief summary for SEO and previews"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+              rows="3"
+            />
+          </div>
         </div>
         
         <div className="space-y-2">

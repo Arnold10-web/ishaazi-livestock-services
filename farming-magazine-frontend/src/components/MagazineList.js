@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Edit2, Trash2, ArrowRight } from 'lucide-react';
+import { AlertCircle, Edit2, Trash2 } from 'lucide-react';
 
 
 const MagazineList = ({ 

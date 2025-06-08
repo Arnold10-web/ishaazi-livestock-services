@@ -1,36 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { motion } from 'framer-motion';
-import { 
-  AlertCircle, 
-  Loader2, 
-  ArrowLeft, 
-  Share2, 
-  Calendar, 
-  Clock,
-  BookOpen,
-  Beef,
-  X,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Link as LinkIcon,
-  Tag
-} from 'lucide-react';
-import RecentPosts from '../components/RecentPosts';
+import ArticleDetailTemplate from '../components/ArticleDetailTemplate';
 
 const BeefPost = () => {
-  const navigate = useNavigate();
   const { id } = useParams();
-  const articleRef = useRef(null);
-  
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentArticles, setRecentArticles] = useState([]);
+  const [relatedPosts, setRelatedPosts] = useState([]);
   const [expandedImage, setExpandedImage] = useState(null);
-  const [readingProgress, setReadingProgress] = useState(0);
   const [headings, setHeadings] = useState([]);
   
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -66,6 +46,17 @@ const BeefPost = () => {
         const recentResponse = await axios.get(`${API_BASE_URL}/api/content/beefs?limit=3`);
         const filteredRecentArticles = recentResponse.data.data.beefs.filter(item => item._id !== id);
         setRecentArticles(filteredRecentArticles);
+
+        // Fetch related posts based on tags or category
+        const relatedResponse = await axios.get(`${API_BASE_URL}/api/content/beefs?limit=6`);
+        const relatedPosts = relatedResponse.data.data.beefs
+          .filter(post => post._id !== id)
+          .filter(post => 
+            post.tags?.some(tag => articleData.tags?.includes(tag)) ||
+            post.category === articleData.category
+          )
+          .slice(0, 3);
+        setRelatedPosts(relatedPosts);
         
         setError(null);
       } catch (err) {
@@ -80,172 +71,29 @@ const BeefPost = () => {
     window.scrollTo(0, 0);
   }, [id, API_BASE_URL]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!articleRef.current) return;
-      const articleHeight = articleRef.current.offsetHeight;
-      const windowHeight = window.innerHeight;
-      const scrollPosition = window.scrollY;
-      const progress = (scrollPosition / (articleHeight - windowHeight)) * 100;
-      setReadingProgress(Math.min(100, Math.max(0, progress)));
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const formatDate = (dateString) => new Intl.DateTimeFormat('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
-  }).format(new Date(dateString));
-
-  const estimateReadTime = (content) => {
-    if (!content) return '1 min read';
-    const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
-    return `${Math.ceil(wordCount / 200)} min read`;
+  const handleImageClick = (imageUrl) => {
+    setExpandedImage(imageUrl);
   };
 
-  const handleShare = (platform = null) => {
-    const shareUrl = window.location.href;
-    const shareTitle = article?.title || 'Beef Article';
-    const shareText = article?.description || article?.title || 'Check out this beef article';
-
-    let url = '';
-    switch (platform) {
-      case 'twitter':
-        url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-        break;
-      case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-        break;
-      case 'linkedin':
-        url = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}&summary=${encodeURIComponent(shareText)}`;
-        break;
-      default:
-        if (navigator.share) {
-          navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(console.error);
-        } else {
-          navigator.clipboard.writeText(shareUrl).then(() => alert('Link copied to clipboard!')).catch(console.error);
-        }
-        return;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const handleCloseImage = () => {
+    setExpandedImage(null);
   };
-
-  const scrollToHeading = (id) => {
-    const element = document.getElementById(id);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleImageError = (e) => {
-    e.target.onerror = null;
-    e.target.src = '/placeholder-image.jpg';
-    e.target.alt = 'Image not available';
-  };
-
-  if (loading) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-      <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-    </div>
-  );
-
-  if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md max-w-md w-full text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Error Loading Article</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-        <Link to="/beef" className="text-red-600 hover:underline">Return to Beef Articles</Link>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900">
-      <motion.div style={{ width: `${readingProgress}%` }} className="fixed top-0 left-0 h-1 bg-red-600 z-50" />
-
-      {expandedImage && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
-          <button onClick={() => setExpandedImage(null)} className="absolute top-4 right-4 text-white">
-            <X className="h-8 w-8" />
-          </button>
-          <img src={`${API_BASE_URL}${expandedImage}`} alt="Expanded" className="max-w-full max-h-[80vh] object-contain" onError={handleImageError} />
-        </div>
-      )}
-
-      <div className="container mx-auto px-4 py-12 max-w-6xl grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8" ref={articleRef}>
-          <button
-            onClick={() => navigate('/beef')}
-            className="inline-flex items-center px-4 py-2 text-sm text-red-600 hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Beef Articles
-          </button>
-
-          <article className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow">
-            <div className="space-y-6">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{article.title}</h1>
-              <div className="flex flex-wrap gap-4 text-gray-600 dark:text-gray-400 text-sm">
-                <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {formatDate(article.createdAt)}</span>
-                <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {estimateReadTime(article.content)}</span>
-                {article.cutType && (
-                  <span className="flex items-center gap-1">
-                    <Beef className="h-4 w-4" /> {article.cutType}
-                  </span>
-                )}
-              </div>
-
-              {article.imageUrl && (
-                <img
-                  src={`${API_BASE_URL}${article.imageUrl}`}
-                  alt={article.title}
-                  className="w-full rounded-lg cursor-pointer"
-                  onClick={() => setExpandedImage(article.imageUrl)}
-                  onError={handleImageError}
-                />
-              )}
-
-              {article.description && <p className="text-lg text-gray-700 dark:text-gray-300 italic">{article.description}</p>}
-              <div className="prose dark:prose-invert max-w-none prose-red" dangerouslySetInnerHTML={{ __html: article.content }} />
-
-              <div className="flex gap-2 flex-wrap">
-                {article.tags?.map((tag, i) => (
-                  <span key={i} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm text-gray-700 dark:text-gray-300">#{tag}</span>
-                ))}
-              </div>
-
-              <div className="flex gap-3 items-center pt-6 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={() => handleShare()} className="text-sm text-red-600 hover:underline flex items-center gap-1">
-                  <Share2 className="h-4 w-4" /> Share
-                </button>
-                <button onClick={() => handleShare('twitter')} aria-label="Share on Twitter"><Twitter className="h-4 w-4 text-gray-500" /></button>
-                <button onClick={() => handleShare('facebook')} aria-label="Share on Facebook"><Facebook className="h-4 w-4 text-gray-500" /></button>
-                <button onClick={() => handleShare('linkedin')} aria-label="Share on LinkedIn"><Linkedin className="h-4 w-4 text-gray-500" /></button>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <aside className="space-y-6 sticky top-20 self-start">
-          {headings.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
-              <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center"><BookOpen className="w-5 h-5 mr-2" /> Table of Contents</h2>
-              <nav className="space-y-2">
-                {headings.map(heading => (
-                  <button
-                    key={heading.id}
-                    onClick={() => scrollToHeading(heading.id)}
-                    className={`block w-full text-left text-sm px-3 py-1 rounded hover:bg-red-50 dark:hover:bg-gray-700 ${heading.level === 'h3' ? 'ml-4 text-gray-500' : 'text-gray-800 dark:text-white'}`}
-                  >
-                    {heading.text}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          )}
-          <RecentPosts posts={recentArticles} themeColor="#dc2626" />
-        </aside>
-      </div>
-    </div>
+    <ArticleDetailTemplate
+      article={article}
+      contentType="beefs"
+      loading={loading}
+      error={error}
+      headings={headings}
+      recentPosts={recentArticles}
+      relatedPosts={relatedPosts}
+      backPath="/beef"
+      backLabel="Beef Articles"
+      onImageClick={handleImageClick}
+      expandedImage={expandedImage}
+      onCloseImage={handleCloseImage}
+    />
   );
 };
 

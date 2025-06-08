@@ -11,6 +11,9 @@ const API_ENDPOINTS = {
   // Admin Authentication
   ADMIN_REGISTER: `${BASE_URL}/api/admin/register`,
   ADMIN_LOGIN: `${BASE_URL}/api/admin/login`,
+  
+  // Dashboard
+  DASHBOARD_STATS: `${BASE_URL}/api/admin/stats`,
 
   // Blog Management
   CREATE_BLOG: `${BASE_URL}/api/content/blogs`,
@@ -42,8 +45,8 @@ const API_ENDPOINTS = {
   DELETE_BASIC: (id) => `${BASE_URL}/api/content/basics/${id}`,
 
   // Basic Comment Management
-  ADD_COMMENT: (basicId) => `${BASE_URL}/api/content/basics/${basicId}/comments`,
-  DELETE_COMMENT: (basicId, commentId) => `${BASE_URL}/api/content/basics/${basicId}/comments/${commentId}`,
+  ADD_BASIC_COMMENT: (basicId) => `${BASE_URL}/api/content/basics/${basicId}/comments`,
+  DELETE_BASIC_COMMENT: (basicId, commentId) => `${BASE_URL}/api/content/basics/${basicId}/comments/${commentId}`,
 
 
   // Farms for Sale Management
@@ -92,15 +95,55 @@ DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
   UPDATE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
   DELETE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
 
+  // Auction Management
+  CREATE_AUCTION: `${BASE_URL}/api/content/auctions`,
+  GET_AUCTIONS: `${BASE_URL}/api/content/auctions`,
+  GET_UPCOMING_AUCTIONS: `${BASE_URL}/api/content/auctions/upcoming`,
+  GET_ADMIN_AUCTIONS: `${BASE_URL}/api/content/auctions/admin`,
+  GET_AUCTION: (id) => `${BASE_URL}/api/content/auctions/${id}`,
+  UPDATE_AUCTION: (id) => `${BASE_URL}/api/content/auctions/${id}`,
+  DELETE_AUCTION: (id) => `${BASE_URL}/api/content/auctions/${id}`,
+  REGISTER_AUCTION_INTEREST: (id) => `${BASE_URL}/api/content/auctions/${id}/register`,
+
   CREATE_SUBSCRIBER: `${BASE_URL}/api/content/subscribers`,
   GET_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
+  GET_ADMIN_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers`,
   DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
+  BULK_UPDATE_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers/bulk`,
 
-// CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
-// GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
-// UPDATE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
-// DELETE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
-// SEND_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}/send`
+  // NEWSLETTER ENDPOINTS
+  CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
+  GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
+  GET_ADMIN_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
+  UPDATE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
+  DELETE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
+  SEND_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}/send`,
+
+  // ENGAGEMENT TRACKING ENDPOINTS
+  TRACK_VIEW: (contentType, id) => `${BASE_URL}/api/content/${contentType}/${id}/view`,
+  TRACK_LIKE: (contentType, id) => `${BASE_URL}/api/content/${contentType}/${id}/like`,
+  TRACK_SHARE: (contentType, id) => `${BASE_URL}/api/content/${contentType}/${id}/share`,
+  GET_ENGAGEMENT_STATS: (contentType, id) => `${BASE_URL}/api/content/${contentType}/${id}/stats`,
+  
+  // COMMENT MANAGEMENT ENDPOINTS
+  ADD_COMMENT: (contentType, id) => `${BASE_URL}/api/content/${contentType}/${id}/comments`,
+  DELETE_COMMENT: (contentType, id, commentId) => `${BASE_URL}/api/content/${contentType}/${id}/comments/${commentId}`,
+  APPROVE_COMMENT: (contentType, id, commentId) => `${BASE_URL}/api/content/${contentType}/${id}/comments/${commentId}/approve`,
+
+  // EMAIL TESTING ENDPOINTS
+  EMAIL_CONFIG_STATUS: `${BASE_URL}/api/email/status`,
+  EMAIL_TEST_CONFIG: `${BASE_URL}/api/email/test/config`,
+  EMAIL_TEST_SEND: `${BASE_URL}/api/email/test/send`,
+  EMAIL_TEST_WELCOME: `${BASE_URL}/api/email/test/welcome`,
+  EMAIL_HEALTH_CHECK: `${BASE_URL}/api/email/test/health`,
+
+  // EMAIL TRACKING ENDPOINTS
+  EMAIL_TRACK_OPEN: (newsletterId, email) => `${BASE_URL}/api/email/track/open/${newsletterId}/${encodeURIComponent(email)}`,
+  EMAIL_TRACK_CLICK: (newsletterId, email) => `${BASE_URL}/api/email/track/click/${newsletterId}/${encodeURIComponent(email)}`,
+
+  // EMAIL ANALYTICS ENDPOINTS
+  EMAIL_NEWSLETTER_ANALYTICS: (newsletterId) => `${BASE_URL}/api/email/analytics/newsletter/${newsletterId}`,
+  EMAIL_OVERALL_ANALYTICS: `${BASE_URL}/api/email/analytics/overall`
 
 };
 

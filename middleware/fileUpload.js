@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -90,6 +91,64 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+
+// Image optimization middleware
+export const optimizeImage = async (req, res, next) => {
+  try {
+    if (!req.file || !req.file.fieldname.includes('image') && req.file.fieldname !== 'fileImage') {
+      return next();
+    }
+
+    const inputPath = req.file.path;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    // Skip optimization for GIFs to preserve animation
+    if (ext === '.gif') {
+      return next();
+    }
+
+    console.log(`🖼️  Optimizing image: ${req.file.filename}`);
+    
+    // Create optimized versions
+    const optimizedPath = inputPath.replace(ext, '_optimized.webp');
+    const thumbnailPath = inputPath.replace(ext, '_thumb.webp');
+    
+    // Main optimized image (max 1200px width, WebP format)
+    await sharp(inputPath)
+      .resize(1200, 800, { 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .webp({ 
+        quality: 85,
+        effort: 4
+      })
+      .toFile(optimizedPath);
+
+    // Thumbnail (300px width)
+    await sharp(inputPath)
+      .resize(300, 200, { 
+        fit: 'cover' 
+      })
+      .webp({ 
+        quality: 80,
+        effort: 4
+      })
+      .toFile(thumbnailPath);
+
+    // Update file info to point to optimized version
+    req.file.optimizedPath = optimizedPath;
+    req.file.thumbnailPath = thumbnailPath;
+    req.file.originalPath = inputPath;
+    
+    console.log(`✅ Image optimization complete: ${req.file.filename}`);
+    next();
+  } catch (error) {
+    console.error('❌ Image optimization failed:', error.message);
+    // Continue without optimization if it fails
+    next();
+  }
+};
 
 // File size limits
 const limits = {

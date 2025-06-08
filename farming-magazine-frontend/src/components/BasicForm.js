@@ -8,7 +8,13 @@ import { getAuthHeader } from '../utils/auth';
 const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const [title, setTitle] = useState('');
   const [fileType, setFileType] = useState('');
-  const [metadata, setMetadata] = useState('{}');
+  const [duration, setDuration] = useState('');
+  const [author, setAuthor] = useState('');
+  const [category, setCategory] = useState('General');
+  const [tags, setTags] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [summary, setSummary] = useState('');
+  const [published, setPublished] = useState(true);
   const [image, setImage] = useState(null);
   const [media, setMedia] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -20,7 +26,18 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     if (editingBasic) {
       setTitle(editingBasic.title);
       setFileType(editingBasic.fileType);
-      setMetadata(editingBasic.metadata ? JSON.stringify(editingBasic.metadata) : '{}');
+      setDuration(editingBasic.duration || '');
+      setCategory(editingBasic.category || 'General');
+      setTags(editingBasic.tags ? editingBasic.tags.join(', ') : '');
+      setPublished(editingBasic.published !== undefined ? editingBasic.published : true);
+      
+      // Extract from metadata if it exists
+      if (editingBasic.metadata) {
+        setAuthor(editingBasic.metadata.author || '');
+        setKeywords(editingBasic.metadata.keywords ? editingBasic.metadata.keywords.join(', ') : '');
+        setSummary(editingBasic.metadata.summary || '');
+      }
+      
       setImagePreview(editingBasic.imageUrl);
       if (quillEditor) {
         quillEditor.root.innerHTML = editingBasic.description;
@@ -75,7 +92,13 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const resetForm = () => {
     setTitle('');
     setFileType('');
-    setMetadata('{}');
+    setDuration('');
+    setAuthor('');
+    setCategory('General');
+    setTags('');
+    setKeywords('');
+    setSummary('');
+    setPublished(true);
     setImage(null);
     setMedia(null);
     setImagePreview(null);
@@ -83,6 +106,18 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       quillEditor.setText('');
     }
     setEditingBasic(null);
+  };
+
+  const generateMetadata = () => {
+    return {
+      author: author.trim(),
+      category: category,
+      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
+      summary: summary.trim(),
+      published: published,
+      duration: duration.trim()
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -94,23 +129,25 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       return;
     }
 
-    try {
-      JSON.parse(metadata);
-    } catch (err) {
-      setError('Invalid metadata JSON format.');
-      return;
-    }
-
     if (!media) {
       setError('Media file is required.');
       return;
     }
 
+    const metadataObj = generateMetadata();
+
     const formData = new FormData();
     formData.append('title', title);
     formData.append('fileType', fileType);
     formData.append('description', description);
-    formData.append('metadata', metadata);
+    formData.append('duration', duration);
+    formData.append('author', author);
+    formData.append('category', category);
+    formData.append('tags', JSON.stringify(metadataObj.tags));
+    formData.append('keywords', JSON.stringify(metadataObj.keywords));
+    formData.append('summary', summary);
+    formData.append('published', published);
+    formData.append('metadata', JSON.stringify(metadataObj));
     if (image) formData.append('image', image);
     formData.append('media', media);
 
@@ -189,17 +226,107 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
           </select>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Author
+            </label>
+            <input
+              id="author"
+              type="text"
+              placeholder="Enter author name"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Category
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            >
+              <option value="General">General</option>
+              <option value="Education">Education</option>
+              <option value="Tutorial">Tutorial</option>
+              <option value="Documentary">Documentary</option>
+              <option value="Interview">Interview</option>
+              <option value="Podcast">Podcast</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Tags
+            </label>
+            <input
+              id="tags"
+              type="text"
+              placeholder="Enter tags (comma-separated)"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Keywords
+            </label>
+            <input
+              id="keywords"
+              type="text"
+              placeholder="Enter keywords (comma-separated)"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Duration
+            </label>
+            <input
+              id="duration"
+              type="text"
+              placeholder="e.g., 5:30 or 10 minutes"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+          <div className="space-y-2 flex items-center">
+            <div className="flex items-center space-x-2 mt-6">
+              <input
+                type="checkbox"
+                id="published"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label htmlFor="published" className="text-sm font-medium text-gray-700 dark:text-gray-300">Published</label>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label htmlFor="metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Metadata (JSON)
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
+          <label htmlFor="summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Summary
           </label>
           <textarea
-            id="metadata"
-            placeholder='{"key": "value"}'
-            value={metadata}
-            onChange={(e) => setMetadata(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out font-mono text-sm"
+            id="summary"
+            placeholder="Enter a brief summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
             rows="3"
           />
         </div>

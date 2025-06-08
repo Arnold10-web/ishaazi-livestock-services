@@ -1,9 +1,9 @@
 import React from 'react';
 import {
   Camera,
-  BookOpen,
   Users,
   BrainCircuit,
+  BookOpen,
   LineChart,
   Globe2
 } from 'lucide-react';

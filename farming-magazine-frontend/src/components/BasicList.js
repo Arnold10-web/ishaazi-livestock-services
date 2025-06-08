@@ -4,7 +4,7 @@ import ReactPlayer from 'react-player';
 import { 
   AlertCircle, Download, MessageSquare, Play, Pause, Volume2, VolumeX,
   ChevronDown, ChevronUp, Edit2, Trash2, SkipBack, SkipForward,
-  Share2, Heart, BookOpen, Calendar, Clock, Headphones, Video, Info
+  Share2, BookOpen, Calendar, Headphones, Video, Info, Maximize2
 } from 'lucide-react';
 
 const formatTime = (seconds) => {
@@ -27,10 +27,11 @@ const BasicList = ({
   const [newComment, setNewComment] = useState({});
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [playingId, setPlayingId] = useState(null);
-  const [likedItems, setLikedItems] = useState({});
+  // Remove likedItems state
+  // const [likedItems, setLikedItems] = useState({});
   const [activeTab, setActiveTab] = useState('all');
   const [filteredBasics, setFilteredBasics] = useState([]);
-  const audioRefs = useRef({});
+  // const audioRefs = useRef({}); // Unused for now
   const PLACEHOLDER_IMAGE = '/images/placeholder-media.png';
   
   // Filter basics by type
@@ -74,14 +75,6 @@ const BasicList = ({
     link.click();
     document.body.removeChild(link);
   }, [getMediaUrl]);
-
-  // Like/favorite handler
-  const toggleLike = useCallback((itemId) => {
-    setLikedItems(prev => ({
-      ...prev,
-      [itemId]: !prev[itemId]
-    }));
-  }, []);
 
   // Share handler
   const handleShare = useCallback((item) => {
@@ -219,42 +212,65 @@ const BasicList = ({
     };
 
     return (
-      <div className={`bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 ${isExpanded ? 'ring-2 ring-emerald-500' : ''}`}>
-        {/* Cover Art with Play Button Overlay */}
-        <div className="relative aspect-square overflow-hidden group cursor-pointer" onClick={togglePlay}>
+      <>
+        {/* Enhanced Cover Art with Play Button Overlay */}
+        <div className="relative aspect-square overflow-hidden group cursor-pointer bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-900" onClick={togglePlay}>
           <img
             src={getMediaUrl(item.imageUrl) || PLACEHOLDER_IMAGE}
             alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 group-hover:brightness-90"
+            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-75 group-hover:saturate-150"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = PLACEHOLDER_IMAGE;
             }}
           />
+          {/* Animated gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
           
-          {/* Audio Type Badge */}
-          <div className="absolute top-3 right-3 bg-emerald-500/90 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center">
-            <Headphones className="w-3 h-3 mr-1" />
-            Audio
-          </div>
-          
-          {/* Play/Pause Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isPlaying ? 'bg-white/20 backdrop-blur-sm' : 'bg-emerald-500/90'}`}>
+          {/* Enhanced Play/Pause Overlay with animations */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className={`
+              w-16 h-16 rounded-full flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20
+              transition-all duration-300 transform 
+              ${isPlaying 
+                ? 'bg-white/25 scale-100 opacity-100' 
+                : 'bg-emerald-500/95 hover:bg-emerald-600/95 group-hover:scale-110 opacity-0 group-hover:opacity-100'
+              }
+            `}>
               {isPlaying ? 
-                <Pause className="w-8 h-8 text-white" /> : 
-                <Play className="w-8 h-8 text-white ml-1" />
+                <Pause className="w-8 h-8 text-white drop-shadow-lg" /> : 
+                <Play className="w-8 h-8 text-white ml-1 drop-shadow-lg" />
               }
             </div>
           </div>
           
-          {/* Progress Overlay */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800/30">
+          {/* Audio type indicator */}
+          <div className="absolute top-3 left-3 z-10">
+            <div className="flex items-center bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium">
+              <Headphones className="w-3 h-3 mr-1" />
+              Audio
+            </div>
+          </div>
+          
+          {/* Enhanced Progress Overlay with glow effect */}
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-black/60 to-black/40">
             <div 
-              className="h-full bg-emerald-500"
-              style={{ width: `${progress}%` }}
+              className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg transition-all duration-300"
+              style={{ 
+                width: `${progress}%`,
+                boxShadow: progress > 0 ? '0 0 8px rgba(16, 185, 129, 0.6)' : 'none'
+              }}
             />
           </div>
+          
+          {/* Duration badge */}
+          {duration > 0 && (
+            <div className="absolute top-3 right-3 z-10">
+              <div className="bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium">
+                {formatTime(duration)}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Audio Controls */}
@@ -283,7 +299,6 @@ const BasicList = ({
               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </button>
           </div>
-          
           {/* Progress Bar */}
           <div className="space-y-1">
             <div 
@@ -301,50 +316,55 @@ const BasicList = ({
               <span>{formatTime(duration)}</span>
             </div>
           </div>
-          
-          {/* Basic Control Buttons */}
+          {/* Enhanced Control Buttons */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={() => handleSkip(-10)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex flex-col items-center"
+                className="group p-2.5 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 flex flex-col items-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg"
                 aria-label="Skip back 10 seconds"
               >
-                <SkipBack size={18} />
-                <span className="text-xs">10s</span>
+                <SkipBack size={16} className="group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium">10s</span>
               </button>
-              
               <button
                 onClick={togglePlay}
-                className={`p-3 rounded-full ${isPlaying ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/60 dark:text-emerald-300' : 'bg-emerald-500 text-white'} hover:bg-emerald-600 hover:text-white transition-colors`}
+                className={`group p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                  isPlaying 
+                    ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-600 dark:from-emerald-800/60 dark:to-teal-800/60 dark:text-emerald-300 shadow-emerald-200/50 dark:shadow-emerald-800/30' 
+                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-300/50 dark:shadow-emerald-700/30 hover:from-emerald-600 hover:to-emerald-700'
+                }`}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
-                {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+                {isPlaying ? 
+                  <Pause size={18} className="group-hover:scale-110 transition-transform" /> : 
+                  <Play size={18} className="ml-0.5 group-hover:scale-110 transition-transform" />
+                }
               </button>
-              
               <button 
                 onClick={() => handleSkip(10)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex flex-col items-center"
+                className="group p-2.5 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 flex flex-col items-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg"
                 aria-label="Skip forward 10 seconds"
               >
-                <SkipForward size={18} />
-                <span className="text-xs">10s</span>
+                <SkipForward size={16} className="group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium">10s</span>
               </button>
             </div>
-            
             <div className="relative">
               <button 
                 onClick={() => setShowVolumeSlider(!showVolumeSlider)}
                 onMouseEnter={() => setShowVolumeSlider(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                className="group p-2.5 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg"
                 aria-label="Volume"
               >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                {isMuted ? 
+                  <VolumeX size={16} className="group-hover:scale-110 transition-transform" /> : 
+                  <Volume2 size={16} className="group-hover:scale-110 transition-transform" />
+                }
               </button>
-              
               {showVolumeSlider && (
                 <div 
-                  className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-10"
+                  className="absolute bottom-full right-0 mb-2 p-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-10"
                   onMouseLeave={() => setShowVolumeSlider(false)}
                 >
                   <input
@@ -354,82 +374,76 @@ const BasicList = ({
                     step="0.01"
                     value={isMuted ? 0 : volume}
                     onChange={handleVolumeChange}
-                    className="w-24 h-2 accent-emerald-500"
+                    className="w-28 h-2 accent-emerald-500 rounded-full appearance-none bg-gray-200 dark:bg-gray-600 hover:accent-emerald-600 transition-colors"
                   />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>0</span>
+                    <span>100</span>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-          
           {/* Extended Controls (only visible when expanded) */}
           {isExpanded && (
-            <div className="pt-3 border-t border-gray-200 dark:border-gray-700 mt-2">
-              <div className="flex flex-wrap gap-2 justify-center">
-                <button 
-                  onClick={() => changePlaybackRate(0.5)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 0.5 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  0.5x
-                </button>
-                <button 
-                  onClick={() => changePlaybackRate(0.75)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 0.75 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  0.75x
-                </button>
-                <button 
-                  onClick={() => changePlaybackRate(1)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  1x
-                </button>
-                <button 
-                  onClick={() => changePlaybackRate(1.25)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 1.25 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  1.25x
-                </button>
-                <button 
-                  onClick={() => changePlaybackRate(1.5)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 1.5 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  1.5x
-                </button>
-                <button 
-                  onClick={() => changePlaybackRate(2)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${playbackRate === 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  2x
-                </button>
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-3 space-y-4">
+              {/* Playback Speed Controls */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Playback Speed</h4>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                    <button 
+                      key={rate}
+                      onClick={() => changePlaybackRate(rate)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 transform hover:scale-105 ${
+                        playbackRate === rate 
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200/50 dark:shadow-emerald-800/30' 
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
               </div>
               
-              <div className="flex justify-center mt-3">
-                <button 
-                  onClick={() => handleSkip(-30)}
-                  className="px-3 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md mx-1 flex items-center"
-                >
-                  <SkipBack size={14} className="mr-1" />
-                  30s
-                </button>
-                <button 
-                  onClick={toggleMute}
-                  className={`px-3 py-1 text-xs rounded-md mx-1 flex items-center ${isMuted ? 'bg-red-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                >
-                  {isMuted ? <VolumeX size={14} className="mr-1" /> : <Volume2 size={14} className="mr-1" />}
-                  {isMuted ? 'Unmute' : 'Mute'}
-                </button>
-                <button 
-                  onClick={() => handleSkip(30)}
-                  className="px-3 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md mx-1 flex items-center"
-                >
-                  30s
-                  <SkipForward size={14} className="ml-1" />
-                </button>
+              {/* Advanced Controls */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Quick Actions</h4>
+                <div className="flex justify-center space-x-3">
+                  <button 
+                    onClick={() => handleSkip(-30)}
+                    className="group px-4 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 flex items-center transform hover:scale-105"
+                  >
+                    <SkipBack size={14} className="mr-1.5 group-hover:scale-110 transition-transform" />
+                    30s
+                  </button>
+                  <button 
+                    onClick={toggleMute}
+                    className={`group px-4 py-2 text-xs font-medium rounded-lg flex items-center transition-all duration-200 transform hover:scale-105 ${
+                      isMuted 
+                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200/50 dark:shadow-red-800/30' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {isMuted ? 
+                      <VolumeX size={14} className="mr-1.5 group-hover:scale-110 transition-transform" /> : 
+                      <Volume2 size={14} className="mr-1.5 group-hover:scale-110 transition-transform" />
+                    }
+                    {isMuted ? 'Unmute' : 'Mute'}
+                  </button>
+                  <button 
+                    onClick={() => handleSkip(30)}
+                    className="group px-4 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 flex items-center transform hover:scale-105"
+                  >
+                    30s
+                    <SkipForward size={14} className="ml-1.5 group-hover:scale-110 transition-transform" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </div>
-
         <audio
           ref={audioRef}
           src={getMediaUrl(item.fileUrl)}
@@ -441,18 +455,18 @@ const BasicList = ({
           }}
           preload="metadata"
         />
-      </div>
-    );
+      </>
+    ); // closes AudioPlayer
   };
 
   // Video Player Component
   const VideoPlayer = ({ item }) => {
-    const [isHovered, setIsHovered] = useState(false);
+    const [isHovered] = useState(false);  // Keep for future hover effects
     const [hasClicked, setHasClicked] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
-    const [showControls, setShowControls] = useState(false);
+    const [showControls] = useState(false);  // Keep for future control visibility
     const playerRef = useRef(null);
     
     // Handle the preview click
@@ -496,17 +510,7 @@ const BasicList = ({
     };
     
     return (
-      <div 
-        className="relative bg-black rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 group"
-        onMouseEnter={() => {
-          setIsHovered(true);
-          setShowControls(true);
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setShowControls(false);
-        }}
-      >
+      <>
         {/* Video Aspect Ratio Container */}
         <div className="relative pt-[56.25%]">
           <ReactPlayer
@@ -520,13 +524,15 @@ const BasicList = ({
             light={!hasClicked && (item.imageUrl ? getMediaUrl(item.imageUrl) : true)}
             playIcon={
               <div 
-                className="bg-emerald-500/90 hover:bg-emerald-600/90 rounded-full p-4 shadow-lg transition-all duration-300 transform hover:scale-110"
+                className="group relative bg-white/95 hover:bg-white rounded-full p-6 shadow-2xl transition-all duration-500 transform hover:scale-110 backdrop-blur-sm border border-white/50"
                 onClick={(e) => {
                   e.stopPropagation();
                   handlePreviewClick();
                 }}
               >
-                <Play className="text-white" size={28} />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Play className="text-gray-800 group-hover:text-emerald-600 transition-colors duration-300 relative z-10" size={32} />
+                <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500/20" />
               </div>
             }
             onClickPreview={handlePreviewClick}
@@ -559,114 +565,101 @@ const BasicList = ({
               }
             }}
           />
-          
-          {/* Video Type Badge */}
-          <div className="absolute top-3 right-3 bg-blue-500/90 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center z-10">
-            <Video className="w-3 h-3 mr-1" />
-            Video
-          </div>
-          
-          {/* Custom Video Controls - Only show when playing or hovered */}
-          {(hasClicked && (showControls || isHovered)) && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 z-20 transition-opacity duration-300">
-              {/* Progress Bar */}
-              <div 
-                className="h-1.5 bg-gray-600/60 rounded-full overflow-hidden cursor-pointer mb-3"
-                onClick={(e) => {
-                  if (playerRef.current) {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const percent = (e.clientX - rect.left) / rect.width;
-                    playerRef.current.seekTo(percent);
-                  }
-                }}
-              >
-                <div 
-                  className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${(currentTime / duration) * 100}%` }}
-                />
-              </div>
-              
-              {/* Controls */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {/* Play/Pause */}
-                  <button
-                    onClick={togglePlay}
-                    className="text-white hover:text-emerald-400 transition-colors"
-                  >
-                    {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                  </button>
-                  
-                  {/* Skip Backward 10s */}
-                  <button
-                    onClick={() => handleSkip(-10)}
-                    className="text-white hover:text-emerald-400 transition-colors flex flex-col items-center"
-                  >
-                    <SkipBack size={18} />
-                    <span className="text-xs">10s</span>
-                  </button>
-                  
-                  {/* Skip Forward 10s */}
-                  <button
-                    onClick={() => handleSkip(10)}
-                    className="text-white hover:text-emerald-400 transition-colors flex flex-col items-center"
-                  >
-                    <SkipForward size={18} />
-                    <span className="text-xs">10s</span>
-                  </button>
-                  
-                  {/* Time Display */}
-                  <div className="text-white text-sm">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </div>
-                </div>
-                
-                {/* Volume and Fullscreen */}
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        const player = playerRef.current.getInternalPlayer();
-                        if (player && player.requestFullscreen) {
-                          player.requestFullscreen();
-                        }
-                      }
-                    }}
-                    className="text-white hover:text-emerald-400 transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Hover Overlay - Only show when not playing */}
-          {isHovered && !isPlaying && !hasClicked && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10 pointer-events-none">
-              <div className="bg-emerald-500/90 rounded-full p-4 shadow-lg">
-                <Play className="text-white" size={28} />
-              </div>
-            </div>
-          )}
         </div>
         
-        {/* Video Info (only shown when not playing) */}
-        {!playingId && (
-          <div className="p-3 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-            <h3 className="font-medium text-gray-900 dark:text-white text-sm truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-              {item.title || "Untitled Video"}
-            </h3>
-            <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
-              <Clock className="w-3 h-3 mr-1" />
-              <span>{item.duration || "--:--"}</span>
+        {/* Enhanced Custom Video Controls - Only show when playing or hovered */}
+        {(hasClicked && (showControls || isHovered)) && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-4 z-20 transition-opacity duration-300">
+            {/* Enhanced Progress Bar */}
+            <div 
+              className="h-2 bg-gray-600/60 rounded-full overflow-hidden cursor-pointer mb-4 group"
+              onClick={(e) => {
+                if (playerRef.current) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const percent = (e.clientX - rect.left) / rect.width;
+                  playerRef.current.seekTo(percent);
+                }
+              }}
+            >
+              <div 
+                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-300 relative overflow-hidden"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+              </div>
+            </div>
+            
+            {/* Enhanced Controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {/* Play/Pause */}
+                <button
+                  onClick={togglePlay}
+                  className="group p-3 text-white hover:text-emerald-400 transition-all duration-200 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transform hover:scale-105"
+                >
+                  {isPlaying ? 
+                    <Pause size={20} className="group-hover:scale-110 transition-transform" /> : 
+                    <Play size={20} className="group-hover:scale-110 transition-transform" />
+                  }
+                </button>
+                
+                {/* Skip Backward 10s */}
+                <button
+                  onClick={() => handleSkip(-10)}
+                  className="group p-2 text-white hover:text-emerald-400 transition-all duration-200 flex flex-col items-center bg-white/5 backdrop-blur-sm rounded-lg hover:bg-white/15"
+                >
+                  <SkipBack size={16} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-medium">10s</span>
+                </button>
+                
+                {/* Skip Forward 10s */}
+                <button
+                  onClick={() => handleSkip(10)}
+                  className="group p-2 text-white hover:text-emerald-400 transition-all duration-200 flex flex-col items-center bg-white/5 backdrop-blur-sm rounded-lg hover:bg-white/15"
+                >
+                  <SkipForward size={16} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-medium">10s</span>
+                </button>
+                
+                {/* Enhanced Time Display */}
+                <div className="text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="text-emerald-400">{formatTime(currentTime)}</span>
+                  <span className="text-gray-300 mx-1">/</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+              
+              {/* Volume and Fullscreen */}
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => {
+                    if (playerRef.current) {
+                      const player = playerRef.current.getInternalPlayer();
+                      if (player && player.requestFullscreen) {
+                        player.requestFullscreen();
+                      }
+                    }
+                  }}
+                  className="group p-2 text-white hover:text-emerald-400 transition-all duration-200 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transform hover:scale-105"
+                >
+                  <Maximize2 size={18} className="group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
             </div>
           </div>
         )}
-      </div>
-    );
+        
+        {/* Enhanced Hover Overlay - Only show when not playing */}
+        {isHovered && !isPlaying && !hasClicked && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-center justify-center z-10 pointer-events-none">
+            <div className="group relative bg-white/95 rounded-full p-6 shadow-2xl backdrop-blur-sm border border-white/50 animate-pulse">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 opacity-75" />
+              <Play className="text-gray-800 relative z-10" size={32} />
+            </div>
+          </div>
+        )}
+      </>
+    ); // closes VideoPlayer
   };
 
   // Loading and Empty States
@@ -709,7 +702,7 @@ const BasicList = ({
         animate={{ opacity: 1, y: 0 }}
         className="mb-8 flex flex-col items-center"
       >
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Farm Basics Library</h2>
+      
         <div className="inline-flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg shadow-sm">
           <button
             onClick={() => setActiveTab('all')}
@@ -751,181 +744,171 @@ const BasicList = ({
               transition={{ duration: 0.3, delay: index * 0.05 }}
               className="flex flex-col h-full"
             >
-              {/* Media Player */}
-              {item.fileType === 'video' ? (
-                <VideoPlayer item={item} />
-              ) : (
-                <AudioPlayer item={item} />
-              )}
-
-              {/* Content Details */}
-              <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 space-y-4 flex-1 flex flex-col">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-lg text-gray-900 dark:text-white line-clamp-2">
-                      {item.title || "Untitled"}
-                    </h3>
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => toggleLike(item._id)}
-                        className={`p-1.5 rounded-full transition-colors ${likedItems[item._id] 
-                          ? 'text-red-500 bg-red-50 dark:bg-red-900/20' 
-                          : 'text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'}`}
-                        aria-label="Like"
-                      >
-                        <Heart className="w-4 h-4" fill={likedItems[item._id] ? 'currentColor' : 'none'} />
-                      </button>
-                      <button 
-                        onClick={() => handleShare(item)}
-                        className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 rounded-full transition-colors"
-                        aria-label="Share"
-                      >
-                        <Share2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center">
-                      <Calendar className="w-3.5 h-3.5 mr-1" />
-                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    {item.description && (
-                      <div className="flex items-center">
-                        <BookOpen className="w-3.5 h-3.5 mr-1" />
-                        <span>{getReadingTime(item.description)}</span>
+              {/* Unified Media Card: Player and Content in One Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-0 flex-1 flex flex-col overflow-hidden">
+                {/* Media Player at the top */}
+                <div className="w-full">
+                  {item.fileType === 'video' ? (
+                    <VideoPlayer item={item} />
+                  ) : (
+                    <AudioPlayer item={item} />
+                  )}
+                </div>
+                {/* Content Details below player */}
+                <div className="p-5 space-y-4 flex-1 flex flex-col">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-medium text-lg text-gray-900 dark:text-white line-clamp-2">
+                        {item.title || "Untitled"}
+                      </h3>
+                      <div className="flex space-x-2">
+                        {/* Like button removed */}
+                        <button 
+                          onClick={() => handleShare(item)}
+                          className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 rounded-full transition-colors"
+                          aria-label="Share"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Description with Read More/Less */}
-                {item.description && (
-                  <div className="flex-1">
-                    <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
-                      {expandedDescriptions[item._id] 
-                        ? stripHtmlTags(item.description)
-                        : `${stripHtmlTags(item.description).substring(0, 150)}${stripHtmlTags(item.description).length > 150 ? '...' : ''}`
-                      }
                     </div>
-                    {stripHtmlTags(item.description).length > 150 && (
-                      <button
-                        onClick={() => toggleDescription(item._id)}
-                        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium mt-2 flex items-center"
-                      >
-                        {expandedDescriptions[item._id] ? 'Show less' : 'Show more'}
-                        {expandedDescriptions[item._id] ? (
-                          <ChevronUp className="ml-1" size={16} />
-                        ) : (
-                          <ChevronDown className="ml-1" size={16} />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex space-x-2 pt-2">
-                  <button
-                    onClick={() => handleDownload(item)}
-                    className="flex-1 flex items-center justify-center py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
-                  >
-                    <Download size={16} className="mr-2" />
-                    Download
-                  </button>
-                  <button
-                    onClick={() => toggleDescription(item._id)}
-                    className="flex items-center justify-center py-2 px-4 bg-emerald-100 dark:bg-emerald-800/40 text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors text-sm font-medium"
-                  >
-                    <Info size={16} className="mr-2" />
-                    Details
-                  </button>
-                </div>
-
-                {/* Comments Section */}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <MessageSquare className="text-emerald-500 mr-2" size={18} />
-                      <h3 className="font-medium text-gray-800 dark:text-white">Comments</h3>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {item.comments?.length || 0} comment{item.comments?.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-
-                  {/* Comments List */}
-                  <div className="space-y-3 mb-4 max-h-48 overflow-y-auto custom-scrollbar">
-                    {item.comments?.length > 0 ? (
-                      item.comments.map((comment) => (
-                        <div key={comment._id} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <p className="text-gray-800 dark:text-gray-200 text-sm">
-                              {comment.content}
-                            </p>
-                            {isAdmin && (
-                              <button
-                                onClick={() => onDeleteComment(item._id, comment._id)}
-                                className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-2"
-                                aria-label="Delete comment"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Just now'}
-                          </div>
+                    <div className="flex items-center space-x-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center">
+                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {item.description && (
+                        <div className="flex items-center">
+                          <BookOpen className="w-3.5 h-3.5 mr-1" />
+                          <span>{getReadingTime(item.description)}</span>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-sm italic text-center py-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        No comments yet. Be the first to comment!
-                      </p>
-                    )}
+                      )}
+                    </div>
                   </div>
-
-                  {/* Add Comment */}
-                  <div className="mt-3">
-                    <textarea
-                      value={newComment[item._id] || ''}
-                      onChange={(e) => handleCommentChange(item._id, e.target.value)}
-                      placeholder="Add a comment..."
-                      className="w-full p-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white"
-                      rows={2}
-                    />
+                  {/* Description */}
+                  {item.description && (
+                    <div className="flex-1">
+                      <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+                        {expandedDescriptions[item._id] 
+                          ? stripHtmlTags(item.description)
+                          : `${stripHtmlTags(item.description).substring(0, 150)}${stripHtmlTags(item.description).length > 150 ? '...' : ''}`
+                        }
+                      </div>
+                      {stripHtmlTags(item.description).length > 150 && (
+                        <button
+                          onClick={() => toggleDescription(item._id)}
+                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium mt-2 flex items-center"
+                        >
+                          {expandedDescriptions[item._id] ? 'Show less' : 'Show more'}
+                          {expandedDescriptions[item._id] ? (
+                            <ChevronUp className="ml-1" size={16} />
+                          ) : (
+                            <ChevronDown className="ml-1" size={16} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {/* Download/Details Buttons */}
+                  <div className="flex space-x-2 pt-2">
                     <button
-                      onClick={() => handleCommentSubmit(item._id)}
-                      disabled={!newComment[item._id]?.trim()}
-                      className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      onClick={() => handleDownload(item)}
+                      className="flex-1 flex items-center justify-center py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                     >
-                      Post Comment
+                      <Download size={16} className="mr-2" />
+                      Download
+                    </button>
+                    <button
+                      onClick={() => toggleDescription(item._id)}
+                      className="flex items-center justify-center py-2 px-4 bg-emerald-100 dark:bg-emerald-800/40 text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors text-sm font-medium"
+                    >
+                      <Info size={16} className="mr-2" />
+                      Details
                     </button>
                   </div>
-                </div>
-
-                {/* Admin Actions */}
-                {isAdmin && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 flex space-x-3">
-                    {onEdit && (
+                  {/* Comments Section */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <MessageSquare className="text-emerald-500 mr-2" size={18} />
+                        <h3 className="font-medium text-gray-800 dark:text-white">Comments</h3>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {item.comments?.length || 0} comment{item.comments?.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="space-y-3 mb-4 max-h-48 overflow-y-auto custom-scrollbar">
+                      {item.comments?.length > 0 ? (
+                        item.comments
+                          .filter(comment => comment && typeof comment === 'object' && comment._id)
+                          .map((comment, index) => (
+                            <div key={comment._id || index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                              <div className="flex justify-between items-start">
+                                <p className="text-gray-800 dark:text-gray-200 text-sm">
+                                  {comment.content || 'No content'}
+                                </p>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => onDeleteComment(item._id, comment._id)}
+                                    className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-2"
+                                    aria-label="Delete comment"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Just now'}
+                              </div>
+                            </div>
+                          ))
+                      ) : (
+                        <p className="text-gray-500 dark:text-gray-400 text-sm italic text-center py-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                          No comments yet. Be the first to comment!
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-3">
+                      <textarea
+                        value={newComment[item._id] || ''}
+                        onChange={(e) => handleCommentChange(item._id, e.target.value)}
+                        placeholder="Add a comment..."
+                        className="w-full p-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white"
+                        rows={2}
+                      />
                       <button
-                        onClick={() => onEdit(item._id)}
-                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
+                        onClick={() => handleCommentSubmit(item._id)}
+                        disabled={!newComment[item._id]?.trim()}
+                        className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <Edit2 size={16} className="mr-2" />
-                        Edit
+                        Post Comment
                       </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(item._id)}
-                        className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
-                      >
-                        <Trash2 size={16} className="mr-2" />
-                        Delete
-                      </button>
-                    )}
+                    </div>
                   </div>
-                )}
+                  {/* Admin Actions */}
+                  {isAdmin && (
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 flex space-x-3">
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(item._id)}
+                          className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
+                        >
+                          <Edit2 size={16} className="mr-2" />
+                          Edit
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(item._id)}
+                          className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
+                        >
+                          <Trash2 size={16} className="mr-2" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}

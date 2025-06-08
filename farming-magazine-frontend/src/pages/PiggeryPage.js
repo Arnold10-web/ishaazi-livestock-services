@@ -1,18 +1,7 @@
-// ========================
-// Redesigned PiggeryPost.js
-// ========================
-
-// (Already updated above)
-
-// ========================
-// Redesigned PiggeryPage.js
-// ========================
-
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Search, Filter, ChevronDown, RefreshCw } from 'lucide-react';
-import PiggeryList from '../components/PiggeryList';
+import { Search, ArrowRight } from 'lucide-react';
 
 const PiggeryPage = () => {
   const [piggeries, setPiggeries] = useState([]);
@@ -20,101 +9,186 @@ const PiggeryPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const piggeryPerPage = 6;
+  const piggeriesPerPage = 9;
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPiggeries = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/content/piggeries`);
-        setPiggeries(res.data.data.piggeries);
+        setLoading(true);
+        const response = await axios.get(`${API_BASE_URL}/api/content/piggeries`, {
+          params: {
+            page: currentPage,
+            limit: piggeriesPerPage
+          }
+        });
+        setPiggeries(response.data.data.piggeries);
+        setError(null);
       } catch (err) {
-        console.error(err);
-        setError('Failed to fetch piggeries.');
+        console.error('Error fetching piggeries:', err);
+        setError('Failed to fetch piggery articles. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [API_BASE_URL]);
 
-  const filtered = piggeries.filter(p =>
-    p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+    fetchPiggeries();
+  }, [API_BASE_URL, currentPage]);
+
+  const filteredPiggeries = piggeries.filter(piggery =>
+    piggery.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    piggery.content?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const indexOfLast = currentPage * piggeryPerPage;
-  const indexOfFirst = indexOfLast - piggeryPerPage;
-  const currentPiggeries = filtered.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(filtered.length / piggeryPerPage);
+  const indexOfLast = currentPage * piggeriesPerPage;
+  const indexOfFirst = indexOfLast - piggeriesPerPage;
+  const currentPiggeries = filteredPiggeries.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(filteredPiggeries.length / piggeriesPerPage);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const truncateContent = (content, maxLength = 150) => {
+    if (!content) return '';
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = content;
+    let text = tempElement.textContent || tempElement.innerText;
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+      <div className="min-h-screen bg-neutral-50">
+        <div className="section-container section-padding">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <h2 className="text-xl font-semibold text-primary-700 mb-2">Loading Piggery Articles</h2>
+              <p className="text-body">Please wait while we fetch the latest content...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 text-center">
-        <p className="text-lg text-red-500 font-semibold mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          <RefreshCw className="w-4 h-4 inline mr-2" />Retry
-        </button>
+      <div className="min-h-screen bg-neutral-50">
+        <div className="section-container section-padding">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center max-w-md">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-red-500" />
+              </div>
+              <h2 className="text-xl font-semibold text-neutral-800 mb-2">Something went wrong</h2>
+              <p className="text-body mb-6">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-primary"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-green-600 py-12 text-center text-white">
-        <h1 className="text-4xl font-bold">Piggery Records</h1>
-        <p className="mt-2 text-green-100">Explore detailed piggery information and stats</p>
-      </header>
-
-      <main className="container mx-auto px-4 py-10">
-        <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="relative w-full sm:w-auto flex-grow">
-            <Search className="absolute top-3 left-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search piggeries..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <button
-            className="inline-flex items-center gap-2 text-sm px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-            disabled
-          >
-            <Filter className="w-4 h-4" /> Filters <ChevronDown className="w-4 h-4" />
-          </button>
+    <div className="min-h-screen bg-white">
+      <main className="section-container section-padding">
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-bold text-heading mb-6">
+            Pig Farming
+          </h1>
+          <p className="text-body text-lg md:text-xl max-w-3xl mx-auto">
+            Expert guidance on pig farming, swine management, breeding techniques, and sustainable practices for successful piggery operations.
+          </p>
         </div>
 
-        <AnimatePresence mode="wait">
-          <PiggeryList piggery={currentPiggeries} apiBaseUrl={API_BASE_URL} />
-        </AnimatePresence>
+        {/* Search Section */}
+        <div className="max-w-2xl mx-auto mb-12">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search piggery articles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-lg border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-neutral-800 placeholder-neutral-500"
+            />
+          </div>
+        </div>
 
+        {/* Piggery Articles Grid */}
+        <div className="mb-12">
+          {currentPiggeries.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-body text-lg">No piggery articles found matching your search.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {currentPiggeries.map((piggery) => (
+                <article key={piggery._id} className="blog-card">
+                  <div className="overflow-hidden">
+                    <img
+                      src={`${API_BASE_URL}${piggery.imageUrl}`}
+                      alt={piggery.title}
+                      className="blog-card-image hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="blog-card-content">
+                    <div className="blog-card-meta">
+                      <span>{formatDate(piggery.createdAt)}</span>
+                      {piggery.author && <span> • By {piggery.author}</span>}
+                    </div>
+                    <h3 className="blog-card-title">{piggery.title}</h3>
+                    <p className="blog-card-excerpt">{truncateContent(piggery.content)}</p>
+                    <Link
+                      to={`/piggery/${piggery._id}`}
+                      className="read-more-link"
+                    >
+                      Read More
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-12 flex justify-center items-center gap-4">
+          <div className="flex justify-center items-center space-x-4">
             <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
-            >Previous</button>
-            <span className="text-gray-600 dark:text-gray-300">Page {currentPage} of {totalPages}</span>
+              className="px-6 py-2 bg-white border border-neutral-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 hover:bg-neutral-50 transition-colors duration-200"
+            >
+              Previous
+            </button>
+
+            <span className="px-4 py-2 text-neutral-600">
+              Page {currentPage} of {totalPages}
+            </span>
+
             <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg disabled:opacity-50"
-            >Next</button>
+              className="px-6 py-2 bg-white border border-neutral-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 hover:bg-neutral-50 transition-colors duration-200"
+            >
+              Next
+            </button>
           </div>
         )}
       </main>

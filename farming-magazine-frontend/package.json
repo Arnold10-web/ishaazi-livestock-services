@@ -14,12 +14,11 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.16",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
+    "@testing-library/dom": "^10.4.0",
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0",
     "axios": "^1.9.0",
+    "axios-mock-adapter": "^2.1.0",
     "dompurify": "^3.2.5",
     "eslint": "^9.26.0",
     "framer-motion": "^12.12.1",
@@ -30,6 +29,9 @@
     "quill": "^2.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-helmet": "^6.1.0",
+    "react-icons": "^5.5.0",
+    "react-loadable": "^5.5.0",
     "react-player": "^2.16.0",
     "react-router-dom": "^7.6.0",
     "react-scripts": "^5.0.1",
@@ -38,7 +40,8 @@
     "sonner": "^2.0.3",
     "styled-components": "^6.1.18",
     "twin.macro": "^3.4.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "webpack-bundle-analyzer": "^4.10.2"
   },
   "scripts": {
     "start": "PORT=3000 react-scripts start --openssl-legacy-provider",
@@ -65,6 +68,9 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "autoprefixer": "^10.4.21",
     "eslint-webpack-plugin": "^4.2.0",
     "postcss": "^8.5.3",

@@ -7,20 +7,46 @@ import { getAuthHeader } from '../utils/auth';
 
 const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   const [title, setTitle] = useState('');
-  const [metadata, setMetadata] = useState('{}');
+  const [author, setAuthor] = useState('');
+  const [category, setCategory] = useState('general');
+  const [tags, setTags] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [summary, setSummary] = useState('');
+  const [location, setLocation] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [published, setPublished] = useState(false);
   const [error, setError] = useState('');
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
+  // Helper function to convert simple inputs to metadata JSON
+  const generateMetadata = () => {
+    const metadata = {};
+    if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
+    if (summary.trim()) metadata.summary = summary.trim();
+    if (location.trim()) metadata.location = location.trim();
+    return metadata;
+  };
+
   useEffect(() => {
     if (editingNews) {
-      setTitle(editingNews.title);
-      setMetadata(JSON.stringify(editingNews.metadata));
+      setTitle(editingNews.title || '');
+      setAuthor(editingNews.author || '');
+      setCategory(editingNews.category || 'general');
+      setTags(editingNews.tags ? editingNews.tags.join(', ') : '');
+      setPublished(editingNews.published || false);
       setImagePreview(editingNews.imageUrl);
+      
+      // Extract metadata fields
+      if (editingNews.metadata) {
+        setKeywords(editingNews.metadata.keywords ? editingNews.metadata.keywords.join(', ') : '');
+        setSummary(editingNews.metadata.summary || '');
+        setLocation(editingNews.metadata.location || '');
+      }
+      
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingNews.content;
+        quillEditor.root.innerHTML = editingNews.content || '';
       }
     }
   }, [editingNews, quillEditor]);
@@ -66,7 +92,13 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
 
   const resetForm = () => {
     setTitle('');
-    setMetadata('{}');
+    setAuthor('');
+    setCategory('general');
+    setTags('');
+    setKeywords('');
+    setSummary('');
+    setLocation('');
+    setPublished(false);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
@@ -79,22 +111,25 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     e.preventDefault();
     const content = quillEditor ? quillEditor.root.innerHTML : '';
 
-    if (!title.trim() || !content.trim()) {
-      setError('Title and content are required.');
+    if (!title.trim() || !content.trim() || !author.trim()) {
+      setError('Title, content, and author are required.');
       return;
     }
 
-    try {
-      JSON.parse(metadata);
-    } catch (err) {
-      setError('Invalid metadata JSON format.');
-      return;
-    }
+    // Generate metadata from user-friendly inputs
+    const metadata = generateMetadata();
+    
+    // Convert tags from comma-separated string to array
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
-    formData.append('metadata', metadata);
+    formData.append('author', author);
+    formData.append('category', category);
+    formData.append('tags', JSON.stringify(tagsArray));
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('published', published);
     if (image) formData.append('image', image);
 
     try {
@@ -156,36 +191,137 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
           </div>
         )}
         
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="title"
+              type="text"
+              placeholder="Enter news title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
+              aria-required="true"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Author <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="author"
+              type="text"
+              placeholder="Author name"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
+              aria-required="true"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Category
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
+            >
+              <option value="general">General</option>
+              <option value="agriculture">Agriculture</option>
+              <option value="livestock">Livestock</option>
+              <option value="technology">Technology</option>
+              <option value="market">Market</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="published" className="flex items-center space-x-2">
+              <input
+                id="published"
+                type="checkbox"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Publish immediately</span>
+            </label>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Title <span className="text-red-500">*</span>
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Tags
           </label>
           <input
-            id="title"
+            id="tags"
             type="text"
-            placeholder="Enter news title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
+            placeholder="farming, agriculture, livestock (separate with commas)"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
-            aria-required="true"
+            aria-describedby="tags-help"
           />
+          <p id="tags-help" className="text-xs text-gray-500 dark:text-gray-400">
+            Enter tags separated by commas (e.g., farming, agriculture, livestock)
+          </p>
         </div>
-        
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Keywords (for SEO)
+            </label>
+            <input
+              id="keywords"
+              type="text"
+              placeholder="farming tips, organic, sustainable"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
+              aria-describedby="keywords-help"
+            />
+            <p id="keywords-help" className="text-xs text-gray-500 dark:text-gray-400">
+              Keywords help with search engine optimization
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Location
+            </label>
+            <input
+              id="location"
+              type="text"
+              placeholder="e.g., Kampala, Uganda"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label htmlFor="metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Metadata (JSON)
+          <label htmlFor="summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Summary (Brief description)
           </label>
           <textarea
-            id="metadata"
-            placeholder="{ }"
-            value={metadata}
-            onChange={(e) => setMetadata(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
-            aria-describedby="metadata-help"
+            id="summary"
+            placeholder="Brief summary of the article..."
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-20 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out resize-none"
+            aria-describedby="summary-help"
           />
-          <p id="metadata-help" className="text-xs text-gray-500 dark:text-gray-400">
-            Enter metadata in valid JSON format
+          <p id="summary-help" className="text-xs text-gray-500 dark:text-gray-400">
+            A brief summary that will be used for previews and search results
           </p>
         </div>
         

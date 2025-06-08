@@ -7,7 +7,14 @@ import { getAuthHeader } from '../utils/auth';
 
 const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) => {
   const [title, setTitle] = useState('');
-  const [metadata, setMetadata] = useState('{}');
+  const [author, setAuthor] = useState('');
+  const [category, setCategory] = useState('Piggery');
+  const [tags, setTags] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [summary, setSummary] = useState('');
+  const [published, setPublished] = useState(true);
+  const [featured, setFeatured] = useState(false);
+  const [readTime, setReadTime] = useState(5);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
@@ -17,7 +24,19 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
   useEffect(() => {
     if (editingPiggery) {
       setTitle(editingPiggery.title);
-      setMetadata(JSON.stringify(editingPiggery.metadata));
+      setCategory(editingPiggery.category || 'Piggery');
+      setTags(editingPiggery.tags ? editingPiggery.tags.join(', ') : '');
+      setPublished(editingPiggery.published !== undefined ? editingPiggery.published : true);
+      setFeatured(editingPiggery.featured || false);
+      setReadTime(editingPiggery.readTime || 5);
+      
+      // Extract from metadata if it exists
+      if (editingPiggery.metadata) {
+        setAuthor(editingPiggery.metadata.author || '');
+        setKeywords(editingPiggery.metadata.keywords ? editingPiggery.metadata.keywords.join(', ') : '');
+        setSummary(editingPiggery.metadata.summary || '');
+      }
+      
       setImagePreview(editingPiggery.imageUrl);
       if (quillEditor) {
         quillEditor.root.innerHTML = editingPiggery.content;
@@ -66,13 +85,28 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
 
   const resetForm = () => {
     setTitle('');
-    setMetadata('{}');
+    setAuthor('');
+    setCategory('Piggery');
+    setTags('');
+    setKeywords('');
+    setSummary('');
+    setPublished(true);
+    setFeatured(false);
+    setReadTime(5);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
       quillEditor.setText('');
     }
     setEditingPiggery(null);
+  };
+
+  const generateMetadata = () => {
+    const metadata = {};
+    if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
+    if (summary.trim()) metadata.summary = summary.trim();
+    if (author.trim()) metadata.author = author.trim();
+    return metadata;
   };
 
   const handleSubmit = async (e) => {
@@ -84,17 +118,18 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
       return;
     }
 
-    try {
-      JSON.parse(metadata);
-    } catch (err) {
-      setError('Invalid metadata JSON format.');
-      return;
-    }
+    const metadata = generateMetadata();
+    const parsedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
-    formData.append('metadata', metadata);
+    formData.append('category', category);
+    formData.append('tags', JSON.stringify(parsedTags));
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('published', published);
+    formData.append('featured', featured);
+    formData.append('readTime', readTime);
     if (image) formData.append('image', image);
 
     try {
@@ -155,19 +190,118 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Metadata (JSON)
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
-          </label>
-          <textarea
-            id="metadata"
-            placeholder='{"key": "value"}'
-            value={metadata}
-            onChange={(e) => setMetadata(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out font-mono text-sm"
-            rows="3"
+        {/* User-friendly metadata fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Author</label>
+            <input
+              id="author"
+              type="text"
+              placeholder="Enter author name"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            >
+              <option value="Piggery">Piggery</option>
+              <option value="Pig Management">Pig Management</option>
+              <option value="Pig Health">Pig Health</option>
+              <option value="Pig Nutrition">Pig Nutrition</option>
+              <option value="Pig Breeding">Pig Breeding</option>
+              <option value="Pig Business">Pig Business</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
+            <input
+              id="tags"
+              type="text"
+              placeholder="Enter tags separated by commas"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., pig farming, management, health</p>
+          </div>
+          
+          <div>
+            <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Read Time (minutes)</label>
+            <input
+              id="readTime"
+              type="number"
+              min="1"
+              max="60"
+              value={readTime}
+              onChange={(e) => setReadTime(parseInt(e.target.value) || 5)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">SEO Keywords</label>
+          <input
+            id="keywords"
+            type="text"
+            placeholder="Enter SEO keywords separated by commas"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
           />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Keywords for search engine optimization</p>
+        </div>
+
+        <div>
+          <label htmlFor="summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Summary</label>
+          <textarea
+            id="summary"
+            placeholder="Enter a brief summary of the content"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            rows="3"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Brief description for previews and search results</p>
+        </div>
+
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center">
+            <input
+              id="published"
+              type="checkbox"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label htmlFor="published" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Publish immediately
+            </label>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              id="featured"
+              type="checkbox"
+              checked={featured}
+              onChange={(e) => setFeatured(e.target.checked)}
+              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label htmlFor="featured" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Featured content
+            </label>
+          </div>
         </div>
 
         <div className="space-y-2">

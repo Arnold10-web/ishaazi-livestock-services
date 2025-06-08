@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import API_ENDPOINTS from '../config/apiConfig';
-import { getAuthHeader } from '../utils/auth';
 
 const OverviewCard = ({ title, value, icon, change, color }) => {
   const isPositive = change >= 0;
@@ -161,6 +159,8 @@ const ContentTrend = ({ data, darkMode }) => {
             <Line type="monotone" dataKey="blogs" stroke="#8884d8" activeDot={{ r: 8 }} />
             <Line type="monotone" dataKey="news" stroke="#82ca9d" />
             <Line type="monotone" dataKey="events" stroke="#ffc658" />
+            <Line type="monotone" dataKey="newsletters" stroke="#ff7300" />
+            <Line type="monotone" dataKey="subscribers" stroke="#00c49f" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -204,6 +204,149 @@ const PopularContent = ({ items, darkMode }) => {
   );
 };
 
+// Newsletter Analytics Widget
+const NewsletterAnalytics = ({ metrics, darkMode }) => {
+  return (
+    <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl shadow-sm p-6 transition-all duration-300`}>
+      <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+        <i className="fas fa-envelope mr-2 text-indigo-500"></i>Newsletter Performance
+      </h3>
+      
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Sent</p>
+              <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {metrics?.sentNewsletters || 0}
+              </p>
+            </div>
+            <div className="p-2 bg-green-100 dark:bg-green-900 dark:bg-opacity-20 rounded-lg">
+              <i className="fas fa-paper-plane text-green-500"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Draft</p>
+              <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {metrics?.draftNewsletters || 0}
+              </p>
+            </div>
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 dark:bg-opacity-20 rounded-lg">
+              <i className="fas fa-edit text-yellow-500"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Open Rate</span>
+          <div className="flex items-center">
+            <div className={`w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3`}>
+              <div 
+                className="bg-blue-500 h-2 rounded-full" 
+                style={{ width: metrics?.openRate || '0%' }}
+              ></div>
+            </div>
+            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {metrics?.openRate || '0%'}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Click Rate</span>
+          <div className="flex items-center">
+            <div className={`w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3`}>
+              <div 
+                className="bg-purple-500 h-2 rounded-full" 
+                style={{ width: metrics?.clickRate || '0%' }}
+              ></div>
+            </div>
+            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {metrics?.clickRate || '0%'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Subscriber Analytics Widget
+const SubscriberAnalytics = ({ metrics, distribution, darkMode }) => {
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  
+  return (
+    <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl shadow-sm p-6 transition-all duration-300`}>
+      <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+        <i className="fas fa-users mr-2 text-cyan-500"></i>Subscriber Insights
+      </h3>
+      
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Active</p>
+              <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {metrics?.activeSubscribers || 0}
+              </p>
+            </div>
+            <div className="p-2 bg-green-100 dark:bg-green-900 dark:bg-opacity-20 rounded-lg">
+              <i className="fas fa-user-check text-green-500"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Growth</p>
+              <p className={`text-2xl font-bold ${metrics?.subscriberGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {metrics?.subscriberGrowth >= 0 ? '+' : ''}{metrics?.subscriberGrowth || 0}%
+              </p>
+            </div>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 dark:bg-opacity-20 rounded-lg">
+              <i className={`fas fa-arrow-${metrics?.subscriberGrowth >= 0 ? 'up' : 'down'} text-blue-500`}></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {distribution && distribution.length > 0 && (
+        <div className="h-48">
+          <h4 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Subscription Types
+          </h4>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={distribution}
+                cx="50%"
+                cy="50%"
+                innerRadius={30}
+                outerRadius={60}
+                paddingAngle={5}
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {distribution.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => [`${value} subscribers`, 'Count']} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Overview = ({ darkMode = false }) => {
   const [dashboardData, setDashboardData] = useState({
     stats: {
@@ -215,71 +358,56 @@ const Overview = ({ darkMode = false }) => {
     activities: [],
     contentDistribution: [],
     contentTrend: [],
-    popularContent: []
+    popularContent: [],
+    newsletterMetrics: {},
+    subscriberDistribution: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Mock data - in a real app, this would come from the API
+  // Fetch dashboard data from API
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // In a real implementation, you would fetch this data from your API
-        // For now we'll use mock data for demonstration
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Get authentication token
+        const token = localStorage.getItem('myAppAdminToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
 
-        // These would be API calls in the real implementation
-        // const response = await axios.get(API_ENDPOINTS.GET_DASHBOARD_STATS, { headers: getAuthHeader() });
-        // setDashboardData(response.data);
-        
-        // Mock data for demonstration
-        setDashboardData({
-          stats: {
-            totalContent: { value: 246, change: 12.5 },
-            subscribers: { value: 1853, change: 8.3 },
-            engagement: { value: "73%", change: -2.1 },
-            events: { value: 15, change: 20 }
-          },
-          activities: [
-            { icon: 'edit', color: 'blue', title: 'Blog Updated', description: 'Modern Dairy Farming Techniques', time: '10 minutes ago', status: 'published' },
-            { icon: 'plus', color: 'green', title: 'New Event Created', description: 'Annual Livestock Exhibition 2025', time: '2 hours ago', status: 'draft' },
-            { icon: 'trash', color: 'red', title: 'Content Deleted', description: 'Outdated farming guide', time: '5 hours ago' },
-            { icon: 'user-plus', color: 'purple', title: 'New Subscriber', description: 'subscriber@example.com', time: 'Yesterday' }
-          ],
-          quickActions: [
-            { icon: 'file-alt', color: 'blue', title: 'New Blog Post', description: 'Create content' },
-            { icon: 'newspaper', color: 'green', title: 'Add News Item', description: 'Post updates' },
-            { icon: 'calendar-plus', color: 'purple', title: 'Schedule Event', description: 'Plan ahead' },
-            { icon: 'paper-plane', color: 'amber', title: 'Send Newsletter', description: 'Reach subscribers' }
-          ],
-          contentDistribution: [
-            { name: 'Blogs', value: 42 },
-            { name: 'News', value: 58 },
-            { name: 'Farms', value: 34 },
-            { name: 'Events', value: 15 },
-            { name: 'Magazines', value: 28 },
-            { name: 'Other', value: 69 }
-          ],
-          contentTrend: [
-            { name: 'Jan', blogs: 4, news: 3, events: 1 },
-            { name: 'Feb', blogs: 7, news: 4, events: 1 },
-            { name: 'Mar', blogs: 5, news: 6, events: 2 },
-            { name: 'Apr', blogs: 10, news: 8, events: 3 },
-            { name: 'May', blogs: 12, news: 12, events: 5 },
-            { name: 'Jun', blogs: 14, news: 15, events: 3 }
-          ],
-          popularContent: [
-            { title: 'Top 10 Dairy Farm Management Tips', category: 'Blog', categoryColor: 'blue', views: 5283, trend: 1 },
-            { title: 'Upcoming Livestock Exhibition 2025', category: 'Event', categoryColor: 'purple', views: 4192, trend: 1 },
-            { title: 'New Government Subsidies for Farmers', category: 'News', categoryColor: 'green', views: 3547, trend: 1 },
-            { title: 'Best Practices for Goat Rearing', category: 'Magazine', categoryColor: 'amber', views: 2871, trend: -1 },
-            { title: 'Advanced Piggery Management', category: 'Blog', categoryColor: 'blue', views: 2315, trend: 1 }
-          ]
+        console.log('Fetching dashboard data with token:', token ? 'Token found' : 'No token');
+        console.log('API Endpoint:', API_ENDPOINTS.DASHBOARD_STATS);
+
+        // Fetch real dashboard statistics from API
+        const response = await fetch(API_ENDPOINTS.DASHBOARD_STATS, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
+
+        console.log('API Response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('API Response data:', result);
+        console.log('Stats received:', result.data?.stats);
+        console.log('Activities count:', result.data?.activities?.length);
+        console.log('Content distribution:', result.data?.contentDistribution);
+        console.log('Popular content with views:', result.data?.popularContent);
         
+        if (result.success) {
+          setDashboardData(result.data);
+        } else {
+          throw new Error(result.message || 'Failed to fetch dashboard data');
+        }
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -319,7 +447,8 @@ const Overview = ({ darkMode = false }) => {
     );
   }
 
-  const { stats, activities, quickActions, contentDistribution, contentTrend, popularContent } = dashboardData;
+  const { stats, activities, contentDistribution, contentTrend, popularContent, newsletterMetrics, subscriberDistribution } = dashboardData;
+  const quickActions = dashboardData.quickActions || [];
 
   return (
     <div className="space-y-6">
@@ -359,6 +488,16 @@ const Overview = ({ darkMode = false }) => {
         />
       </div>
       
+      {/* Newsletter and Subscriber Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <NewsletterAnalytics metrics={newsletterMetrics} darkMode={darkMode} />
+        <SubscriberAnalytics 
+          metrics={newsletterMetrics} 
+          distribution={subscriberDistribution} 
+          darkMode={darkMode} 
+        />
+      </div>
+      
       {/* Content and Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
@@ -375,7 +514,7 @@ const Overview = ({ darkMode = false }) => {
           <ContentDistribution data={contentDistribution} darkMode={darkMode} />
         </div>
         <div>
-          <QuickActions actions={dashboardData.quickActions} darkMode={darkMode} />
+          <QuickActions actions={quickActions} darkMode={darkMode} />
         </div>
         <div>
           <PopularContent items={popularContent} darkMode={darkMode} />

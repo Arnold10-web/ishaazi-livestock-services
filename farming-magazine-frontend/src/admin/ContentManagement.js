@@ -848,6 +848,7 @@ const ContentManagement = ({ activeTab, darkMode }) => {
               editingNewsletter={editingItem}
               setEditingNewsletter={setEditingItem}
               onClose={handleFormClose}
+              darkMode={darkMode}
             />
           );
         default:
@@ -884,9 +885,9 @@ const ContentManagement = ({ activeTab, darkMode }) => {
         case 'beefs':
           return <BeefList beefs={content} {...commonProps} />;
         case 'newsletters':
-          return <NewsletterList newsletters={content} {...commonProps} />;
+          return <NewsletterList newsletters={content} {...commonProps} darkMode={darkMode} />;
         case 'subscribers':
-          return <SubscriberList subscribers={content} onDelete={handleDelete} />;
+          return <SubscriberList subscribers={content} onDelete={handleDelete} darkMode={darkMode} />;
         default:
           return <div>Select a content type to manage</div>;
       }

@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import Blog from '../models/Blog.js';
 import Event from '../models/Event.js';
+import EventRegistration from '../models/EventRegistration.js';
 import News from '../models/News.js';
 import Basic from '../models/Basic.js';
 import Farm from '../models/Farm.js';
@@ -11,9 +12,12 @@ import Dairy from '../models/Dairy.js';
 import Goat from '../models/Goat.js';
 import Piggery from '../models/Piggery.js';
 import Beef from '../models/Beef.js';
+import Auction from '../models/Auction.js';
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
+import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail } from '../services/emailService.js';
 
 // Define __dirname manually for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -36,10 +40,297 @@ const sendResponse = (res, success, message, data = null, error = null) => {
   res.status(success ? 200 : 500).json({ success, message, data, error });
 };
 
+// ENGAGEMENT TRACKING FUNCTIONS
+// Generic view tracking function for all content types
+export const trackView = async (req, res) => {
+  try {
+    const { contentType, id } = req.params;
+    
+    // Map content types to their models
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const content = await Model.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!content) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    sendResponse(res, true, 'View tracked successfully', { views: content.views });
+  } catch (error) {
+    sendResponse(res, false, 'Failed to track view', null, error.message);
+  }
+};
+
+// Generic like tracking function
+export const trackLike = async (req, res) => {
+  try {
+    const { contentType, id } = req.params;
+    const { action } = req.body; // 'like' or 'unlike'
+    
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const increment = action === 'like' ? 1 : -1;
+    const content = await Model.findByIdAndUpdate(
+      id,
+      { $inc: { likes: increment } },
+      { new: true }
+    );
+
+    if (!content) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    // Ensure likes don't go below 0
+    if (content.likes < 0) {
+      content.likes = 0;
+      await content.save();
+    }
+
+    sendResponse(res, true, `${action} tracked successfully`, { likes: content.likes });
+  } catch (error) {
+    sendResponse(res, false, 'Failed to track like', null, error.message);
+  }
+};
+
+// Generic share tracking function
+export const trackShare = async (req, res) => {
+  try {
+    const { contentType, id } = req.params;
+    
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const content = await Model.findByIdAndUpdate(
+      id,
+      { $inc: { shares: 1 } },
+      { new: true }
+    );
+
+    if (!content) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    sendResponse(res, true, 'Share tracked successfully', { shares: content.shares });
+  } catch (error) {
+    sendResponse(res, false, 'Failed to track share', null, error.message);
+  }
+};
+
+// Get engagement stats for content
+export const getEngagementStats = async (req, res) => {
+  try {
+    const { contentType, id } = req.params;
+    
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const content = await Model.findById(id).select('views likes shares');
+    if (!content) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    sendResponse(res, true, 'Engagement stats retrieved successfully', {
+      views: content.views || 0,
+      likes: content.likes || 0,
+      shares: content.shares || 0
+    });
+  } catch (error) {
+    sendResponse(res, false, 'Failed to get engagement stats', null, error.message);
+  }
+};
+
+// Comment management for all content types
+export const addContentComment = async (req, res) => {
+  try {
+    const { contentType, id } = req.params;
+    const { author, email, content } = req.body;
+
+    if (!author || !email || !content) {
+      return sendResponse(res, false, 'Author, email, and content are required');
+    }
+
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const item = await Model.findById(id);
+    if (!item) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    const newComment = {
+      author,
+      email,
+      content,
+      approved: false // Comments require approval by default
+    };
+
+    item.comments = item.comments || [];
+    item.comments.push(newComment);
+    await item.save();
+
+    sendResponse(res, true, 'Comment added successfully (pending approval)', item);
+  } catch (error) {
+    sendResponse(res, false, 'Failed to add comment', null, error.message);
+  }
+};
+
+// Delete comment from any content type
+export const deleteContentComment = async (req, res) => {
+  try {
+    const { contentType, id, commentId } = req.params;
+
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const item = await Model.findById(id);
+    if (!item) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    item.comments = item.comments.filter(comment => comment._id.toString() !== commentId);
+    await item.save();
+
+    sendResponse(res, true, 'Comment deleted successfully', item);
+  } catch (error) {
+    sendResponse(res, false, 'Failed to delete comment', null, error.message);
+  }
+};
+
+// Approve comment for any content type
+export const approveContentComment = async (req, res) => {
+  try {
+    const { contentType, id, commentId } = req.params;
+
+    const modelMap = {
+      blogs: Blog,
+      news: News,
+      dairies: Dairy,
+      beefs: Beef,
+      farms: Farm,
+      piggeries: Piggery,
+      goats: Goat,
+      basics: Basic,
+      magazines: Magazine
+    };
+
+    const Model = modelMap[contentType];
+    if (!Model) {
+      return sendResponse(res, false, 'Invalid content type');
+    }
+
+    const item = await Model.findById(id);
+    if (!item) {
+      return sendResponse(res, false, 'Content not found', null, null, 404);
+    }
+
+    const comment = item.comments.id(commentId);
+    if (!comment) {
+      return sendResponse(res, false, 'Comment not found', null, null, 404);
+    }
+
+    comment.approved = true;
+    await item.save();
+
+    sendResponse(res, true, 'Comment approved successfully', item);
+  } catch (error) {
+    sendResponse(res, false, 'Failed to approve comment', null, error.message);
+  }
+};
+
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, category, tags, metadata, published } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
@@ -52,13 +343,16 @@ export const createBlog = async (req, res) => {
     }
 
     const parsedMetadata = parseMetadata(metadata);
+    const parsedTags = tags ? JSON.parse(tags) : [];
 
     const newBlog = new Blog({
       title,
       content,
+      category: category || 'General',
+      tags: parsedTags,
       imageUrl,
       metadata: parsedMetadata,
-      published
+      published: published === 'true' || published === true
     });
 
     const savedBlog = await newBlog.save();
@@ -137,8 +431,22 @@ export const getAdminBlogs = async (req, res) => {
 export const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    const { title, content, category, tags, metadata, published } = req.body;
+    
+    // Parse metadata if it's a string
+    const parsedMetadata = parseMetadata(metadata);
+    
+    // Parse tags if they exist
+    const parsedTags = tags ? JSON.parse(tags) : [];
+    
+    let updateData = { 
+      title, 
+      content, 
+      category: category || 'General',
+      tags: parsedTags,
+      metadata: parsedMetadata, 
+      published: published === 'true' || published === true
+    };
 
     if (req.file) {
       // Construct the relative path
@@ -1394,118 +1702,455 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Fetch all subscribers
+// Enhanced subscriber management functions
 export const getSubscribers = async (req, res) => {
   try {
-    const subscribers = await Subscriber.find();
-    res.status(200).json(subscribers);
+    const { page = 1, limit = 10, subscriptionType, isActive } = req.query;
+    
+    // Build query filters
+    const query = {};
+    if (subscriptionType && subscriptionType !== 'all') {
+      query.subscriptionType = subscriptionType;
+    }
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    const subscribers = await Subscriber.find(query)
+      .sort({ subscribedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Subscriber.countDocuments(query);
+
+    // Analytics data
+    const analytics = {
+      totalSubscribers: await Subscriber.countDocuments(),
+      activeSubscribers: await Subscriber.countDocuments({ isActive: true }),
+      inactiveSubscribers: await Subscriber.countDocuments({ isActive: false }),
+      subscriptionTypes: await Subscriber.aggregate([
+        { $group: { _id: '$subscriptionType', count: { $sum: 1 } } }
+      ])
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subscribers,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
+        analytics
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching subscribers' });
+    console.error('Error fetching subscribers:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching subscribers',
+      error: error.message 
+    });
   }
 };
 
-// Add a subscriber
+// Enhanced subscriber creation with welcome email
 export const createSubscriber = async (req, res) => {
-  const { email } = req.body;
+  const { email, subscriptionType = 'all' } = req.body;
+  
   if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Email is required' 
+    });
   }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Please enter a valid email address' 
+    });
+  }
+
   try {
     const existingSubscriber = await Subscriber.findOne({ email });
     if (existingSubscriber) {
-      return res.status(400).json({ message: 'Email is already subscribed' });
+      if (existingSubscriber.isActive) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This email is already subscribed to our newsletter' 
+        });
+      } else {
+        // Reactivate inactive subscriber
+        existingSubscriber.isActive = true;
+        existingSubscriber.subscriptionType = subscriptionType;
+        existingSubscriber.subscribedAt = new Date();
+        await existingSubscriber.save();
+
+        // Send welcome back email
+        await sendWelcomeEmail(email, subscriptionType);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Welcome back! Your subscription has been reactivated.',
+          data: existingSubscriber
+        });
+      }
     }
-    const subscriber = new Subscriber({ email });
+
+    const subscriber = new Subscriber({ 
+      email, 
+      subscriptionType,
+      isActive: true 
+    });
     await subscriber.save();
-    res.status(201).json(subscriber);
+
+    // Send welcome email
+    const emailResult = await sendWelcomeEmail(email, subscriptionType);
+    if (!emailResult.success) {
+      console.error('Failed to send welcome email:', emailResult.error);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Thank you for subscribing to our newsletter! Please check your email for confirmation.',
+      data: subscriber
+    });
   } catch (error) {
     console.error('Error adding subscriber:', error);
-    res.status(500).json({ message: 'Internal server error while adding subscriber' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error while adding subscriber',
+      error: error.message 
+    });
   }
 };
 
-
-// Delete a subscriber
+// Delete a subscriber (enhanced)
 export const deleteSubscriber = async (req, res) => {
   try {
-    await Subscriber.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Subscriber deleted' });
+    const subscriber = await Subscriber.findByIdAndDelete(req.params.id);
+    if (!subscriber) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Subscriber not found' 
+      });
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Subscriber removed successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting subscriber' });
+    console.error('Error deleting subscriber:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting subscriber',
+      error: error.message 
+    });
   }
 };
 
-// Fetch all newsletters
-export const getNewsletters = async (req, res) => {
+// Bulk operations for subscribers
+export const bulkUpdateSubscribers = async (req, res) => {
   try {
-    const newsletters = await Newsletter.find();
-    res.status(200).json(newsletters);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching newsletters' });
-  }
-};
+    const { action, subscriberIds, subscriptionType } = req.body;
 
-// Create a new newsletter
-export const createNewsletter = async (req, res) => {
-  const { title, body } = req.body;
-  try {
-    const newsletter = new Newsletter({ title, body });
-    await newsletter.save();
-    res.status(201).json(newsletter);
-  } catch (error) {
-    res.status(400).json({ message: 'Error creating newsletter' });
-  }
-};
-
-// Update a newsletter
-export const updateNewsletter = async (req, res) => {
-  try {
-    const newsletter = await Newsletter.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.status(200).json(newsletter);
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating newsletter' });
-  }
-};
-
-// Delete a newsletter
-export const deleteNewsletter = async (req, res) => {
-  try {
-    await Newsletter.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Newsletter deleted' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting newsletter' });
-  }
-};
-
-// Send a newsletter
-export const sendNewsletter = async (req, res) => {
-  try {
-    const newsletter = await Newsletter.findById(req.params.id);
-    if (!newsletter) return res.status(404).json({ message: 'Newsletter not found' });
-
-    const subscribers = await Subscriber.find();
-    const emails = subscribers.map((sub) => sub.email);
-
-    // Send emails
-    for (const email of emails) {
-      await transporter.sendMail({
-        from: 'your-email@gmail.com',
-        to: email,
-        subject: newsletter.title,
-        html: newsletter.body,
+    if (!action || !subscriberIds || !Array.isArray(subscriberIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action and subscriber IDs are required'
       });
     }
 
+    let result;
+    switch (action) {
+      case 'activate':
+        result = await Subscriber.updateMany(
+          { _id: { $in: subscriberIds } },
+          { isActive: true }
+        );
+        break;
+      case 'deactivate':
+        result = await Subscriber.updateMany(
+          { _id: { $in: subscriberIds } },
+          { isActive: false }
+        );
+        break;
+      case 'updateType':
+        if (!subscriptionType) {
+          return res.status(400).json({
+            success: false,
+            message: 'Subscription type is required for update action'
+          });
+        }
+        result = await Subscriber.updateMany(
+          { _id: { $in: subscriberIds } },
+          { subscriptionType }
+        );
+        break;
+      case 'delete':
+        result = await Subscriber.deleteMany({ _id: { $in: subscriberIds } });
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid action'
+        });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk ${action} completed successfully`,
+      modifiedCount: result.modifiedCount || result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error in bulk update:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error performing bulk operation',
+      error: error.message
+    });
+  }
+};
+
+// Enhanced newsletter management functions
+export const getNewsletters = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const newsletters = await Newsletter.find(query)
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Newsletter.countDocuments(query);
+
+    // Analytics
+    const analytics = {
+      totalNewsletters: await Newsletter.countDocuments(),
+      draftNewsletters: await Newsletter.countDocuments({ status: 'draft' }),
+      sentNewsletters: await Newsletter.countDocuments({ status: 'sent' }),
+      totalEmailsSent: await Newsletter.aggregate([
+        { $match: { status: 'sent' } },
+        { $group: { _id: null, total: { $sum: '$sentTo' } } }
+      ])
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        newsletters,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
+        analytics
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching newsletters:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching newsletters',
+      error: error.message 
+    });
+  }
+};
+
+// Enhanced newsletter creation
+export const createNewsletter = async (req, res) => {
+  const { title, body, subject, targetSubscriptionTypes = ['all'] } = req.body;
+  
+  if (!title || !body || !subject) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Title, subject, and body are required' 
+    });
+  }
+
+  try {
+    const newsletter = new Newsletter({ 
+      title, 
+      body, 
+      subject,
+      targetSubscriptionTypes,
+      createdBy: req.admin?._id // Assuming admin info is in request
+    });
+    await newsletter.save();
+    
+    res.status(201).json({
+      success: true,
+      message: 'Newsletter created successfully',
+      data: newsletter
+    });
+  } catch (error) {
+    console.error('Error creating newsletter:', error);
+    res.status(400).json({ 
+      success: false, 
+      message: 'Error creating newsletter',
+      error: error.message 
+    });
+  }
+};
+
+// Enhanced newsletter update
+export const updateNewsletter = async (req, res) => {
+  try {
+    const { title, body, subject, targetSubscriptionTypes } = req.body;
+    
+    const newsletter = await Newsletter.findById(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Newsletter not found'
+      });
+    }
+
+    // Don't allow editing sent newsletters
+    if (newsletter.status === 'sent') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot edit newsletters that have already been sent'
+      });
+    }
+
+    const updatedNewsletter = await Newsletter.findByIdAndUpdate(
+      req.params.id,
+      { title, body, subject, targetSubscriptionTypes },
+      { new: true }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Newsletter updated successfully',
+      data: updatedNewsletter
+    });
+  } catch (error) {
+    console.error('Error updating newsletter:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating newsletter',
+      error: error.message 
+    });
+  }
+};
+
+// Enhanced newsletter deletion
+export const deleteNewsletter = async (req, res) => {
+  try {
+    const newsletter = await Newsletter.findById(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Newsletter not found'
+      });
+    }
+
+    // Don't allow deleting sent newsletters (for audit purposes)
+    if (newsletter.status === 'sent') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete newsletters that have been sent'
+      });
+    }
+
+    await Newsletter.findByIdAndDelete(req.params.id);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Newsletter deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Error deleting newsletter:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting newsletter',
+      error: error.message 
+    });
+  }
+};
+
+// Enhanced newsletter sending with analytics tracking
+export const sendNewsletter = async (req, res) => {
+  try {
+    const newsletter = await Newsletter.findById(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Newsletter not found' 
+      });
+    }
+
+    if (newsletter.status === 'sent') {
+      return res.status(400).json({
+        success: false,
+        message: 'This newsletter has already been sent'
+      });
+    }
+
+    // Get subscribers based on target subscription types
+    const subscriberQuery = {
+      isActive: true
+    };
+
+    if (!newsletter.targetSubscriptionTypes.includes('all')) {
+      subscriberQuery.subscriptionType = { 
+        $in: newsletter.targetSubscriptionTypes 
+      };
+    }
+
+    const subscribers = await Subscriber.find(subscriberQuery);
+
+    if (subscribers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active subscribers found for the selected subscription types'
+      });
+    }
+
+    // Send newsletter using email service
+    const sendResult = await sendNewsletterEmail(newsletter, subscribers);
+
+    // Update newsletter status and analytics
+    newsletter.status = 'sent';
     newsletter.sentAt = new Date();
+    newsletter.sentTo = sendResult.sent;
     await newsletter.save();
 
-    res.status(200).json({ message: 'Newsletter sent successfully' });
+    // Update subscriber analytics
+    await Subscriber.updateMany(
+      { _id: { $in: subscribers.map(s => s._id) } },
+      { 
+        $inc: { emailsSent: 1 },
+        $set: { lastEmailSent: new Date() }
+      }
+    );
+
+    res.status(200).json({ 
+      success: true, 
+      message: `Newsletter sent successfully to ${sendResult.sent} subscribers`,
+      data: {
+        sent: sendResult.sent,
+        failed: sendResult.failed,
+        errors: sendResult.errors
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error sending newsletter' });
+    console.error('Error sending newsletter:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error sending newsletter',
+      error: error.message 
+    });
   }
 };
 
@@ -1542,7 +2187,7 @@ export const createEvent = async (req, res) => {
       location: location || "",
       imageUrl,
       metadata: parsedMetadata,
-      published: published !== undefined ? published : true
+      published: published === 'true' || published === true
     });
 
     const savedEvent = await newEvent.save();
@@ -1641,7 +2286,7 @@ export const updateEvent = async (req, res) => {
       endDate,
       location,
       metadata: parsedMetadata,
-      published
+      published: published === 'true' || published === true
     };
 
     if (req.file) {
@@ -1686,5 +2331,529 @@ export const deleteEvent = async (req, res) => {
   } catch (error) {
     console.error('Error deleting event:', error);
     res.status(500).json({ message: 'Failed to delete event' });
+  }
+};
+
+// ----- AUCTION CRUD -----
+
+// Create a new auction
+export const createAuction = async (req, res) => {
+  try {
+    const { 
+      title, description, location, date, startTime, endTime, 
+      livestock, auctioneer, registrationRequired, registrationDeadline, 
+      registrationFee, terms, published 
+    } = req.body;
+    
+    let imageUrl = null;
+
+    if (!title || !description || !location || !date || !startTime || !endTime) {
+      return sendResponse(res, false, 'Title, description, location, date, start time, and end time are required.');
+    }
+
+    if (req.file) {
+      imageUrl = `/uploads/images/${req.file.filename}`;
+    }
+
+    // Parse livestock data if it's a string
+    let parsedLivestock = [];
+    if (livestock) {
+      try {
+        parsedLivestock = typeof livestock === 'string' ? JSON.parse(livestock) : livestock;
+      } catch (error) {
+        return sendResponse(res, false, 'Invalid livestock data format.');
+      }
+    }
+
+    // Parse auctioneer data if it's a string
+    let parsedAuctioneer = {};
+    if (auctioneer) {
+      try {
+        parsedAuctioneer = typeof auctioneer === 'string' ? JSON.parse(auctioneer) : auctioneer;
+      } catch (error) {
+        return sendResponse(res, false, 'Invalid auctioneer data format.');
+      }
+    }
+
+    const auction = new Auction({
+      title,
+      description,
+      location,
+      date: new Date(date),
+      startTime,
+      endTime,
+      livestock: parsedLivestock,
+      auctioneer: parsedAuctioneer,
+      registrationRequired: registrationRequired === 'true',
+      registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : null,
+      registrationFee: Number(registrationFee) || 0,
+      terms: terms || 'Standard auction terms and conditions apply',
+      imageUrl,
+      published: published !== 'false'
+    });
+
+    await auction.save();
+    sendResponse(res, true, 'Auction created successfully', auction);
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    sendResponse(res, false, 'Failed to create auction', null, error.message);
+  }
+};
+
+// Get all auctions (public view)
+export const getAuctions = async (req, res) => {
+  const { page = 1, limit = 10, category, location, status = 'upcoming', admin } = req.query;
+
+  try {
+    const query = admin ? {} : { published: true };
+    
+    // Add status filter
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Add category filter
+    if (category && category !== 'all') {
+      query['livestock.category'] = category;
+    }
+
+    // Add location filter
+    if (location && location !== 'all') {
+      query.location = { $regex: location, $options: 'i' };
+    }
+
+    // Sort upcoming auctions by date ascending, others by date descending
+    const sortOrder = status === 'upcoming' ? 1 : -1;
+
+    const auctions = await Auction.find(query)
+      .sort({ date: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Auction.countDocuments(query);
+    
+    sendResponse(res, true, 'Auctions retrieved successfully', { 
+      auctions, 
+      total, 
+      page: Number(page), 
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('Error fetching auctions:', error);
+    sendResponse(res, false, 'Failed to retrieve auctions', null, error.message);
+  }
+};
+
+// Get auction by ID
+export const getAuctionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await Auction.findById(id);
+
+    if (!auction) {
+      return sendResponse(res, false, 'Auction not found');
+    }
+
+    // Increment view count
+    auction.views = (auction.views || 0) + 1;
+    await auction.save();
+
+    sendResponse(res, true, 'Auction retrieved successfully', auction);
+  } catch (error) {
+    console.error('Error fetching auction:', error);
+    sendResponse(res, false, 'Failed to retrieve auction', null, error.message);
+  }
+};
+
+// Get all auctions for admin (with pagination)
+export const getAdminAuctions = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+
+  try {
+    const auctions = await Auction.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Auction.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      auctions,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      total,
+    });
+  } catch (error) {
+    console.error('Error fetching admin auctions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve admin auctions',
+      error: error.message,
+    });
+  }
+};
+
+// Update auction
+export const updateAuction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      title, description, location, date, startTime, endTime, 
+      livestock, auctioneer, registrationRequired, registrationDeadline, 
+      registrationFee, terms, published 
+    } = req.body;
+
+    const auction = await Auction.findById(id);
+    if (!auction) {
+      return sendResponse(res, false, 'Auction not found');
+    }
+
+    // Update image if provided
+    if (req.file) {
+      // Delete old image
+      if (auction.imageUrl) {
+        const oldImagePath = normalizePath(auction.imageUrl);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      auction.imageUrl = `/uploads/images/${req.file.filename}`;
+    }
+
+    // Update fields
+    if (title) auction.title = title;
+    if (description) auction.description = description;
+    if (location) auction.location = location;
+    if (date) auction.date = new Date(date);
+    if (startTime) auction.startTime = startTime;
+    if (endTime) auction.endTime = endTime;
+    if (terms) auction.terms = terms;
+    if (registrationFee !== undefined) auction.registrationFee = Number(registrationFee);
+    if (registrationRequired !== undefined) auction.registrationRequired = registrationRequired === 'true';
+    if (registrationDeadline) auction.registrationDeadline = new Date(registrationDeadline);
+    if (published !== undefined) auction.published = published !== 'false';
+
+    // Update livestock data
+    if (livestock) {
+      try {
+        auction.livestock = typeof livestock === 'string' ? JSON.parse(livestock) : livestock;
+      } catch (error) {
+        return sendResponse(res, false, 'Invalid livestock data format.');
+      }
+    }
+
+    // Update auctioneer data
+    if (auctioneer) {
+      try {
+        auction.auctioneer = typeof auctioneer === 'string' ? JSON.parse(auctioneer) : auctioneer;
+      } catch (error) {
+        return sendResponse(res, false, 'Invalid auctioneer data format.');
+      }
+    }
+
+    await auction.save();
+    sendResponse(res, true, 'Auction updated successfully', auction);
+  } catch (error) {
+    console.error('Error updating auction:', error);
+    sendResponse(res, false, 'Failed to update auction', null, error.message);
+  }
+};
+
+// Delete auction
+export const deleteAuction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const auction = await Auction.findById(id);
+    if (!auction) {
+      return sendResponse(res, false, 'Auction not found');
+    }
+
+    // Delete associated image
+    if (auction.imageUrl) {
+      const imagePath = normalizePath(auction.imageUrl);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await Auction.findByIdAndDelete(id);
+    sendResponse(res, true, 'Auction deleted successfully');
+  } catch (error) {
+    console.error('Error deleting auction:', error);
+    sendResponse(res, false, 'Failed to delete auction', null, error.message);
+  }
+};
+
+// Register interest in auction
+export const registerInterest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, contact } = req.body;
+
+    if (!name || !contact) {
+      return sendResponse(res, false, 'Name and contact information are required');
+    }
+
+    const auction = await Auction.findById(id);
+    if (!auction) {
+      return sendResponse(res, false, 'Auction not found');
+    }
+
+    // Check if already registered
+    const existingRegistration = auction.interestedBuyers.find(
+      buyer => buyer.contact === contact
+    );
+
+    if (existingRegistration) {
+      return sendResponse(res, false, 'Already registered for this auction');
+    }
+
+    // Add to interested buyers
+    auction.interestedBuyers.push({ name, contact });
+    await auction.save();
+
+    sendResponse(res, true, 'Interest registered successfully');
+  } catch (error) {
+    console.error('Error registering interest:', error);
+    sendResponse(res, false, 'Failed to register interest', null, error.message);
+  }
+};
+
+// Get upcoming auctions (utility function)
+export const getUpcomingAuctions = async (req, res) => {
+  try {
+    const { limit = 5 } = req.query;
+    
+    const auctions = await Auction.findUpcoming().limit(Number(limit));
+    
+    sendResponse(res, true, 'Upcoming auctions retrieved successfully', auctions);
+  } catch (error) {
+    console.error('Error fetching upcoming auctions:', error);
+    sendResponse(res, false, 'Failed to retrieve upcoming auctions', null, error.message);
+  }
+};
+
+// ----- EVENT REGISTRATION SYSTEM -----
+export const registerForEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { name, email, phone } = req.body;
+
+    // Validate required fields
+    if (!name || !email) {
+      return sendResponse(res, false, 'Name and email are required');
+    }
+
+    // Check if event exists and is published
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return sendResponse(res, false, 'Event not found');
+    }
+
+    if (!event.published) {
+      return sendResponse(res, false, 'Event is not available for registration');
+    }
+
+    // Check if event is in the past
+    if (new Date(event.startDate) < new Date()) {
+      return sendResponse(res, false, 'Cannot register for past events');
+    }
+
+    // Check if already registered
+    const existingRegistration = await EventRegistration.findOne({
+      eventId,
+      email: email.toLowerCase()
+    });
+
+    if (existingRegistration) {
+      return sendResponse(res, false, 'You are already registered for this event');
+    }
+
+    // Create registration
+    const registration = new EventRegistration({
+      eventId,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone ? phone.trim() : undefined
+    });
+
+    const savedRegistration = await registration.save();
+
+    // Populate event details for response
+    await savedRegistration.populate('eventId', 'title startDate location');
+
+    sendResponse(res, true, 'Successfully registered for event', {
+      registration: savedRegistration,
+      event: {
+        title: event.title,
+        startDate: event.startDate,
+        location: event.location
+      }
+    });
+
+  } catch (error) {
+    console.error('Error registering for event:', error);
+    if (error.code === 11000) {
+      return sendResponse(res, false, 'You are already registered for this event');
+    }
+    sendResponse(res, false, 'Failed to register for event', null, error.message);
+  }
+};
+
+export const getEventRegistrations = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { page = 1, limit = 20, status } = req.query;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return sendResponse(res, false, 'Event not found');
+    }
+
+    const query = { eventId };
+    if (status) {
+      query.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+    
+    const [registrations, total] = await Promise.all([
+      EventRegistration.find(query)
+        .populate('eventId', 'title startDate location')
+        .sort({ registrationDate: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      EventRegistration.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    sendResponse(res, true, 'Event registrations retrieved successfully', {
+      registrations,
+      pagination: {
+        currentPage: Number(page),
+        totalPages,
+        totalCount: total,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      },
+      event: {
+        title: event.title,
+        startDate: event.startDate,
+        location: event.location
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching event registrations:', error);
+    sendResponse(res, false, 'Failed to retrieve event registrations', null, error.message);
+  }
+};
+
+export const getRegistrationByEmail = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { email } = req.query;
+
+    if (!email) {
+      return sendResponse(res, false, 'Email is required');
+    }
+
+    const registration = await EventRegistration.findOne({
+      eventId,
+      email: email.toLowerCase()
+    }).populate('eventId', 'title startDate location');
+
+    if (!registration) {
+      return sendResponse(res, false, 'Registration not found');
+    }
+
+    sendResponse(res, true, 'Registration found', registration);
+
+  } catch (error) {
+    console.error('Error fetching registration by email:', error);
+    sendResponse(res, false, 'Failed to retrieve registration', null, error.message);
+  }
+};
+
+export const cancelEventRegistration = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+      return sendResponse(res, false, 'Email is required');
+    }
+
+    const registration = await EventRegistration.findOne({
+      eventId,
+      email: email.toLowerCase()
+    });
+
+    if (!registration) {
+      return sendResponse(res, false, 'Registration not found');
+    }
+
+    // Update status to cancelled instead of deleting
+    registration.status = 'cancelled';
+    await registration.save();
+
+    sendResponse(res, true, 'Registration cancelled successfully', registration);
+
+  } catch (error) {
+    console.error('Error cancelling registration:', error);
+    sendResponse(res, false, 'Failed to cancel registration', null, error.message);
+  }
+};
+
+export const getEventRegistrationStats = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return sendResponse(res, false, 'Event not found');
+    }
+
+    const stats = await EventRegistration.aggregate([
+      { $match: { eventId: new mongoose.Types.ObjectId(eventId) } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const totalRegistrations = await EventRegistration.countDocuments({ eventId });
+
+    const formattedStats = {
+      total: totalRegistrations,
+      confirmed: 0,
+      pending: 0,
+      cancelled: 0
+    };
+
+    stats.forEach(stat => {
+      formattedStats[stat._id] = stat.count;
+    });
+
+    sendResponse(res, true, 'Event registration statistics retrieved successfully', {
+      stats: formattedStats,
+      event: {
+        title: event.title,
+        startDate: event.startDate,
+        location: event.location
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching event registration stats:', error);
+    sendResponse(res, false, 'Failed to retrieve registration statistics', null, error.message);
   }
 };

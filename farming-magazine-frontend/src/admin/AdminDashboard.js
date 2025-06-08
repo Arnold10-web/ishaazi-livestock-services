@@ -2,8 +2,13 @@ import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const ContentManagement = lazy(() => import('./ContentManagement'));
+const AuctionManagement = lazy(() => import('./AuctionManagement'));
 // New component imports
 const Overview = lazy(() => import('../components/Overview'));
+const EmailTesting = lazy(() => import('./EmailTesting'));
+const EmailAnalytics = lazy(() => import('./EmailAnalytics'));
+const NotificationManagement = lazy(() => import('./NotificationManagement'));
+const PerformanceDashboard = lazy(() => import('../components/PerformanceDashboard'));
 
 function getIconForTab(tab) {
   const icons = {
@@ -19,7 +24,12 @@ function getIconForTab(tab) {
     piggeries: 'piggy-bank',
     newsletters: 'envelope',
     subscribers: 'users',
-    events: 'calendar-alt'
+    events: 'calendar-alt',
+    auctions: 'gavel',
+    'email-testing': 'envelope-open-text',
+    'email-analytics': 'chart-line',
+    'notifications': 'bell',
+    'performance': 'tachometer-alt'
   };
   return icons[tab] || 'cog';
 }
@@ -74,9 +84,14 @@ const AdminDashboard = () => {
     { id: 'dairies', label: 'Dairies' },
     { id: 'beefs', label: 'Beef' },
     { id: 'piggeries', label: 'Piggery' },
+    { id: 'auctions', label: 'Auctions' },
     { id: 'newsletters', label: 'Newsletters' },
     { id: 'subscribers', label: 'Subscribers' },
     { id: 'events', label: 'Events' },
+    { id: 'email-testing', label: 'Email Testing' },
+    { id: 'email-analytics', label: 'Email Analytics' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'performance', label: 'Performance Dashboard' },
   ];
 
   // Generate breadcrumb based on active tab
@@ -252,7 +267,17 @@ const AdminDashboard = () => {
                 }
               >
                 {activeTab === 'overview' ? (
-                  <Overview />
+                  <Overview darkMode={darkMode} />
+                ) : activeTab === 'auctions' ? (
+                  <AuctionManagement />
+                ) : activeTab === 'email-testing' ? (
+                  <EmailTesting />
+                ) : activeTab === 'email-analytics' ? (
+                  <EmailAnalytics />
+                ) : activeTab === 'notifications' ? (
+                  <NotificationManagement theme={darkMode ? 'dark' : 'light'} />
+                ) : activeTab === 'performance' ? (
+                  <PerformanceDashboard darkMode={darkMode} />
                 ) : (
                   <ContentManagement activeTab={activeTab} darkMode={darkMode} />
                 )}

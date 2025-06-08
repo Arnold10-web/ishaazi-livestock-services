@@ -10,18 +10,60 @@ module.exports = {
         serif: ['Playfair Display', 'serif'],
       },
       colors: {
-        green: {
-          700: '#4b774f', // Your secondary color
+        // Clean, professional color palette
+        primary: {
+          50: '#f0f9f4',
+          100: '#dcf2e3',
+          200: '#bbe5ca',
+          300: '#8dd1a7',
+          400: '#5bb67d',
+          500: '#1B4332', // Main primary - Deep Forest Green
+          600: '#166b2d',
+          700: '#145a27',
+          800: '#134a22',
+          900: '#11401e',
         },
-        amber: {
-          500: '#e2a800', // Your primary color
+        secondary: {
+          50: '#f8f6f0',
+          100: '#f0ebd8',
+          200: '#e1d5b1',
+          300: '#d0bc84',
+          400: '#c1a55f',
+          500: '#2D5016', // Dark Olive
+          600: '#a89042',
+          700: '#8b7538',
+          800: '#745f32',
+          900: '#5f4f2e',
         },
+        accent: {
+          50: '#fefbf0',
+          100: '#fef7e0',
+          200: '#fdecc4',
+          300: '#fbdc9c',
+          400: '#f8c572',
+          500: '#B7950B', // Muted Gold
+          600: '#e6a817',
+          700: '#c08a0e',
+          800: '#9d6f10',
+          900: '#805b11',
+        },
+        neutral: {
+          50: '#f8f9fa',
+          100: '#e9ecef',
+          200: '#dee2e6',
+          300: '#ced4da',
+          400: '#adb5bd',
+          500: '#6c757d',
+          600: '#495057',
+          700: '#343a40',
+          800: '#212529',
+          900: '#1a1d20',
+        }
       },
       animation: {
-        'fade-in': 'fadeIn 0.8s ease-in-out forwards',
-        'fade-in-up': 'fadeInUp 0.8s ease-in-out forwards',
-        'fade-in-down': 'fade-in-down 0.8s ease-out forwards',
-        'expand': 'expand 1s ease-out forwards 0.3s'
+        'fade-in': 'fadeIn 0.6s ease-out forwards',
+        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
+        'slide-in': 'slideIn 0.4s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -32,41 +74,43 @@ module.exports = {
           '0%': { opacity: '0', transform: 'translateY(20px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        'fade-in-down': {
-          '0%': {
-            opacity: '0',
-            transform: 'translateY(-20px)'
-          },
-          '100%': {
-            opacity: '1',
-            transform: 'translateY(0)'
-          },
-        },
-        'expand': {
-          '0%': {
-            width: '0px'
-          },
-          '100%': {
-            width: '6rem'
-          },
+        slideIn: {
+          '0%': { opacity: '0', transform: 'translateX(-20px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
         }
       },
-      screens: {
-        'xs': '375px',    // Extra small devices
-        'sm': '640px',    // Small devices
-        'md': '768px',    // Medium devices
-        'lg': '1024px',   // Large devices
-        'xl': '1280px',   // Extra large devices
-        '2xl': '1536px',  // 2X Extra large devices
-      },
-      spacing: {
-        '18': '4.5rem',   // Custom spacing if needed
-        '22': '5.5rem',
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: 'none',
+            color: '#374151',
+            lineHeight: '1.7',
+            h1: {
+              fontSize: '2.25rem',
+              fontWeight: '700',
+              color: '#1B4332',
+            },
+            h2: {
+              fontSize: '1.875rem',
+              fontWeight: '600',
+              color: '#1B4332',
+            },
+            h3: {
+              fontSize: '1.5rem',
+              fontWeight: '600',
+              color: '#1B4332',
+            },
+            h4: {
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#1B4332',
+            },
+          },
+        },
       },
     },
   },
   plugins: [
-    require('@tailwindcss/line-clamp'),
     require('@tailwindcss/typography'),
     require('@tailwindcss/forms'),
   ],

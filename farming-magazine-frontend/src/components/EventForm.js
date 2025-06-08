@@ -7,24 +7,41 @@ import { getAuthHeader } from '../utils/auth';
 
 const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
   const [title, setTitle] = useState('');
-  const [metadata, setMetadata] = useState('{}');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [location, setLocation] = useState('');
+  
+  // User-friendly fields for metadata
+  const [organizer, setOrganizer] = useState('');
+  const [category, setCategory] = useState('Conference');
+  const [tags, setTags] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [summary, setSummary] = useState('');
+  const [published, setPublished] = useState(true);
+  
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
-      setMetadata(editingEvent.metadata ? JSON.stringify(editingEvent.metadata) : '{}');
       setImagePreview(editingEvent.imageUrl);
       setStartDate(editingEvent.startDate ? new Date(editingEvent.startDate).toISOString().slice(0, 16) : '');
       setEndDate(editingEvent.endDate ? new Date(editingEvent.endDate).toISOString().slice(0, 16) : '');
       setLocation(editingEvent.location || '');
+      setPublished(editingEvent.published !== false);
+      
+      // Extract user-friendly fields from metadata
+      const metadata = editingEvent.metadata || {};
+      setOrganizer(metadata.organizer || '');
+      setCategory(metadata.category || 'Conference');
+      setTags(metadata.tags ? (Array.isArray(metadata.tags) ? metadata.tags.join(', ') : metadata.tags) : '');
+      setKeywords(metadata.keywords ? (Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : metadata.keywords) : '');
+      setSummary(metadata.summary || '');
+      
       if (quillEditor) {
         quillEditor.root.innerHTML = editingEvent.description;
       }
@@ -69,16 +86,32 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
 
   const resetForm = () => {
     setTitle('');
-    setMetadata('{}');
     setImage(null);
     setImagePreview(null);
     setStartDate('');
     setEndDate('');
     setLocation('');
+    setOrganizer('');
+    setCategory('Conference');
+    setTags('');
+    setKeywords('');
+    setSummary('');
+    setPublished(true);
     if (quillEditor) {
       quillEditor.setText('');
     }
     setEditingEvent(null);
+  };
+
+  // Generate metadata from user-friendly fields
+  const generateMetadata = () => {
+    const metadata = {};
+    if (organizer.trim()) metadata.organizer = organizer.trim();
+    if (category.trim()) metadata.category = category.trim();
+    if (tags.trim()) metadata.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
+    if (summary.trim()) metadata.summary = summary.trim();
+    return metadata;
   };
 
   const handleSubmit = async (e) => {
@@ -90,18 +123,12 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
       return;
     }
 
-    try {
-      JSON.parse(metadata);
-    } catch (err) {
-      setError('Invalid metadata JSON format.');
-      return;
-    }
-
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    formData.append('metadata', metadata);
+    formData.append('metadata', JSON.stringify(generateMetadata()));
     formData.append('startDate', startDate);
+    formData.append('published', published);
     if (endDate) formData.append('endDate', endDate);
     if (location) formData.append('location', location);
     if (image) formData.append('image', image);
@@ -202,20 +229,109 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
           />
         </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="event-metadata" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Metadata (JSON)
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
-          </label>
-          <textarea
-            id="event-metadata"
-            placeholder='{"tags": ["conference", "tech"], "category": "networking"}'
-            value={metadata}
-            onChange={(e) => setMetadata(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out font-mono text-sm"
-            rows="3"
-          />
+
+        {/* User-friendly metadata fields */}
+        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Event Details</h4>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="event-organizer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Organizer
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Optional</span>
+              </label>
+              <input
+                id="event-organizer"
+                type="text"
+                placeholder="e.g., AgriTech Solutions"
+                value={organizer}
+                onChange={(e) => setOrganizer(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="event-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Category
+              </label>
+              <select
+                id="event-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="Conference">Conference</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Seminar">Seminar</option>
+                <option value="Exhibition">Exhibition</option>
+                <option value="Training">Training</option>
+                <option value="Networking">Networking</option>
+                <option value="Competition">Competition</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="event-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Tags
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Comma separated</span>
+              </label>
+              <input
+                id="event-tags"
+                type="text"
+                placeholder="e.g., agriculture, technology, farming"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="event-keywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                SEO Keywords
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Comma separated</span>
+              </label>
+              <input
+                id="event-keywords"
+                type="text"
+                placeholder="e.g., farming event, agricultural conference"
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="event-summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Event Summary
+              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Brief description for previews</span>
+            </label>
+            <textarea
+              id="event-summary"
+              placeholder="A brief summary of the event for previews and social media..."
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              rows="3"
+              className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white resize-none"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              id="event-published"
+              type="checkbox"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor="event-published" className="text-sm text-gray-700 dark:text-gray-300">
+              Publish event immediately
+              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Event will be visible on the website</span>
+            </label>
+          </div>
         </div>
         
         <div className="space-y-2">
