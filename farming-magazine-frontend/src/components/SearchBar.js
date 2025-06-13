@@ -1,11 +1,32 @@
-// Enhanced SearchBar.js with autocomplete, suggestions, and search history
+/**
+ * SearchBar Component
+ * 
+ * An enhanced search input with autocomplete suggestions, search history,
+ * keyboard navigation, and animation effects. Features include:
+ * - Expandable/collapsible search interface
+ * - Debounced API-powered search suggestions
+ * - Recent search history display
+ * - Keyboard navigation for suggestions
+ * - Loading state indicator
+ * 
+ * @module components/SearchBar
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2, Clock, TrendingUp, Hash, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchHistory from './SearchHistory';
 
+/**
+ * Enhanced search input component with suggestions and history
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.placeholder - Placeholder text for the search input
+ * @param {boolean} props.expandable - Whether the search bar should expand on focus
+ * @returns {JSX.Element} Rendered search bar component
+ */
 const SearchBar = ({ placeholder = "Search all content...", expandable = false }) => {
+  // State for search input and UI control
   const [query, setQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(!expandable);
   const [isLoading, setIsLoading] = useState(false);
@@ -13,21 +34,32 @@ const SearchBar = ({ placeholder = "Search all content...", expandable = false }
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
+  
+  // Hooks for navigation and references
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  // API configuration
+  // API configuration for backend communication
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  // Debounced function to fetch suggestions
+  /**
+   * Debounced function to fetch search suggestions from API
+   * Delays API calls until user stops typing to reduce request frequency
+   * 
+   * @param {string} searchQuery - The current search query text
+   * @returns {void}
+   */
   const debouncedFetchSuggestions = useCallback((searchQuery) => {
+    // Clear any pending timeout to implement debouncing
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     
+    // Set a new timeout to delay the API call
     timeoutRef.current = setTimeout(async () => {
+      // Don't fetch suggestions for very short queries
       if (searchQuery.length < 2) {
         setSuggestions([]);
         setShowSuggestions(false);
@@ -35,6 +67,7 @@ const SearchBar = ({ placeholder = "Search all content...", expandable = false }
       }
 
       try {
+        // Fetch suggestions from API
         const response = await fetch(
           `${API_BASE_URL}/api/search/suggestions?query=${encodeURIComponent(searchQuery)}&limit=8`
         );
@@ -49,7 +82,7 @@ const SearchBar = ({ placeholder = "Search all content...", expandable = false }
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
       }
-    }, 300);
+    }, 300); // 300ms debounce delay
   }, [API_BASE_URL]);
 
   // Handle input change

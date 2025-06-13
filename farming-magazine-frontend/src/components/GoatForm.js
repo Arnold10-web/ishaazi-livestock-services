@@ -1,3 +1,12 @@
+/**
+ * GoatForm Component
+ * 
+ * Form component for creating and editing goat farming content.
+ * Features rich text editing with Quill, image upload functionality,
+ * and comprehensive metadata management for goat farming articles.
+ * 
+ * @module components/GoatForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -5,7 +14,17 @@ import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+/**
+ * Form component for creating and editing goat farming articles
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshGoats - Callback to refresh goat content list after submission
+ * @param {Object|null} props.editingGoat - Goat article object being edited, or null when creating new
+ * @param {Function} props.setEditingGoat - Callback to reset the editing state
+ * @returns {JSX.Element} Rendered form component
+ */
 const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
+  // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('Goat');
@@ -15,9 +34,15 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
   const [readTime, setReadTime] = useState(5);
+  
+  // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // UI state
   const [error, setError] = useState('');
+  
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 

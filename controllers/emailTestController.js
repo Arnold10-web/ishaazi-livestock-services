@@ -1,4 +1,14 @@
 // controllers/emailTestController.js
+/**
+ * Email Test Controller
+ * 
+ * This controller handles endpoints used to test email functionality, 
+ * including configuration tests, sending test emails, welcome email testing,
+ * and email system health checks.
+ * 
+ * These endpoints are primarily used by administrators to verify that the email
+ * delivery system is functioning correctly and to diagnose potential issues.
+ */
 import { 
   testEmailConfiguration, 
   sendTestEmail, 
@@ -9,7 +19,14 @@ import {
 
 /**
  * Test email configuration endpoint
- * GET /api/email/test/config
+ * 
+ * Verifies that the email system is configured correctly by checking all required 
+ * environment variables and connection settings. Also generates a detailed configuration
+ * report with information about the email service, authentication status, and missing settings.
+ * 
+ * @route GET /api/email/test/config
+ * @access Admin only
+ * @returns {Object} Response containing configuration test results and detailed report
  */
 export const testEmailConfig = async (req, res) => {
   try {
@@ -37,8 +54,16 @@ export const testEmailConfig = async (req, res) => {
 
 /**
  * Send test email endpoint
- * POST /api/email/test/send
- * Body: { email: "test@example.com" }
+ * 
+ * Sends a test email to the specified address to verify delivery functionality.
+ * The test email contains diagnostic information about the server environment
+ * and email configuration. This endpoint validates the email format before
+ * attempting to send.
+ * 
+ * @route POST /api/email/test/send
+ * @access Admin only
+ * @param {Object} req.body.email - Target email address to send the test to
+ * @returns {Object} Response containing the result of the test email attempt
  */
 export const sendTestEmailEndpoint = async (req, res) => {
   try {
@@ -80,8 +105,16 @@ export const sendTestEmailEndpoint = async (req, res) => {
 
 /**
  * Test welcome email endpoint
- * POST /api/email/test/welcome
- * Body: { email: "test@example.com", subscriptionType: "all" }
+ * 
+ * Sends a test welcome email to verify that the onboarding email templates
+ * are rendering correctly and being delivered. Can test different subscription
+ * types to ensure all variants of the welcome email are working properly.
+ * 
+ * @route POST /api/email/test/welcome
+ * @access Admin only
+ * @param {Object} req.body.email - Target email address to send the test to
+ * @param {string} [req.body.subscriptionType="all"] - Type of subscription welcome email to test
+ * @returns {Object} Response containing the result of the welcome email test
  */
 export const testWelcomeEmailEndpoint = async (req, res) => {
   try {
@@ -123,8 +156,17 @@ export const testWelcomeEmailEndpoint = async (req, res) => {
 
 /**
  * Comprehensive email health check endpoint
- * POST /api/email/test/health
- * Body: { email: "test@example.com" } (optional)
+ * 
+ * Performs a complete diagnostics check on the email system, including
+ * configuration validation, connection tests, and optionally an end-to-end
+ * delivery test if an email address is provided. This is useful for
+ * troubleshooting email issues or verifying system health after configuration
+ * changes.
+ * 
+ * @route POST /api/email/test/health
+ * @access Admin only
+ * @param {Object} [req.body.email] - Optional email address for delivery testing
+ * @returns {Object} Response containing detailed health check results for all email subsystems
  */
 export const emailHealthCheckEndpoint = async (req, res) => {
   try {
@@ -162,7 +204,15 @@ export const emailHealthCheckEndpoint = async (req, res) => {
 
 /**
  * Get email configuration status
- * GET /api/email/status
+ * 
+ * Provides a simplified status report about the email configuration system,
+ * focusing on whether required settings exist and what type of email service
+ * is configured. This endpoint is less detailed than the test endpoints
+ * and is suitable for dashboard status displays.
+ * 
+ * @route GET /api/email/status
+ * @access Admin only
+ * @returns {Object} Response containing email configuration status summary
  */
 export const getEmailConfigStatus = async (req, res) => {
   try {

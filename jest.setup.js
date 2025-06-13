@@ -3,7 +3,8 @@ import { jest } from '@jest/globals';
 
 // Mock environment variables
 process.env.JWT_SECRET = 'test-jwt-secret';
-process.env.MONGODB_TEST_URI = 'mongodb://localhost:27017/trial_test';
+process.env.MONGO_URI = 'mongodb://localhost:27017/farming_magazine_test';
+process.env.NODE_ENV = 'test';
 
 // Global test utilities
 global.console = {

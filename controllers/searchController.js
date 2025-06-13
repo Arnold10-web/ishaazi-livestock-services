@@ -1,4 +1,15 @@
-// Enhanced searchController.js with advanced features
+/**
+ * @file Search Controller
+ * @description Advanced search functionality for the Online Farming Magazine platform:
+ *  - Cross-content type search with relevance ranking
+ *  - Fuzzy search with typo tolerance
+ *  - Content filtering by type, date, tags, and more
+ *  - Search suggestions with auto-complete
+ *  - Search analytics tracking and reporting
+ *  - Result highlighting and formatting
+ * @module controllers/searchController
+ */
+
 import Blog from '../models/Blog.js';
 import News from '../models/News.js';
 import Basic from '../models/Basic.js';
@@ -10,14 +21,48 @@ import Piggery from '../models/Piggery.js';
 import Beef from '../models/Beef.js';
 import mongoose from 'mongoose';
 
-// Search Analytics Schema
+/**
+ * @constant {mongoose.Schema} searchAnalyticsSchema
+ * @description Schema for tracking search behavior and performance analytics
+ */
 const searchAnalyticsSchema = new mongoose.Schema({
+  /**
+   * @property {String} searchTerm - The query string entered by the user
+   */
   searchTerm: { type: String, required: true },
+  
+  /**
+   * @property {Number} resultCount - Number of results returned for the search
+   */
   resultCount: { type: Number, default: 0 },
+  
+  /**
+   * @property {Date} timestamp - When the search was performed
+   */
   timestamp: { type: Date, default: Date.now },
+  
+  /**
+   * @property {String} userAgent - Browser/device information
+   */
   userAgent: String,
+  
+  /**
+   * @property {String} ipAddress - Anonymized IP for geographic analysis
+   */
   ipAddress: String,
+  
+  /**
+   * @property {String} sessionId - User session identifier
+   */
   sessionId: String,
+  
+  /**
+   * @property {Array} clickedResults - Tracks which results users clicked on
+   * @property {String} clickedResults.contentId - ID of the clicked content
+   * @property {String} clickedResults.contentType - Type of content clicked
+   * @property {Number} clickedResults.position - Position in search results
+   * @property {Date} clickedResults.timestamp - When the result was clicked
+   */
   clickedResults: [{ 
     contentId: String, 
     contentType: String, 
@@ -26,9 +71,21 @@ const searchAnalyticsSchema = new mongoose.Schema({
   }]
 });
 
+/**
+ * @constant {mongoose.Model} SearchAnalytics
+ * @description Model for search analytics data
+ */
 const SearchAnalytics = mongoose.model('SearchAnalytics', searchAnalyticsSchema);
 
-// Fuzzy search helper using Levenshtein distance
+/**
+ * @function levenshteinDistance
+ * @description Calculates the edit distance between two strings 
+ * to measure similarity for fuzzy search matching
+ * @param {string} str1 - First string to compare
+ * @param {string} str2 - Second string to compare
+ * @returns {number} The edit distance (lower = more similar)
+ * @private
+ */
 function levenshteinDistance(str1, str2) {
   const matrix = [];
   for (let i = 0; i <= str2.length; i++) {
@@ -53,7 +110,15 @@ function levenshteinDistance(str1, str2) {
   return matrix[str2.length][str1.length];
 }
 
-// Create fuzzy search terms
+/**
+ * @function createFuzzyTerms
+ * @description Generates variations of search terms to handle common typos
+ * and misspellings for improved search accuracy
+ * @param {string} query - Original search query
+ * @param {number} threshold - Maximum edit distance to consider (default: 2)
+ * @returns {Array<string>} Array of search term variations
+ * @private
+ */
 function createFuzzyTerms(query, threshold = 2) {
   const words = query.toLowerCase().split(' ');
   const fuzzyTerms = [];
@@ -76,7 +141,14 @@ function createFuzzyTerms(query, threshold = 2) {
   return [...new Set(fuzzyTerms)];
 }
 
-// Highlight search terms in text
+/**
+ * @function highlightSearchTerms
+ * @description Wraps matching search terms in HTML mark tags for highlighting
+ * @param {string} text - The content text to process
+ * @param {Array<string>} searchTerms - Terms to highlight in the text
+ * @returns {string} HTML-formatted text with highlighted search terms
+ * @private
+ */
 function highlightSearchTerms(text, searchTerms) {
   if (!text || !searchTerms) return text;
   
@@ -90,7 +162,29 @@ function highlightSearchTerms(text, searchTerms) {
 }
 
 /**
- * Enhanced search across all content types with fuzzy search and analytics
+ * @function searchAll
+ * @description Performs comprehensive search across all content types with advanced features:
+ * - Fuzzy matching for typo tolerance
+ * - Result highlighting
+ * - Content filtering by type, date, tags, views
+ * - Sorting options (relevance, date, title, views)
+ * - Pagination
+ * - Search analytics tracking
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} req.query.query - Search query string
+ * @param {number} [req.query.page=1] - Result page number
+ * @param {number} [req.query.limit=10] - Results per page
+ * @param {Array<string>} [req.query.contentTypes] - Content types to search
+ * @param {boolean} [req.query.fuzzy=false] - Enable fuzzy matching
+ * @param {boolean} [req.query.highlight=true] - Highlight matching terms
+ * @param {string} [req.query.sortBy='relevance'] - Sort order (relevance|date|title|views)
+ * @param {string} [req.query.dateStart] - Filter by start date
+ * @param {string} [req.query.dateEnd] - Filter by end date
+ * @param {string|Array<string>} [req.query.tags] - Filter by tags
+ * @param {number} [req.query.minViews] - Filter by minimum view count
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with search results and metadata
  */
 export const searchAll = async (req, res) => {
   try {
@@ -354,7 +448,22 @@ export const searchAll = async (req, res) => {
 };
 
 /**
- * Filter content by specific criteria
+ * @function filterContent
+ * @description Filters content by multiple criteria with sorting and pagination
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} req.query.contentType - Type of content to filter
+ * @param {Array<string>} [req.query.categories] - Categories to filter by
+ * @param {Array<string>} [req.query.tags] - Tags to filter by
+ * @param {string} [req.query.dateFrom] - Start date for filtering
+ * @param {string} [req.query.dateTo] - End date for filtering
+ * @param {string} [req.query.author] - Filter by content author
+ * @param {string} [req.query.sortBy='createdAt'] - Field to sort by
+ * @param {string} [req.query.sortOrder='desc'] - Sort direction (asc|desc)
+ * @param {number} [req.query.page=1] - Result page number
+ * @param {number} [req.query.limit=10] - Results per page
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with filtered content and metadata
  */
 export const filterContent = async (req, res) => {
   try {
@@ -442,7 +551,13 @@ export const filterContent = async (req, res) => {
 };
 
 /**
- * Get available categories for a specific content type
+ * @function getCategories
+ * @description Retrieves available categories for a specific content type
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.contentType - The content type to get categories for
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with list of categories and counts
  */
 export const getCategories = async (req, res) => {
   try {
@@ -500,7 +615,13 @@ export const getCategories = async (req, res) => {
 };
 
 /**
- * Get available tags for a specific content type
+ * @function getTags
+ * @description Retrieves available tags for a specific content type
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.contentType - The content type to get tags for
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with list of tags and counts
  */
 export const getTags = async (req, res) => {
   try {
@@ -572,6 +693,19 @@ export const getTags = async (req, res) => {
 /**
  * Get search suggestions/autocomplete
  */
+/**
+ * @function getSearchSuggestions
+ * @description Provides search autocomplete suggestions based on:
+ *  - Partial text matches in content titles
+ *  - Previous popular searches
+ *  - Recent user searches
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} req.query.query - Partial search text
+ * @param {number} [req.query.limit=10] - Maximum suggestions to return
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with ranked suggestions
+ */
 export const getSearchSuggestions = async (req, res) => {
   try {
     const { query, limit = 10 } = req.query;
@@ -633,6 +767,20 @@ export const getSearchSuggestions = async (req, res) => {
 /**
  * Track search analytics
  */
+/**
+ * @function trackSearchAnalytics
+ * @description Records search activity and click behavior for analytics
+ * @param {Object} req - Express request object
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.searchTerm - The search query
+ * @param {number} req.body.resultCount - Number of results returned
+ * @param {Object} [req.body.clickData] - Information about clicked results
+ * @param {string} req.body.clickData.contentId - ID of clicked content
+ * @param {string} req.body.clickData.contentType - Type of clicked content
+ * @param {number} req.body.clickData.position - Position in search results
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON confirmation response
+ */
 export const trackSearchAnalytics = async (req, res) => {
   try {
     const { searchTerm, resultCount, clickData } = req.body;
@@ -688,6 +836,22 @@ export const trackSearchAnalytics = async (req, res) => {
 
 /**
  * Get search analytics dashboard data
+ */
+/**
+ * @function getSearchAnalytics
+ * @description Provides comprehensive search analytics for the admin dashboard
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} [req.query.startDate] - Start date for analytics period (default: 30 days ago)
+ * @param {string} [req.query.endDate] - End date for analytics period (default: current date)
+ * @param {number} [req.query.limit=20] - Maximum results to return for each metric
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with search analytics data:
+ *  - Top searches by frequency
+ *  - Most clicked search results
+ *  - Zero-result searches
+ *  - Search volume trend
+ *  - Click-through rates
  */
 export const getSearchAnalytics = async (req, res) => {
   try {
@@ -793,6 +957,13 @@ export const getSearchAnalytics = async (req, res) => {
 };
 
 // Helper functions
+/**
+ * @function getModelByContentType
+ * @description Maps content type string to corresponding Mongoose model
+ * @param {string} contentType - Content type identifier
+ * @returns {mongoose.Model|undefined} Mongoose model or undefined if not found
+ * @private
+ */
 function getModelByContentType(contentType) {
   const contentTypeMap = {
     blog: Blog,
@@ -817,6 +988,13 @@ function getModelByContentType(contentType) {
   return contentTypeMap[contentType];
 }
 
+/**
+ * @function getModelsByContentTypes
+ * @description Converts an array of content type strings to Mongoose models
+ * @param {Array<string>} contentTypes - Array of content type identifiers
+ * @returns {Array<mongoose.Model>} Array of valid Mongoose models
+ * @private
+ */
 function getModelsByContentTypes(contentTypes) {
   return contentTypes.map(type => getModelByContentType(type)).filter(Boolean);
 }
@@ -854,6 +1032,15 @@ async function getTitleSuggestions(query, limit) {
   }
 }
 
+/**
+ * @function getTagSuggestions
+ * @description Finds matching tags across all content models
+ * @param {string} query - Partial tag text
+ * @param {number} limit - Maximum tags to return
+ * @returns {Array} Matching tags with relevance scores
+ * @private
+ * @async
+ */
 async function getTagSuggestions(query, limit) {
   try {
     const models = [Blog, News, Basic, Farm, Magazine, Dairy, Goat, Piggery, Beef];
@@ -931,6 +1118,14 @@ async function getRecentSearches(query, limit) {
   }
 }
 
+/**
+ * @function calculateRelevance
+ * @description Calculates relevance score between search text and query
+ * @param {string} text - Text to evaluate
+ * @param {string} query - Search query
+ * @returns {number} Relevance score (0-100)
+ * @private
+ */
 function calculateRelevance(text, query) {
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
@@ -955,3 +1150,17 @@ function calculateRelevance(text, query) {
   
   return Math.max(0, similarity * 40);
 }
+
+/**
+ * Default export of all search controller functions
+ * @exports {Object} Search controller functions
+ */
+export default {
+  searchAll,
+  filterContent,
+  getCategories,
+  getTags,
+  getSearchSuggestions,
+  trackSearchAnalytics,
+  getSearchAnalytics
+};

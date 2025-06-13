@@ -61,11 +61,18 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
           { label: 'Draft', value: content.filter(item => !item.isPublished).length, icon: 'file-alt', color: 'yellow', description: 'Unpublished content' }
         ];
       case 'subscribers':
+        const currentMonth = new Date().getMonth();
+        const lastMonth = currentMonth - 1 >= 0 ? currentMonth - 1 : 11;
+        const currentMonthSubscribers = content.filter(item => new Date(item.createdAt).getMonth() === currentMonth).length;
+        const lastMonthSubscribers = content.filter(item => new Date(item.createdAt).getMonth() === lastMonth).length;
+        const growthRate = lastMonthSubscribers > 0 ? Math.round(((currentMonthSubscribers - lastMonthSubscribers) / lastMonthSubscribers) * 100) : 0;
+        const growthDisplay = growthRate > 0 ? `+${growthRate}%` : `${growthRate}%`;
+        
         return [
           { label: 'Total Subscribers', value: content.length, icon: 'users', color: 'teal', description: 'All subscribers' },
           { label: 'Active', value: content.filter(item => item.isActive).length, icon: 'user-check', color: 'green', description: 'Engaged subscribers' },
           { label: 'Inactive', value: content.filter(item => !item.isActive).length, icon: 'user-slash', color: 'red', description: 'Disengaged subscribers' },
-          { label: 'Growth Rate', value: '+12%', icon: 'chart-line', color: 'blue', description: 'Monthly growth' }
+          { label: 'Growth Rate', value: growthDisplay, icon: 'chart-line', color: 'blue', description: 'Monthly growth' }
         ];
       default:
         return [

@@ -20,15 +20,16 @@ const PiggeryList = ({
   isAdmin, 
   onDelete, 
   onEdit, 
-  isLoading 
+  isLoading,
+  viewMode = 'grid' // Add viewMode prop with default value
 }) => {
   const [hoveredCard, setHoveredCard] = useState(null);
 
   // Early return if piggeries is null or undefined
   if (!piggeries) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map(i => <PiggerySkeleton key={i} />)}
+      <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
+        {[1, 2, 3].map(i => <PiggerySkeleton key={i} viewMode={viewMode} />)}
       </div>
     );
   }
@@ -53,18 +54,18 @@ const PiggeryList = ({
   });
 
   // Enhanced skeleton loader component with glassmorphism
-  const PiggerySkeleton = () => (
+  const PiggerySkeleton = ({ viewMode = 'grid' }) => (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative"
+      className={`group relative ${viewMode === 'list' ? 'flex space-x-4' : ''}`}
     >
       {/* Floating particles for skeleton */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-pink-400/30 rounded-full"
+            className="absolute w-1 h-1 bg-amber-400/30 rounded-full"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -83,22 +84,27 @@ const PiggeryList = ({
         ))}
       </div>
 
-      <div className="relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
-                      shadow-xl animate-pulse space-y-4 h-full">
-        <div className="h-48 bg-gradient-to-br from-pink-100/50 to-rose-100/50 rounded-xl relative overflow-hidden">
+      <div className={`relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
+                      shadow-xl animate-pulse h-full ${viewMode === 'list' ? 'flex space-x-4 w-full' : 'space-y-4'}`}>
+        {/* Image skeleton */}
+        <div className={`bg-gradient-to-br from-amber-100/50 to-orange-100/50 rounded-xl relative overflow-hidden ${
+          viewMode === 'list' ? 'w-32 h-32 flex-shrink-0' : 'h-48'
+        }`}>
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
             animate={{ x: [-300, 300] }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           />
         </div>
-        <div className="space-y-3">
-          <div className="h-6 bg-gradient-to-r from-pink-200/60 to-rose-200/60 rounded-lg w-4/5" />
-          <div className="h-4 bg-gradient-to-r from-pink-100/50 to-rose-100/50 rounded w-2/3" />
-          <div className="h-4 bg-gradient-to-r from-pink-100/40 to-rose-100/40 rounded w-full" />
-          <div className="h-4 bg-gradient-to-r from-pink-100/40 to-rose-100/40 rounded w-3/4" />
+        
+        {/* Content skeleton */}
+        <div className={`space-y-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+          <div className="h-6 bg-gradient-to-r from-amber-200/60 to-orange-200/60 rounded-lg w-4/5" />
+          <div className="h-4 bg-gradient-to-r from-amber-100/50 to-orange-100/50 rounded w-2/3" />
+          <div className="h-4 bg-gradient-to-r from-amber-100/40 to-orange-100/40 rounded w-full" />
+          <div className="h-4 bg-gradient-to-r from-amber-100/40 to-orange-100/40 rounded w-3/4" />
           <div className="flex justify-between items-center pt-2">
-            <div className="h-3 bg-pink-100/40 rounded w-1/4" />
+            <div className="h-3 bg-amber-100/40 rounded w-1/4" />
             <div className="h-3 bg-rose-100/40 rounded w-1/5" />
           </div>
         </div>
@@ -112,7 +118,7 @@ const PiggeryList = ({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative text-center p-16 backdrop-blur-md bg-gradient-to-br from-pink-50/80 to-rose-50/80 
+        className="relative text-center p-16 backdrop-blur-md bg-gradient-to-br from-amber-50/80 to-orange-50/80 
                    border border-white/30 rounded-3xl shadow-2xl overflow-hidden"
       >
         {/* Floating particles background */}
@@ -120,7 +126,7 @@ const PiggeryList = ({
           {[...Array(20)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-2 h-2 bg-pink-300/40 rounded-full"
+              className="absolute w-2 h-2 bg-amber-300/40 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -152,7 +158,7 @@ const PiggeryList = ({
           }}
           className="relative mb-8"
         >
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-pink-400 to-rose-500 rounded-full 
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-amber-400 to-orange-500 rounded-full 
                           flex items-center justify-center shadow-lg relative overflow-hidden">
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
@@ -167,7 +173,7 @@ const PiggeryList = ({
                 opacity: [0.5, 0.8, 0.5]
               }}
               transition={{ duration: 3, repeat: Infinity }}
-              className="absolute inset-0 bg-gradient-to-br from-pink-300/30 to-rose-400/30 rounded-full"
+              className="absolute inset-0 bg-gradient-to-br from-amber-300/30 to-orange-400/30 rounded-full"
             />
           </div>
         </motion.div>
@@ -176,7 +182,7 @@ const PiggeryList = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4"
+          className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-4"
         >
           No Piggery Content Available
         </motion.h3>
@@ -185,7 +191,7 @@ const PiggeryList = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-pink-600/80 text-lg max-w-md mx-auto leading-relaxed"
+          className="text-amber-600/80 text-lg max-w-md mx-auto leading-relaxed"
         >
           Discover comprehensive pig farming guides, breeding techniques, and swine management tips. 
           Check back soon for expert piggery content!
@@ -204,8 +210,8 @@ const PiggeryList = ({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.9 + index * 0.1 }}
               whileHover={{ scale: 1.05 }}
-              className="px-4 py-2 backdrop-blur-sm bg-pink-100/60 border border-pink-200/50 
-                         rounded-full text-pink-700 text-sm font-medium shadow-sm"
+              className="px-4 py-2 backdrop-blur-sm bg-amber-100/60 border border-amber-200/50 
+                         rounded-full text-amber-700 text-sm font-medium shadow-sm"
             >
               {topic}
             </motion.span>
@@ -218,14 +224,14 @@ const PiggeryList = ({
   // Loading state
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map(i => <PiggerySkeleton key={i} />)}
+      <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
+        {[1, 2, 3].map(i => <PiggerySkeleton key={i} viewMode={viewMode} />)}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
       <AnimatePresence mode="popLayout">
         {piggeries.map((piggery, index) => (
           <motion.article
@@ -245,10 +251,14 @@ const PiggeryList = ({
             }}
             onMouseEnter={() => setHoveredCard(piggery._id)}
             onMouseLeave={() => setHoveredCard(null)}
-            className="group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
-                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col
-                       before:absolute before:inset-0 before:bg-gradient-to-br before:from-pink-100/20 before:to-rose-100/20 
-                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500"
+            className={`group relative backdrop-blur-md bg-white/10 border border-white/20 
+                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden
+                       before:absolute before:inset-0 before:bg-gradient-to-br before:from-amber-100/20 before:to-orange-100/20 
+                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500
+                       ${viewMode === 'list' 
+                         ? 'flex rounded-3xl' 
+                         : 'flex flex-col rounded-3xl'
+                       }`}
           >
             {/* Floating particles on hover */}
             <AnimatePresence>
@@ -271,7 +281,7 @@ const PiggeryList = ({
                         repeat: Infinity,
                         repeatDelay: 1,
                       }}
-                      className="absolute w-1.5 h-1.5 bg-pink-400/60 rounded-full"
+                      className="absolute w-1.5 h-1.5 bg-amber-400/60 rounded-full"
                       style={{
                         left: `${20 + Math.random() * 60}%`,
                         top: `${20 + Math.random() * 60}%`,
@@ -284,7 +294,11 @@ const PiggeryList = ({
 
             {/* Image container */}
             {piggery.imageUrl && (
-              <div className="relative overflow-hidden aspect-[16/10] rounded-t-3xl">
+              <div className={`relative overflow-hidden ${
+                viewMode === 'list' 
+                  ? 'w-48 h-32 rounded-l-3xl flex-shrink-0' 
+                  : 'aspect-[16/10] rounded-t-3xl'
+              }`}>
                 <motion.img
                   src={`${apiBaseUrl}${piggery.imageUrl}`}
                   alt={piggery.title}
@@ -304,7 +318,7 @@ const PiggeryList = ({
                     <motion.span 
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="backdrop-blur-md bg-pink-500/90 text-white text-xs font-semibold 
+                      className="backdrop-blur-md bg-amber-500/90 text-white text-xs font-semibold 
                                  px-3 py-2 rounded-full border border-white/20 shadow-lg
                                  flex items-center gap-1.5"
                     >
@@ -345,13 +359,15 @@ const PiggeryList = ({
             )}
             
             {/* Enhanced content section */}
-            <div className="p-6 flex-1 flex flex-col relative z-20">
+            <div className={`p-6 flex-1 flex flex-col relative z-20 ${
+              viewMode === 'list' ? 'justify-center' : ''
+            }`}>
               {/* Meta information */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center justify-between text-xs text-pink-600/70 mb-3"
+                className="flex items-center justify-between text-xs text-amber-600/70 mb-3"
               >
                 <div className="flex items-center gap-2 backdrop-blur-sm bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-200/30">
                   <Calendar className="w-3 h-3" />

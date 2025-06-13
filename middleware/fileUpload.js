@@ -1,14 +1,35 @@
+/**
+ * File Upload Middleware
+ * 
+ * This middleware handles secure file uploads for the application including images, PDFs,
+ * and media files (audio/video). It provides robust security features including:
+ * - Secure random filename generation
+ * - MIME type validation
+ * - File size limits
+ * - Suspicious extension detection
+ * - Image optimization
+ * 
+ * The middleware automatically creates necessary upload directories and provides
+ * specialized upload handlers for different content types.
+ * 
+ * @module middleware/fileUpload
+ */
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Ensure necessary upload directories exist
+/**
+ * Ensures that a directory exists, creating it if necessary
+ * 
+ * @param {string} dir - The directory path to check/create
+ */
 const ensureDirExists = (dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -45,9 +66,18 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     try {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname);
-      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+      // Generate secure random filename to prevent directory traversal
+      const randomBytes = crypto.randomBytes(16).toString('hex');
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname).toLowerCase();
+
+      // Sanitize original filename for logging purposes
+      const sanitizedOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+      const secureFilename = `${file.fieldname}-${timestamp}-${randomBytes}${ext}`;
+
+      console.log(`📁 Generating secure filename: ${sanitizedOriginalName} -> ${secureFilename}`);
+      cb(null, secureFilename);
     } catch (error) {
       console.error('Error generating file name:', error.message);
       cb(error, null);
@@ -55,34 +85,55 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter for allowed file types
+// Secure file filter with MIME type validation
 const fileFilter = (req, file, cb) => {
   try {
-    const allowedImageTypes = /\.(jpeg|jpg|png|gif|webp)$/i;
-    const allowedPdfTypes = /\.pdf$/i;
-    const allowedMediaTypes = /\.(mp3|mp4|wav|avi|mov|wmv)$/i;
+    // Define allowed file types with both extension and MIME type validation
+    const allowedTypes = {
+      image: {
+        extensions: ['.jpeg', '.jpg', '.png', '.gif', '.webp'],
+        mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      },
+      pdf: {
+        extensions: ['.pdf'],
+        mimeTypes: ['application/pdf']
+      },
+      media: {
+        extensions: ['.mp3', '.mp4', '.wav', '.avi', '.mov', '.wmv'],
+        mimeTypes: ['audio/mpeg', 'audio/wav', 'video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv']
+      }
+    };
 
     const fileExtension = path.extname(file.originalname).toLowerCase();
-    const fileType = file.mimetype;
+    const mimeType = file.mimetype.toLowerCase();
 
-    console.log(`Received file: ${file.originalname}`);
-    console.log(`Field name: ${file.fieldname}`);
-    console.log(`File extension: ${fileExtension}`);
-    console.log(`File MIME type: ${fileType}`);
+    // Security: Check for double extensions (e.g., file.jpg.exe)
+    const fileName = file.originalname.toLowerCase();
+    const suspiciousExtensions = ['.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js', '.jar', '.php', '.asp', '.jsp'];
 
-    if (file.fieldname === 'image' && allowedImageTypes.test(fileExtension)) {
-      cb(null, true);
-    } else if (file.fieldname === 'pdf' && allowedPdfTypes.test(fileExtension)) {
-      cb(null, true);
-    } else if (file.fieldname === 'media' && allowedMediaTypes.test(fileExtension)) {
+    if (suspiciousExtensions.some(ext => fileName.includes(ext))) {
+      console.warn(`🚨 Suspicious file detected: ${file.originalname} from IP: ${req.ip}`);
+      return cb(new Error('File type not allowed for security reasons'), false);
+    }
+
+    // Validate file field and type
+    const fieldType = file.fieldname === 'fileImage' ? 'image' : file.fieldname;
+    const allowedForField = allowedTypes[fieldType];
+
+    if (!allowedForField) {
+      return cb(new Error(`Invalid field name: ${file.fieldname}`), false);
+    }
+
+    // Check both extension and MIME type
+    const extensionValid = allowedForField.extensions.includes(fileExtension);
+    const mimeTypeValid = allowedForField.mimeTypes.includes(mimeType);
+
+    if (extensionValid && mimeTypeValid) {
+      console.log(`✅ File accepted: ${file.originalname} (${mimeType})`);
       cb(null, true);
     } else {
-      const errorMessage = `Invalid file type for field "${file.fieldname}". Allowed types: 
-      images (jpeg, jpg, png, gif, webp), 
-      PDFs, 
-      audio (mp3, wav), 
-      video (mp4, avi, mov, wmv)`;
-      console.error(errorMessage);
+      const errorMessage = `Invalid file type. Expected ${fieldType} file with valid extension and MIME type.`;
+      console.warn(`⚠️  File rejected: ${file.originalname} - Extension: ${fileExtension}, MIME: ${mimeType}`);
       cb(new Error(errorMessage), false);
     }
   } catch (error) {
@@ -150,9 +201,13 @@ export const optimizeImage = async (req, res, next) => {
   }
 };
 
-// File size limits
+// Secure file size limits based on file type
 const limits = {
-  fileSize: 500 * 1024 * 1024, // 500MB max file size
+  fileSize: 10 * 1024 * 1024, // 10MB max file size (reduced for security)
+  files: 1, // Only allow one file per request
+  fields: 10, // Limit number of fields
+  fieldNameSize: 100, // Limit field name size
+  fieldSize: 1024 * 1024 // 1MB limit for field values
 };
 
 // Multer configuration with added error handling

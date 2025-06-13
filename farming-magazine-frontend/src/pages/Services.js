@@ -1,4 +1,5 @@
 import React from 'react';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 import {
   Camera,
   Users,
@@ -92,6 +93,15 @@ const Services = () => {
             />
           </div>
         ))}
+      </div>
+      
+      {/* In-Content Ad */}
+      <div className="py-8">
+        <DynamicAdComponent 
+          adSlot="1122334455"
+          adFormat="rectangle"
+          adStyle={{ minHeight: '200px' }}
+        />
       </div>
       
       {/* CTA Section */}

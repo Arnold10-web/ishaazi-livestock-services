@@ -1,4 +1,12 @@
-// Search history and saved searches component
+/**
+ * SearchHistory Component
+ * 
+ * Manages and displays user search history and saved searches.
+ * Features include tabbed navigation between history and saved searches,
+ * persistence using localStorage, and interactive UI for managing searches.
+ * 
+ * @module components/SearchHistory
+ */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,12 +20,24 @@ import {
   BookOpen
 } from 'lucide-react';
 
+/**
+ * Component for displaying and managing search history and saved searches
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.onSearchClick - Callback when a search is clicked
+ * @param {boolean} props.isVisible - Whether the component is visible
+ * @param {Function} props.onClose - Callback to close the component
+ * @returns {JSX.Element|null} The search history component or null when hidden
+ */
 const SearchHistory = ({ onSearchClick, isVisible, onClose }) => {
+  // State for recent searches and saved searches
   const [searchHistory, setSearchHistory] = useState([]);
   const [savedSearches, setSavedSearches] = useState([]);
   const [activeTab, setActiveTab] = useState('history');
 
-  // Load data from localStorage on component mount
+  /**
+   * Load search history and saved searches from localStorage on mount
+   */
   useEffect(() => {
     const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
     const saved = JSON.parse(localStorage.getItem('savedSearches') || '[]');
@@ -25,9 +45,16 @@ const SearchHistory = ({ onSearchClick, isVisible, onClose }) => {
     setSavedSearches(saved);
   }, []);
 
-  // Add search to history (called from parent component)
+  /**
+   * Adds a new search to the history and updates localStorage
+   * Removes duplicates and limits the history to 20 entries
+   * 
+   * @param {string} searchTerm - The search query text
+   * @param {Object} filters - Additional search filters applied
+   */
   // eslint-disable-next-line no-unused-vars
   const addToHistory = (searchTerm, filters = {}) => {
+    // Create a new history entry
     const newEntry = {
       id: Date.now(),
       searchTerm,
@@ -36,10 +63,12 @@ const SearchHistory = ({ onSearchClick, isVisible, onClose }) => {
       resultCount: 0 // Will be updated when results are received
     };
 
+    // Add new entry at start, remove duplicates, limit to 20 entries
     const updatedHistory = [newEntry, ...searchHistory.filter(item => 
       item.searchTerm.toLowerCase() !== searchTerm.toLowerCase()
     )].slice(0, 20);
 
+    // Update state and localStorage
     setSearchHistory(updatedHistory);
     localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
   };

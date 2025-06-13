@@ -1,3 +1,12 @@
+/**
+ * BeefForm Component
+ * 
+ * A form component for creating and editing beef farming articles.
+ * Features include rich text editing with Quill, image upload and preview,
+ * metadata management, and form validation.
+ * 
+ * @module components/BeefForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -5,7 +14,17 @@ import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+/**
+ * Form component for creating and editing beef farming articles
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshBeefs - Callback to refresh the beef articles list after form submission
+ * @param {Object|null} props.editingBeef - Beef article object being edited, or null when creating new
+ * @param {Function} props.setEditingBeef - Callback to reset the editing state
+ * @returns {JSX.Element} Rendered form component
+ */
 const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
+  // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('Beef');
@@ -15,14 +34,25 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
   const [readTime, setReadTime] = useState(5);
+  
+  // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // UI state
   const [error, setError] = useState('');
+  
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
+  /**
+   * Populate form fields when editing an existing beef article
+   * Handles both direct properties and nested metadata
+   */
   useEffect(() => {
     if (editingBeef) {
+      // Set basic article properties
       setTitle(editingBeef.title);
       setCategory(editingBeef.category || 'Beef');
       setTags(editingBeef.tags ? editingBeef.tags.join(', ') : '');
@@ -37,13 +67,20 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
         setSummary(editingBeef.metadata.summary || '');
       }
       
+      // Set image preview using existing image URL
       setImagePreview(editingBeef.imageUrl);
+      
+      // Set rich text editor content
       if (quillEditor) {
         quillEditor.root.innerHTML = editingBeef.content;
       }
     }
   }, [editingBeef, quillEditor]);
 
+  /**
+   * Initialize the Quill rich text editor with toolbar options
+   * Memoized with useCallback to prevent unnecessary re-creation
+   */
   const initializeQuill = useCallback(() => {
     if (quillRef.current && !quillEditor) {
       const editor = new Quill(quillRef.current, {
@@ -71,16 +108,24 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
     };
   }, [initializeQuill, quillEditor]);
 
+  /**
+   * Handles image file selection and generates preview
+   * Uses FileReader API to create a data URL for image preview
+   * 
+   * @param {Event} e - Input change event from file input
+   */
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setImage(file);
     if (file) {
+      // Create preview using FileReader
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     } else {
+      // Clear preview if no file selected
       setImagePreview(null);
     }
   };

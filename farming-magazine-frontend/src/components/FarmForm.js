@@ -1,3 +1,13 @@
+/**
+ * FarmForm Component
+ * 
+ * Form component for creating and editing farm listings.
+ * Features rich text editing for farm descriptions, image upload,
+ * and property details entry. Handles both new farms and editing
+ * existing farm listings.
+ * 
+ * @module components/FarmForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -6,13 +16,29 @@ import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
 
+/**
+ * Form component for creating and editing farm listings
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshFarms - Callback to refresh farms list after submission
+ * @param {Object|null} props.editingFarm - Farm object being edited, null for new farms
+ * @param {Function} props.setEditingFarm - Function to clear editing state
+ * @returns {JSX.Element} Rendered farm form component
+ */
 const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
+  // Farm property state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');
+  
+  // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // UI state
   const [error, setError] = useState('');
+  
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 

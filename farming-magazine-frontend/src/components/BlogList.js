@@ -1,3 +1,12 @@
+/**
+ * BlogList Component
+ * 
+ * Renders a responsive grid of blog entries with animations and interactive UI elements.
+ * Features include animated transitions, glassmorphism effects, hover interactions,
+ * loading skeletons, empty states, and optional admin controls.
+ * 
+ * @module components/BlogList
+ */
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,11 +15,33 @@ import {
   Clock, Star
 } from 'lucide-react';
 
+/**
+ * Renders a list of blog articles with various interactive UI elements
+ * 
+ * @param {Object} props - Component props
+ * @param {Array} props.blogs - Array of blog objects to display
+ * @param {string} props.apiBaseUrl - Base URL for API requests (used for image paths)
+ * @param {boolean} props.isAdmin - Whether admin controls should be displayed
+ * @param {Function} props.onDelete - Callback function when delete button is clicked
+ * @param {Function} props.onEdit - Callback function when edit button is clicked
+ * @param {boolean} props.isLoading - Whether the component is in loading state
+ * @returns {JSX.Element} Rendered blog list component
+ */
 const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+  /**
+   * Handles image loading errors by replacing with default placeholder
+   * @param {Event} e - Image error event
+   */
   const handleImageError = (e) => {
     e.target.src = '/placeholder-image.jpg';
   };
 
+  /**
+   * Truncates HTML content to specified length while preserving plain text
+   * @param {string} content - HTML content to truncate
+   * @param {number} maxLength - Maximum length before truncation
+   * @returns {string} Truncated plain text with ellipsis if needed
+   */
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
@@ -19,10 +50,20 @@ const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
+  /**
+   * Formats date strings into localized, human-readable format
+   * @param {string} dateString - ISO date string to format
+   * @returns {string} Formatted date string (e.g., "January 1, 2023")
+   */
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
+  /**
+   * Skeleton loader component for blog cards during loading state
+   * Implements animated placeholder UI with glassmorphism effects
+   * @returns {JSX.Element} Animated skeleton loader
+   */
   const BlogSkeleton = () => (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}

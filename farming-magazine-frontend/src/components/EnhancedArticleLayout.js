@@ -1,111 +1,137 @@
+/**
+ * EnhancedArticleLayout Component
+ * 
+ * Reusable layout component for displaying full article content across
+ * different content types (blogs, news, dairy content, etc). Provides
+ * consistent presentation with reading progress indicator, sharing options,
+ * related content, and ad placement.
+ *
+ * @module components/EnhancedArticleLayout
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, ArrowLeft, Share2, Facebook, Twitter, Linkedin,
-  BookOpen, X, Heart, MessageCircle, Bookmark, Eye, User, Tag
+  Clock, ArrowLeft, Share2, Facebook, Instagram, MessageCircle,
+  Bookmark, Heart, Mail
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import DynamicAdComponent from './DynamicAdComponent';
 
-const EnhancedArticleLayout = ({ 
-  article, 
-  loading, 
-  error, 
-  recentPosts, 
-  backLink, 
+/**
+ * Import ad slot configurations with robust error handling
+ * Uses a try-catch pattern to handle potential import errors
+ */
+let importedAdSlots;
+try {
+  const { adSlots } = require('./DynamicAdComponent');
+  importedAdSlots = adSlots;
+} catch (error) {
+  console.warn('Failed to import adSlots:', error);
+  importedAdSlots = null;
+}
+
+/**
+ * Default ad slot configuration for fallback
+ * Used when the imported configurations are unavailable
+ */
+const defaultAdSlots = {
+  header: { slot: '1234567890', format: 'horizontal', style: { minHeight: '90px' } },
+  inContent: { slot: '1122334455', format: 'rectangle', style: { minHeight: '200px' } }
+};
+
+/**
+ * Safety-enhanced ad slot configuration
+ * Implements multiple validation checks to ensure robust ad display
+ */
+const adSlots = importedAdSlots || {};
+const safeAdSlots = {
+  header: (adSlots?.header && typeof adSlots.header === 'object' && adSlots.header.slot) 
+    ? adSlots.header 
+    : defaultAdSlots.header,
+  inContent: (adSlots?.inContent && typeof adSlots.inContent === 'object' && adSlots.inContent.slot) 
+    ? adSlots.inContent 
+    : defaultAdSlots.inContent
+};
+
+/**
+ * Reusable component for rendering article content with standardized layout
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.article - The article object containing content and metadata
+ * @param {boolean} props.loading - Loading state indicator
+ * @param {string|null} props.error - Error message if article failed to load
+ * @param {Array} props.recentPosts - Related content to display in sidebar
+ * @param {string} props.backLink - URL to navigate back to article listing
+ * @param {string} props.backLabel - Label for back navigation
+ * @param {string} [props.category="Article"] - Content category label
+ * @returns {JSX.Element} Rendered article layout
+ */
+const EnhancedArticleLayout = ({
+  article,
+  loading,
+  error,
+  recentPosts,
+  backLink,
   backLabel,
-  themeColor = "#2D5016",
   category = "Article"
 }) => {
+  // Router hooks
   const navigate = useNavigate();
-  const [expandedImage, setExpandedImage] = useState(null);
+  
+  // Reading and engagement state
   const [readingProgress, setReadingProgress] = useState(0);
-  const [headings, setHeadings] = useState([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likes, setLikes] = useState(article?.likes || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const articleRef = useRef(null);
-
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  useEffect(() => {
-    if (article?.content) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(article.content, 'text/html');
-      const headingElements = Array.from(doc.querySelectorAll('h2, h3'));
-      const extractedHeadings = headingElements.map((heading, index) => ({
-        id: `heading-${index}`,
-        text: heading.textContent,
-        level: heading.tagName.toLowerCase(),
-      }));
-
-      headingElements.forEach((heading, index) => {
-        heading.id = `heading-${index}`;
-      });
-
-      setHeadings(extractedHeadings);
-    }
-  }, [article]);
-
+  // Reading progress tracker
   useEffect(() => {
     const handleScroll = () => {
       if (!articleRef.current) return;
-      const articleHeight = articleRef.current.offsetHeight;
-      const windowHeight = window.innerHeight;
-      const scrollPosition = window.scrollY;
-      const progress = (scrollPosition / (articleHeight - windowHeight)) * 100;
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      const progress = (scrollTop / (scrollHeight - clientHeight)) * 100;
       setReadingProgress(Math.min(100, Math.max(0, progress)));
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const formatDate = (dateString) => new Intl.DateTimeFormat('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  }).format(new Date(dateString));
+  const formatDate = (dateString) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(new Date(dateString));
+  };
 
   const estimateReadTime = (content) => {
+    if (!content) return '5 min read';
     const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
     return `${Math.ceil(wordCount / 200)} min read`;
   };
 
-  const handleShare = (platform = null) => {
-    const shareUrl = window.location.href;
-    const shareTitle = article?.title || 'Article';
-    const shareText = article?.subtitle || article?.title || 'Check out this article';
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const title = article?.title || '';
+    
+    const shareUrls = {
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      instagram: '', // Instagram doesn't support direct URL sharing
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`
+    };
 
-    let url = '';
-    switch (platform) {
-      case 'twitter':
-        url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-        break;
-      case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-        break;
-      case 'linkedin':
-        url = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}&summary=${encodeURIComponent(shareText)}`;
-        break;
-      default:
-        if (navigator.share) {
-          navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(console.error);
-        } else {
-          navigator.clipboard.writeText(shareUrl).then(() => alert('Link copied to clipboard!')).catch(console.error);
-        }
-        return;
+    if (shareUrls[platform] && platform !== 'instagram') {
+      window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+    } else if (platform === 'instagram') {
+      // Instagram doesn't support direct URL sharing, so we'll copy the link
+      navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard! You can now paste it in Instagram.');
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
     setShowShareMenu(false);
-  };
-
-  const scrollToHeading = (id) => {
-    const element = document.getElementById(id);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleImageError = (e) => {
-    e.target.onerror = null;
-    e.target.src = '/placeholder-image.jpg';
-    e.target.alt = 'Image not available';
   };
 
   const handleLike = () => {
@@ -117,326 +143,326 @@ const EnhancedArticleLayout = ({
     setIsBookmarked(!isBookmarked);
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC] to-white flex items-center justify-center">
-      <motion.div 
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        className="h-12 w-12 border-4 border-[#2D5016] border-t-transparent rounded-full"
-      />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="animate-pulse space-y-8">
+            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] to-white">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center border border-red-200"
-      >
-        <div className="h-12 w-12 text-red-500 mx-auto mb-4">⚠️</div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Article</h2>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <Link to={backLink} className="text-[#2D5016] hover:underline font-medium">Return to {backLabel}</Link>
-      </motion.div>
-    </div>
-  );
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Article Not Found</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate(backLink)}
+            className="inline-flex items-center space-x-2 text-green-700 hover:text-green-800 font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to {backLabel}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!article) return null;
 
   return (
-    <div className="bg-gradient-to-br from-[#F5F5DC] to-white min-h-screen">
-      {/* Reading Progress Bar */}
-      <motion.div 
-        style={{ width: `${readingProgress}%` }} 
-        className="fixed top-0 left-0 h-1 bg-gradient-to-r from-[#2D5016] to-[#DAA520] z-50"
-        initial={{ width: 0 }}
-        animate={{ width: `${readingProgress}%` }}
-        transition={{ duration: 0.1 }}
-      />
+    <div className="min-h-screen bg-white">
+      {/* Modern Reading Progress Bar - Wired.com inspired */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-gray-100 z-50">
+        <div
+          className="h-full bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 transition-all duration-300 shadow-sm"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
 
-      {/* Expanded Image Modal */}
-      <AnimatePresence>
-        {expandedImage && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <button 
-              onClick={() => setExpandedImage(null)} 
-              className="absolute top-4 right-4 text-white hover:text-[#DAA520] transition-colors"
-            >
-              <X className="h-8 w-8" />
-            </button>
-            <motion.img 
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
-              src={`${API_BASE_URL}${expandedImage}`} 
-              alt="Expanded" 
-              className="max-w-full max-h-[80vh] object-contain rounded-lg" 
-              onError={handleImageError} 
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Main Article Content */}
-          <div className="lg:col-span-3 space-y-6" ref={articleRef}>
-            {/* Back Button */}
-            <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+      {/* Modern Article Header - Copyblogger inspired */}
+      <header className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <button
               onClick={() => navigate(backLink)}
-              className="inline-flex items-center px-4 py-2 text-sm text-[#2D5016] hover:text-[#DAA520] transition-colors font-medium"
+              className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to {backLabel}
-            </motion.button>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to {backLabel}</span>
+            </button>
 
-            {/* Article Card */}
-            <motion.article 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden border border-[#2D5016]/10"
-            >
-              {/* Article Header */}
-              <div className="p-8 pb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="px-3 py-1 bg-gradient-to-r from-[#2D5016] to-[#3D6B1F] text-white text-xs font-semibold rounded-full uppercase tracking-wide">
-                    {category}
-                  </span>
-                  <div className="flex items-center text-sm text-gray-500 gap-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" /> 
-                      {formatDate(article.publishedAt || article.createdAt)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" /> 
-                      {estimateReadTime(article.content)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" /> 
-                      {article.views || 0} views
-                    </span>
+            <div className="flex items-center space-x-6">
+              <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
+                {category}
+              </span>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Clock className="w-4 h-4" />
+                <span>{estimateReadTime(article.content)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Modern Hero Section - Wired.com inspired */}
+      <section className="relative bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7 space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wide">
+                    Featured
+                  </div>
+                  <div className="text-sm text-gray-500 font-medium">
+                    {formatDate(article.createdAt)}
                   </div>
                 </div>
 
-                <h1 className="text-4xl lg:text-5xl font-bold text-[#2D5016] mb-4 leading-tight">
+                <h1 className="font-sans text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-gray-900 leading-tight tracking-tight">
                   {article.title}
                 </h1>
 
-                {article.subtitle && (
-                  <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-                    {article.subtitle}
-                  </p>
-                )}
-
-                {/* Author Info */}
-                {article.author && (
-                  <div className="flex items-center gap-3 mb-6 p-4 bg-[#F5F5DC] rounded-lg">
-                    <div className="h-10 w-10 bg-[#2D5016] rounded-full flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
+                <div className="flex items-center space-x-8 text-sm text-gray-600 pt-4 border-t border-gray-100">
+                  {article.author && (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-700 font-bold text-sm">
+                          {article.author.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">By {article.author}</p>
+                        <p className="text-xs text-gray-500">Agricultural Expert</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-[#2D5016]">{article.author}</p>
-                      <p className="text-sm text-gray-600">Agricultural Expert</p>
+                  )}
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="w-4 h-4" />
+                      <span>{estimateReadTime(article.content)}</span>
                     </div>
+                    <span>•</span>
+                    <span>{article.views || 0} views</span>
                   </div>
-                )}
-              </div>
-
-              {/* Featured Image */}
-              {article.imageUrl && (
-                <div className="px-8 pb-6">
-                  <motion.img
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 }}
-                    src={`${API_BASE_URL}${article.imageUrl}`}
-                    alt={article.title}
-                    className="w-full rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setExpandedImage(article.imageUrl)}
-                    onError={handleImageError}
-                  />
                 </div>
-              )}
+              </div>
+            </div>
 
-              {/* Article Content */}
-              <div className="px-8 pb-8">
-                <div 
-                  className="prose prose-lg max-w-none prose-headings:text-[#2D5016] prose-links:text-[#DAA520] prose-strong:text-[#2D5016]" 
-                  dangerouslySetInnerHTML={{ __html: article.content }} 
+            <div className="lg:col-span-5">
+              <div className="aspect-[4/3] overflow-hidden rounded-2xl shadow-2xl">
+                <img
+                  src={`${API_BASE_URL}${article.imageUrl}`}
+                  alt={article.title}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                {/* Tags */}
-                {article.tags && article.tags.length > 0 && (
-                  <div className="flex gap-2 flex-wrap mt-8 pt-6 border-t border-gray-200">
-                    <Tag className="h-4 w-4 text-gray-500 mt-1" />
-                    {article.tags.map((tag, i) => (
-                      <span 
-                        key={i} 
-                        className="bg-[#F5F5DC] text-[#2D5016] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#2D5016] hover:text-white transition-colors cursor-pointer"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+      {/* Header Advertisement */}
+      <div className="bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <DynamicAdComponent 
+            adSlot={safeAdSlots.header.slot}
+            adFormat={safeAdSlots.header.format}
+            adStyle={safeAdSlots.header.style}
+          />
+        </div>
+      </div>
 
-                {/* Article Actions */}
-                <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={handleLike}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                        isLiked 
-                          ? 'bg-red-100 text-red-600' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
-                      }`}
-                    >
-                      <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                      <span className="text-sm font-medium">{likes}</span>
-                    </button>
+      {/* Main Content - Enhanced Typography */}
+      <main className="relative bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid lg:grid-cols-12 gap-12">
+            {/* Article Content - Copyblogger inspired typography */}
+            <article ref={articleRef} className="lg:col-span-8">
+              {/* Top Article Ad */}
+              <div className="mb-8">
+                <DynamicAdComponent 
+                  adSlot={safeAdSlots.inContent.slot}
+                  adFormat={safeAdSlots.inContent.format}
+                  adStyle={safeAdSlots.inContent.style}
+                />
+              </div>
 
-                    <button 
-                      onClick={handleBookmark}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                        isBookmarked 
-                          ? 'bg-[#DAA520] text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-[#DAA520] hover:text-white'
-                      }`}
-                    >
-                      <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                      <span className="text-sm font-medium">Save</span>
-                    </button>
-                  </div>
+              <div
+                className="prose prose-xl max-w-none
+                prose-headings:font-black prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:leading-tight
+                prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl
+                prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-lg prose-p:font-light prose-p:mb-6
+                prose-a:text-green-600 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline hover:prose-a:text-green-700
+                prose-blockquote:border-l-4 prose-blockquote:border-green-500 prose-blockquote:bg-green-50 prose-blockquote:p-6 prose-blockquote:italic prose-blockquote:text-lg prose-blockquote:font-medium
+                prose-ul:space-y-2 prose-ol:space-y-2 prose-li:text-gray-700 prose-li:leading-relaxed
+                prose-strong:text-gray-900 prose-strong:font-bold
+                prose-code:bg-gray-100 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono"
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
 
-                  <div className="relative">
-                    <button 
-                      onClick={() => setShowShareMenu(!showShareMenu)}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#2D5016] text-white rounded-full hover:bg-[#3D6B1F] transition-colors"
-                    >
-                      <Share2 className="h-4 w-4" />
-                      <span className="text-sm font-medium">Share</span>
-                    </button>
+              {/* Bottom Article Ad */}
+              <div className="mt-8">
+                <DynamicAdComponent 
+                  adSlot={safeAdSlots.inContent.slot}
+                  adFormat={safeAdSlots.inContent.format}
+                  adStyle={safeAdSlots.inContent.style}
+                />
+              </div>
+            </article>
 
-                    <AnimatePresence>
-                      {showShareMenu && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                          className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-10"
-                        >
-                          <button 
-                            onClick={() => handleShare('twitter')} 
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                          >
-                            <Twitter className="h-4 w-4" /> Twitter
-                          </button>
-                          <button 
-                            onClick={() => handleShare('facebook')} 
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                          >
-                            <Facebook className="h-4 w-4" /> Facebook
-                          </button>
-                          <button 
-                            onClick={() => handleShare('linkedin')} 
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                          >
-                            <Linkedin className="h-4 w-4" /> LinkedIn
-                          </button>
-                          <button 
-                            onClick={() => handleShare()} 
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                          >
-                            📋 Copy Link
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+            {/* Sidebar */}
+            <aside className="lg:col-span-4 space-y-8">
+              {/* Newsletter Signup */}
+              <div className="sticky top-8 space-y-6">
+                <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-100">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-2">Stay Updated</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Get the latest farming insights delivered to your inbox
+                    </p>
+                    <div className="space-y-3">
+                      <input
+                        type="email"
+                        placeholder="Enter your email"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                      <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                        Subscribe
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Related Articles */}
+                {recentPosts && recentPosts.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="font-bold text-gray-900 mb-4">More Articles</h3>
+                    <div className="space-y-4">
+                      {recentPosts.slice(0, 3).map((post) => (
+                        <Link
+                          key={post._id}
+                          to={`/blog/${post._id}`}
+                          className="block group"
+                        >
+                          <div className="flex space-x-3">
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={`${API_BASE_URL}${post.imageUrl}`}
+                                alt={post.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900 group-hover:text-green-700 transition-colors line-clamp-2">
+                                {post.title}
+                              </h4>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatDate(post.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </motion.article>
+            </aside>
+          </div>
+        </div>
+      </main>
+
+      {/* Floating Action Toolbar */}
+      <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-40 hidden xl:block">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-3 space-y-3">
+          <button
+            onClick={handleLike}
+            className={`group flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 ${
+              isLiked 
+                ? 'bg-red-100 text-red-600 shadow-md' 
+                : 'bg-gray-50 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:shadow-md'
+            }`}
+            title="Like this article"
+          >
+            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+          </button>
+          
+          <div className="text-center">
+            <span className="text-xs font-medium text-gray-500">{likes}</span>
           </div>
 
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            {/* Table of Contents */}
-            {headings.length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-xl shadow-lg p-6 sticky top-20"
-              >
-                <h2 className="text-lg font-bold mb-4 text-[#2D5016] flex items-center">
-                  <BookOpen className="w-5 h-5 mr-2" /> 
-                  Table of Contents
-                </h2>
-                <nav className="space-y-2">
-                  {headings.map(heading => (
-                    <button
-                      key={heading.id}
-                      onClick={() => scrollToHeading(heading.id)}
-                      className={`block w-full text-left text-sm px-3 py-2 rounded-lg hover:bg-[#F5F5DC] transition-colors ${
-                        heading.level === 'h3' 
-                          ? 'ml-4 text-gray-500' 
-                          : 'text-[#2D5016] font-medium'
-                      }`}
-                    >
-                      {heading.text}
-                    </button>
-                  ))}
-                </nav>
-              </motion.div>
-            )}
+          <button
+            onClick={handleBookmark}
+            className={`group flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 ${
+              isBookmarked 
+                ? 'bg-blue-100 text-blue-600 shadow-md' 
+                : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md'
+            }`}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark article'}
+          >
+            <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+          </button>
 
-            {/* Recent Posts */}
-            {recentPosts && recentPosts.length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white rounded-xl shadow-lg p-6"
-              >
-                <h2 className="text-lg font-bold mb-4 text-[#2D5016]">Related Articles</h2>
-                <div className="space-y-4">
-                  {recentPosts.slice(0, 3).map((post) => (
-                    <Link
-                      key={post._id}
-                      to={`${backLink}/${post._id}`}
-                      className="block group"
-                    >
-                      <div className="flex gap-3">
-                        {post.imageUrl && (
-                          <img
-                            src={`${API_BASE_URL}${post.imageUrl}`}
-                            alt={post.title}
-                            className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                            onError={handleImageError}
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h3 className="text-sm font-semibold text-[#2D5016] group-hover:text-[#DAA520] transition-colors line-clamp-2">
-                            {post.title}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatDate(post.publishedAt || post.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </motion.div>
+          <div className="relative">
+            <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className="group flex items-center justify-center w-12 h-12 rounded-xl bg-gray-50 text-gray-600 hover:bg-green-50 hover:text-green-600 hover:shadow-md transition-all duration-200"
+              title="Share article"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+
+            {showShareMenu && (
+              <div className="absolute left-full ml-3 top-0 bg-white rounded-xl shadow-lg border border-gray-100 py-2 min-w-[140px]">
+                <button
+                  onClick={() => handleShare('x')}
+                  className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <span className="text-sm">X</span>
+                </button>
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                >
+                  <Facebook className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm">Facebook</span>
+                </button>
+                <button
+                  onClick={() => handleShare('instagram')}
+                  className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                >
+                  <Instagram className="w-4 h-4 text-pink-600" />
+                  <span className="text-sm">Instagram</span>
+                </button>
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">WhatsApp</span>
+                </button>
+              </div>
             )}
-          </aside>
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@ import express from 'express';
 import upload, { optimizeImage } from '../middleware/fileUpload.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
+import { validate, blogSchemas, newsSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
+import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import {
   createBlog,
   getBlogs,
@@ -114,13 +116,37 @@ router.post('/upload/media', upload.single('file'), (req, res) => {
   res.status(200).json({ message: 'Media uploaded', path: req.file.path });
 });
 
-// Blog Routes
-router.post('/blogs', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['blogs']), createBlog);
+// Blog Routes with validation
+router.post('/blogs',
+  authMiddleware,
+  sensitiveOperationLimiter,
+  upload.single('image'),
+  validateFileUpload,
+  optimizeImage,
+  validate(blogSchemas.create),
+  invalidateCache(['blogs']),
+  createBlog
+);
 router.get('/blogs', cacheMiddleware(300), getBlogs);
 router.get('/blogs/admin', authMiddleware, getAdminBlogs);
-router.get('/blogs/:id', cacheMiddleware(600), getBlogById);
-router.put('/blogs/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['blogs']), updateBlog);
-router.delete('/blogs/:id', authMiddleware, invalidateCache(['blogs']), deleteBlog);
+router.get('/blogs/:id', validateObjectId('id'), cacheMiddleware(600), getBlogById);
+router.put('/blogs/:id',
+  authMiddleware,
+  validateObjectId('id'),
+  upload.single('image'),
+  validateFileUpload,
+  optimizeImage,
+  validate(blogSchemas.update),
+  invalidateCache(['blogs']),
+  updateBlog
+);
+router.delete('/blogs/:id',
+  authMiddleware,
+  sensitiveOperationLimiter,
+  validateObjectId('id'),
+  invalidateCache(['blogs']),
+  deleteBlog
+);
 
 // News Routes
 router.post('/news', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['news']), createNews);

@@ -1,6 +1,27 @@
+/**
+ * AdPlacement Component
+ * 
+ * A smart component that automatically determines optimal ad placement
+ * based on context, strategy, content length, and user engagement.
+ * Handles conditional rendering of ads in different page locations
+ * based on configured rules.
+ * 
+ * @module components/AdPlacement
+ */
 import React, { useState, useEffect } from 'react';
-import AdBanner from './AdBanner';
+import DynamicAdComponent from './DynamicAdComponent';
 
+/**
+ * Determines optimal ad placement strategy based on page context
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.strategy - Ad display strategy: 'aggressive', 'balanced', or 'minimal'
+ * @param {string} props.pageType - Type of page: 'home', 'article', 'listing', or 'category'
+ * @param {string} props.contentLength - Content length: 'short', 'medium', or 'long'
+ * @param {string} props.userEngagement - User engagement level: 'low', 'medium', or 'high'
+ * @param {string} props.className - Additional CSS classes for the container
+ * @returns {JSX.Element} Component with properly placed ads
+ */
 const AdPlacement = ({ 
   strategy = 'balanced', // 'aggressive', 'balanced', 'minimal'
   pageType = 'article', // 'home', 'article', 'listing', 'category'
@@ -8,12 +29,18 @@ const AdPlacement = ({
   userEngagement = 'medium', // 'low', 'medium', 'high'
   className = ''
 }) => {
+  // State for ad display configuration and visibility control
   const [adConfig, setAdConfig] = useState({});
   const [shouldShowAds, setShouldShowAds] = useState(true);
 
+  /**
+   * Effect hook to configure ad placement based on strategy and context
+   * Determines which ad positions should be active and their frequencies
+   */
   useEffect(() => {
     // Configure ad placement based on strategy and context
     const configureAds = () => {
+      // Default configuration with no ads
       let config = {
         showHeaderAd: false,
         showSidebarAds: false,
@@ -92,13 +119,10 @@ const AdPlacement = ({
       {/* Header Ad */}
       {adConfig.showHeaderAd && (
         <div className="header-ad mb-6">
-          <AdBanner
-            position="header"
-            size="banner"
-            category="farming"
-            showCloseButton={false}
-            autoRotate={true}
-            rotationInterval={45000}
+          <DynamicAdComponent
+            adSlot="1234567890"
+            adFormat="horizontal"
+            adStyle={{ minHeight: '90px' }}
           />
         </div>
       )}
@@ -106,22 +130,17 @@ const AdPlacement = ({
       {/* Sidebar Ads */}
       {adConfig.showSidebarAds && (
         <div className="sidebar-ads space-y-6">
-          <AdBanner
-            position="sidebar"
-            size="medium"
-            category="livestock"
-            showCloseButton={true}
-            autoRotate={false}
+          <DynamicAdComponent
+            adSlot="1122334455"
+            adFormat="vertical"
+            adStyle={{ minHeight: '250px' }}
           />
           
           {strategy === 'aggressive' && (
-            <AdBanner
-              position="sidebar"
-              size="small"
-              category="equipment"
-              showCloseButton={true}
-              autoRotate={true}
-              rotationInterval={60000}
+            <DynamicAdComponent
+              adSlot="5566778899"
+              adFormat="rectangle"
+              adStyle={{ minHeight: '200px' }}
             />
           )}
         </div>
@@ -130,12 +149,10 @@ const AdPlacement = ({
       {/* Inline Ads (for article content) */}
       {adConfig.showInlineAds && (
         <div className="inline-ad-marker" data-frequency={adConfig.inlineAdFrequency}>
-          <AdBanner
-            position="inline"
-            size="large"
-            category="farming"
-            showCloseButton={false}
-            autoRotate={false}
+          <DynamicAdComponent
+            adSlot="9988776655"
+            adFormat="rectangle"
+            adStyle={{ minHeight: '200px' }}
           />
         </div>
       )}
@@ -143,13 +160,10 @@ const AdPlacement = ({
       {/* Footer Ad */}
       {adConfig.showFooterAd && (
         <div className="footer-ad mt-8">
-          <AdBanner
-            position="footer"
-            size="banner"
-            category="general"
-            showCloseButton={true}
-            autoRotate={true}
-            rotationInterval={30000}
+          <DynamicAdComponent
+            adSlot="3344556677"
+            adFormat="horizontal"
+            adStyle={{ minHeight: '90px' }}
           />
         </div>
       )}
@@ -211,13 +225,13 @@ export const useInlineAds = (contentRef, adFrequency = 5) => {
 };
 
 // Component for native advertising (sponsored content)
-export const SponsoredContent = ({ 
-  title, 
-  description, 
-  imageUrl, 
-  sponsorName, 
+export const SponsoredContent = ({
+  title,
+  description,
+  imageUrl,
+  sponsorName,
   clickUrl,
-  className = '' 
+  className = ''
 }) => {
   const handleClick = () => {
     if (clickUrl) {
@@ -226,30 +240,30 @@ export const SponsoredContent = ({
   };
 
   return (
-    <div className={`sponsored-content bg-gradient-to-r from-[#F5F5DC] to-white border border-[#2D5016] border-opacity-20 rounded-lg p-6 ${className}`}>
+    <div className={`sponsored-content bg-gradient-to-r from-gray-50 to-white border border-green-800 border-opacity-20 rounded-lg p-6 ${className}`}>
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0">
-          <span className="bg-[#DAA520] text-white text-xs px-2 py-1 rounded-full font-medium">
+          <span className="bg-amber-600 text-white text-xs px-2 py-1 rounded-full font-medium">
             Sponsored
           </span>
         </div>
         <div className="flex-1">
           <p className="text-xs text-gray-500 mb-2">Sponsored by {sponsorName}</p>
-          <h3 className="font-bold text-[#2D5016] mb-2 cursor-pointer hover:text-[#DAA520] transition-colors" onClick={handleClick}>
+          <h3 className="font-bold text-green-800 mb-2 cursor-pointer hover:text-amber-600 transition-colors" onClick={handleClick}>
             {title}
           </h3>
           <p className="text-gray-600 text-sm mb-3">{description}</p>
-          <button 
+          <button
             onClick={handleClick}
-            className="text-[#DAA520] text-sm font-medium hover:underline"
+            className="text-amber-600 text-sm font-medium hover:underline"
           >
             Learn More →
           </button>
         </div>
         {imageUrl && (
           <div className="flex-shrink-0 w-20 h-20">
-            <img 
-              src={imageUrl} 
+            <img
+              src={imageUrl}
               alt={title}
               className="w-full h-full object-cover rounded-lg cursor-pointer"
               onClick={handleClick}

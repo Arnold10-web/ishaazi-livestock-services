@@ -1,26 +1,58 @@
+/**
+ * TableOfContents Component
+ * 
+ * Renders an interactive, animated table of contents that highlights
+ * the current section as the user scrolls through the content.
+ * Features expandable/collapsible navigation, smooth scrolling,
+ * and active section tracking.
+ * 
+ * @module components/TableOfContents
+ */
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * Dynamic table of contents with scroll tracking and animation
+ * 
+ * @param {Object} props - Component props
+ * @param {Array} props.headings - Array of heading objects with id and text properties
+ * @param {string} props.className - Additional CSS classes
+ * @returns {JSX.Element} Animated table of contents component
+ */
 const TableOfContents = ({ headings, className = "" }) => {
+  // Track the currently active heading based on scroll position
   const [activeHeading, setActiveHeading] = useState('');
+  // Control whether the TOC is expanded or collapsed
   const [isExpanded, setIsExpanded] = useState(true);
 
+  /**
+   * Effect hook to track scroll position and highlight the active heading
+   * Adds scroll listener that updates active heading state when scrolling
+   */
   useEffect(() => {
+    // Skip if no headings are provided
     if (!headings || headings.length === 0) return;
 
+    /**
+     * Handle scroll events and determine which heading is currently active
+     * Based on the scroll position relative to each heading's position
+     */
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 100; // Offset for better UX
       
       let currentHeading = '';
       
+      // Find the heading that's currently in view
       for (const heading of headings) {
         const element = document.getElementById(heading.id);
         if (element) {
           const elementTop = element.offsetTop;
+          // If we've scrolled past this heading, mark it as current
           if (scrollPosition >= elementTop) {
             currentHeading = heading.id;
           } else {
+            // Stop at the first heading we haven't scrolled past yet
             break;
           }
         }
@@ -29,12 +61,20 @@ const TableOfContents = ({ headings, className = "" }) => {
       setActiveHeading(currentHeading);
     };
 
+    // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
     handleScroll(); // Set initial active heading
     
+    // Clean up event listener on unmount
     return () => window.removeEventListener('scroll', handleScroll);
   }, [headings]);
 
+  /**
+   * Scrolls the page to the selected heading with smooth animation
+   * Accounts for fixed header offset when scrolling
+   * 
+   * @param {string} id - HTML ID of the heading to scroll to
+   */
   const scrollToHeading = (id) => {
     const element = document.getElementById(id);
     if (element) {

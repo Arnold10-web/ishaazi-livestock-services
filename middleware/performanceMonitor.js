@@ -1,12 +1,35 @@
 /**
- * Performance monitoring middleware for search operations
- * Tracks response times, error rates, and resource usage
+ * @file Performance Monitor Middleware
+ * @description Advanced performance monitoring system with:
+ *  - Response time tracking and histograms
+ *  - Error rate monitoring
+ *  - Resource usage tracking
+ *  - Slow query detection
+ *  - Periodic performance reporting
+ *  - Customizable thresholds for alerts
+ * @module middleware/performanceMonitor
  */
 
 import { performance } from 'perf_hooks';
 
+/**
+ * @class PerformanceMonitor
+ * @description Tracks and analyzes API performance metrics
+ */
 class PerformanceMonitor {
+  /**
+   * @constructor
+   * @description Initializes performance metrics tracking
+   */
   constructor() {
+    /**
+     * @property {Object} metrics - Collection of performance metrics
+     * @property {number} metrics.searchRequests - Total number of requests processed
+     * @property {number} metrics.totalResponseTime - Cumulative response time in ms
+     * @property {number} metrics.errors - Count of failed requests
+     * @property {number} metrics.slowQueries - Count of requests exceeding threshold
+     * @property {Object} metrics.responseTimeHistogram - Distribution of response times
+     */
     this.metrics = {
       searchRequests: 0,
       totalResponseTime: 0,

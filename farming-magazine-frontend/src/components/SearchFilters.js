@@ -1,4 +1,12 @@
-// Advanced search filters component with date range, tags, and more
+/**
+ * SearchFilters Component
+ * 
+ * Advanced search filtering interface that provides options for refining
+ * search results by date range, tags, minimum views, and sorting order.
+ * Features include animated transitions, tag selection, and filter persistence.
+ * 
+ * @module components/SearchFilters
+ */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,6 +17,18 @@ import {
   Eye
 } from 'lucide-react';
 
+/**
+ * Advanced search filters component with multiple filtering options
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.filters - Current filter settings
+ * @param {Function} props.onFiltersChange - Callback when filters change
+ * @param {Array} props.availableTags - Available content tags for filtering
+ * @param {Object} props.contentTypeCounts - Count of content by type
+ * @param {boolean} props.isVisible - Whether filters are visible
+ * @param {Function} props.onToggle - Callback to toggle filters visibility
+ * @returns {JSX.Element} Rendered search filters component
+ */
 const SearchFilters = ({ 
   filters, 
   onFiltersChange, 
@@ -17,6 +37,7 @@ const SearchFilters = ({
   isVisible = true,
   onToggle
 }) => {
+  // Local state for filter values before applying
   const [localFilters, setLocalFilters] = useState({
     dateRange: { start: '', end: '' },
     tags: [],
@@ -25,19 +46,26 @@ const SearchFilters = ({
     ...filters
   });
 
+  // UI state for tag selector dropdown
   const [showTagSelector, setShowTagSelector] = useState(false);
 
-  // Sync local filters with parent
+  /**
+   * Synchronize local filter state with parent component filters
+   */
   useEffect(() => {
     setLocalFilters(prev => ({ ...prev, ...filters }));
   }, [filters]);
 
-  // Apply filters
+  /**
+   * Apply locally modified filters by calling parent callback
+   */
   const applyFilters = () => {
     onFiltersChange(localFilters);
   };
 
-  // Reset filters
+  /**
+   * Reset all filters to default values and notify parent
+   */
   const resetFilters = () => {
     const resetFilters = {
       dateRange: { start: '', end: '' },

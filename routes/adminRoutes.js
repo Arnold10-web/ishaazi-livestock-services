@@ -2,6 +2,7 @@
 import express from 'express';
 import { registerAdmin, loginAdmin, logoutAdmin, getAdminDashboard, getAdminProfile, updateAdminProfile, deleteAdmin } from '../controllers/adminController.js';
 import { getDashboardStats, resetViewCounts } from '../controllers/dashboardController.js';
+import { getSecurityStats, getSecurityAuditLog, updateSecuritySettings } from '../controllers/securityController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -81,6 +82,34 @@ router.delete('/:id', authMiddleware, (req, res) => {
     } catch (error) {
         console.error('Error deleting admin:', error);
         res.status(500).json({ message: 'Error deleting admin' });
+    }
+});
+
+// Security routes
+router.get('/security-stats', authMiddleware, (req, res) => {
+    try {
+        getSecurityStats(req, res);
+    } catch (error) {
+        console.error('Error getting security stats:', error);
+        res.status(500).json({ message: 'Error getting security stats' });
+    }
+});
+
+router.get('/security-audit', authMiddleware, (req, res) => {
+    try {
+        getSecurityAuditLog(req, res);
+    } catch (error) {
+        console.error('Error getting security audit log:', error);
+        res.status(500).json({ message: 'Error getting security audit log' });
+    }
+});
+
+router.put('/security-settings', authMiddleware, (req, res) => {
+    try {
+        updateSecuritySettings(req, res);
+    } catch (error) {
+        console.error('Error updating security settings:', error);
+        res.status(500).json({ message: 'Error updating security settings' });
     }
 });
 

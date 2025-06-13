@@ -1,4 +1,17 @@
-// Enhanced SearchResults.js with highlighting and advanced features
+/**
+ * SearchResults Component
+ * 
+ * A comprehensive search results page with advanced filtering capabilities,
+ * content type filtering, pagination, sorting options, and result highlighting.
+ * Features include:
+ * - Query parameter handling for shareable search URLs
+ * - Advanced filtering by date, tags, and popularity
+ * - Content type categorization and counts
+ * - Animated transitions between results
+ * - Search result highlighting
+ * 
+ * @module pages/SearchResults
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -24,28 +37,44 @@ import SearchBar from '../components/SearchBar';
 import SearchFilters from '../components/SearchFilters';
 import SEOHelmet from '../components/SEOHelmet';
 import LazyImage from '../components/LazyImage';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
+/**
+ * Search results page component with advanced filtering and content type filtering
+ * 
+ * @returns {JSX.Element} Rendered search results page
+ */
 const SearchResults = () => {
+  // Extract and manage URL search parameters
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const contentType = searchParams.get('type') || 'all';
   const sortBy = searchParams.get('sort') || 'relevance';
   const fuzzy = searchParams.get('fuzzy') === 'true';
   
+  // Search results and status state
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Content categorization state
   const [contentTypeCounts, setContentTypeCounts] = useState({});
   const [searchMeta, setSearchMeta] = useState({});
+  
+  // UI control state
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [availableTags, setAvailableTags] = useState([]);
+  
+  // Advanced filtering state
   const [searchFilters, setSearchFilters] = useState({
     dateRange: { start: '', end: '' },
     tags: [],
     minViews: '',
     sortBy: 'relevance'
   });
+  
+  // Pagination state
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -325,6 +354,15 @@ const SearchResults = () => {
       />
       
       <div className="container mx-auto px-4 py-12">
+        {/* Header Ad */}
+        <div className="py-4">
+          <DynamicAdComponent 
+            adSlot="1234567890"
+            adFormat="horizontal"
+            adStyle={{ minHeight: '90px' }}
+          />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -661,6 +699,15 @@ const SearchResults = () => {
                     </div>
                   </motion.article>
                 ))}
+                
+                {/* In-Content Ad */}
+                <div className="py-8">
+                  <DynamicAdComponent 
+                    adSlot="1122334455"
+                    adFormat="rectangle"
+                    adStyle={{ minHeight: '200px' }}
+                  />
+                </div>
                 
                 {/* Pagination */}
                 {totalPages > 1 && (

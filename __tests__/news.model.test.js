@@ -159,6 +159,52 @@ describe('News Model Test', () => {
       const savedNews = await news.save();
       expect(savedNews.tags).toEqual([]);
     });
+
+    it('should handle breaking news field', async () => {
+      const breakingNews = new News({
+        title: 'Breaking: Agricultural Innovation',
+        content: 'Important breaking news content',
+        author: 'Test Author',
+        isBreaking: true
+      });
+
+      const savedNews = await breakingNews.save();
+      expect(savedNews.isBreaking).toBe(true);
+    });
+
+    it('should default isBreaking to false', async () => {
+      const regularNews = new News({
+        title: 'Regular News',
+        content: 'Regular news content',
+        author: 'Test Author'
+      });
+
+      const savedNews = await regularNews.save();
+      expect(savedNews.isBreaking).toBe(false);
+    });
+
+    it('should handle views field', async () => {
+      const news = new News({
+        title: 'News with views',
+        content: 'News content',
+        author: 'Test Author',
+        views: 100
+      });
+
+      const savedNews = await news.save();
+      expect(savedNews.views).toBe(100);
+    });
+
+    it('should default views to 0', async () => {
+      const news = new News({
+        title: 'News without views',
+        content: 'News content',
+        author: 'Test Author'
+      });
+
+      const savedNews = await news.save();
+      expect(savedNews.views).toBe(0);
+    });
   });
 
   describe('Timestamps and Dates', () => {

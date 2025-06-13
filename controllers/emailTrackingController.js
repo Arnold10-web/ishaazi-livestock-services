@@ -1,9 +1,28 @@
-// controllers/emailTrackingController.js
+/**
+ * @file Email Tracking Controller
+ * @description Handles email and notification tracking functionality:
+ *  - Tracking email opens via transparent pixel
+ *  - Tracking email link clicks
+ *  - Tracking notification views and interactions
+ *  - Generating analytics reports for email campaigns
+ *  - Updating subscriber engagement metrics
+ * @module controllers/emailTrackingController
+ */
+
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import Notification from '../models/Notification.js';
 
-// Track email opens via tracking pixel
+/**
+ * @function trackEmailOpen
+ * @description Records email opens using a transparent tracking pixel
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.newsletterId - ID of the newsletter being tracked
+ * @param {string} req.params.email - URL-encoded email address of the recipient
+ * @param {Object} res - Express response object
+ * @returns {Buffer} 1x1 transparent PNG tracking pixel
+ */
 export const trackEmailOpen = async (req, res) => {
   try {
     const { newsletterId, email } = req.params;
@@ -53,7 +72,18 @@ export const trackEmailOpen = async (req, res) => {
   }
 };
 
-// Track email link clicks
+/**
+ * @function trackEmailClick
+ * @description Records when recipients click links in emails
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.newsletterId - ID of the newsletter being tracked
+ * @param {string} req.params.email - URL-encoded email address of the recipient
+ * @param {Object} req.query - Query parameters
+ * @param {string} [req.query.platform] - Device/platform information
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON confirmation response
+ */
 export const trackEmailClick = async (req, res) => {
   try {
     const { newsletterId, email } = req.params;
@@ -91,7 +121,16 @@ export const trackEmailClick = async (req, res) => {
   }
 };
 
-// Track notification opens via tracking pixel
+/**
+ * @function trackNotificationOpen
+ * @description Records notification opens using a tracking pixel
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.notificationId - ID of the notification being tracked
+ * @param {string} req.params.email - URL-encoded email address of the recipient
+ * @param {Object} res - Express response object
+ * @returns {Buffer} 1x1 transparent PNG tracking pixel
+ */
 export const trackNotificationOpen = async (req, res) => {
   try {
     const { notificationId, email } = req.params;
@@ -141,7 +180,17 @@ export const trackNotificationOpen = async (req, res) => {
   }
 };
 
-// Track notification clicks
+/**
+ * @function trackNotificationClick
+ * @description Records when users click on notification links
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.notificationId - ID of the notification being tracked
+ * @param {string} req.params.email - URL-encoded email address of the recipient
+ * @param {string} req.params.url - URL that was clicked (encoded)
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON confirmation response
+ */
 export const trackNotificationClick = async (req, res) => {
   try {
     const { notificationId, email, url } = req.params;
@@ -172,7 +221,15 @@ export const trackNotificationClick = async (req, res) => {
   }
 };
 
-// Get email analytics for a specific newsletter
+/**
+ * @function getNewsletterAnalytics
+ * @description Retrieves detailed performance metrics for a specific newsletter
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.newsletterId - ID of the newsletter to analyze
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with newsletter analytics
+ */
 export const getNewsletterAnalytics = async (req, res) => {
   try {
     const { newsletterId } = req.params;
@@ -219,7 +276,15 @@ export const getNewsletterAnalytics = async (req, res) => {
   }
 };
 
-// Get overall email analytics
+/**
+ * @function getOverallEmailAnalytics
+ * @description Generates comprehensive analytics for all email campaigns
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} [req.query.timeframe='30d'] - Time period for analytics (7d, 30d, 90d, etc.)
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with aggregated email campaign analytics
+ */
 export const getOverallEmailAnalytics = async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
@@ -326,6 +391,10 @@ export const getOverallEmailAnalytics = async (req, res) => {
   }
 };
 
+/**
+ * Default export of all email tracking controller functions
+ * @exports {Object} Email tracking controller functions
+ */
 export default {
   trackEmailOpen,
   trackEmailClick,

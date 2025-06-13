@@ -6,8 +6,7 @@ import {
   Share2, 
   MessageCircle, 
   Facebook, 
-  Twitter, 
-  Linkedin, 
+  Instagram, 
   Copy,
   Check
 } from 'lucide-react';
@@ -42,12 +41,16 @@ const EngagementPanel = ({ contentType, contentId, title, url }) => {
     
     const shareUrls = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+      instagram: `https://www.instagram.com/`, // Instagram doesn't support direct URL sharing
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`
     };
 
-    if (shareUrls[platform]) {
+    if (shareUrls[platform] && platform !== 'instagram') {
       window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+    } else if (platform === 'instagram') {
+      // For Instagram, we'll copy the link since direct sharing isn't supported
+      await copyLink();
     }
     
     setShowShareMenu(false);
@@ -160,19 +163,29 @@ const EngagementPanel = ({ contentType, contentId, title, url }) => {
                 </button>
                 
                 <button
-                  onClick={() => handleShare('twitter')}
-                  className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left"
+                  onClick={() => handleShare('x')}
+                  className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                 >
-                  <Twitter className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm">Twitter</span>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <span className="text-sm">X (Twitter)</span>
                 </button>
                 
                 <button
-                  onClick={() => handleShare('linkedin')}
-                  className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left"
+                  onClick={() => handleShare('instagram')}
+                  className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900/20 text-left"
                 >
-                  <Linkedin className="w-4 h-4 text-blue-700" />
-                  <span className="text-sm">LinkedIn</span>
+                  <Instagram className="w-4 h-4 text-pink-600" />
+                  <span className="text-sm">Instagram</span>
+                </button>
+                
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-left"
+                >
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">WhatsApp</span>
                 </button>
                 
                 <button

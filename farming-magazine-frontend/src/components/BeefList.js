@@ -6,7 +6,7 @@ import {
   Clock, Award, Heart 
 } from 'lucide-react';
 
-const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
   // Utility function for image error handling
   const handleImageError = (e) => {
     e.target.src = '/placeholder-image.jpg';
@@ -27,7 +27,7 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
   });
 
   // Simple skeleton loader component
-  const BeefSkeleton = () => (
+  const BeefSkeleton = ({ viewMode = 'grid' }) => (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -42,9 +42,13 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
         <div className="absolute bottom-8 left-6 w-6 h-6 bg-orange-500/10 rounded-full animate-bounce" />
       </div>
       
-      <div className="relative p-8 space-y-6">
-        <div className="aspect-[16/9] bg-gradient-to-br from-gray-200/50 to-gray-300/30 dark:from-gray-700/50 dark:to-gray-800/30 rounded-2xl animate-pulse backdrop-blur-sm border border-white/10" />
-        <div className="space-y-4">
+      <div className={`relative p-8 ${viewMode === 'list' ? 'flex flex-row space-x-6 space-y-0' : 'space-y-6'}`}>
+        <div className={`bg-gradient-to-br from-gray-200/50 to-gray-300/30 dark:from-gray-700/50 dark:to-gray-800/30 animate-pulse backdrop-blur-sm border border-white/10 ${
+          viewMode === 'list' 
+            ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-2xl' 
+            : 'aspect-[16/9] rounded-2xl'
+        }`} />
+        <div className={`space-y-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
           <div className="h-6 bg-gradient-to-r from-gray-200/50 to-gray-300/30 dark:from-gray-700/50 dark:to-gray-800/30 rounded-xl animate-pulse w-4/5" />
           <div className="h-4 bg-gradient-to-r from-gray-200/40 to-gray-300/20 dark:from-gray-700/40 dark:to-gray-800/20 rounded-lg animate-pulse w-3/5" />
           <div className="h-4 bg-gradient-to-r from-gray-200/40 to-gray-300/20 dark:from-gray-700/40 dark:to-gray-800/20 rounded-lg animate-pulse w-full" />
@@ -142,14 +146,14 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
   // Loading state
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[1, 2, 3, 4, 5, 6].map(i => <BeefSkeleton key={i} />)}
+      <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
+        {[1, 2, 3, 4, 5, 6].map(i => <BeefSkeleton key={i} viewMode={viewMode} />)}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
       <AnimatePresence mode="popLayout">
         {beefs.map((beef, index) => (
           <motion.article
@@ -157,14 +161,18 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
             initial={{ opacity: 0, y: 30, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            whileHover={{ y: -8, scale: 1.02 }}
+            whileHover={{ y: viewMode === 'list' ? -4 : -8, scale: 1.02 }}
             transition={{ 
               delay: index * 0.1,
               type: "spring",
               stiffness: 200,
               damping: 20
             }}
-            className="relative group cursor-pointer"
+            className={`relative group cursor-pointer ${
+              viewMode === 'list' 
+                ? 'flex flex-row items-stretch' 
+                : 'flex flex-col'
+            }`}
           >
             {/* Glassmorphism background */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 dark:from-white/5 dark:to-transparent backdrop-blur-xl rounded-3xl border border-white/20 dark:border-white/10 transition-all duration-500 group-hover:from-white/15 group-hover:to-white/10 dark:group-hover:from-white/8 dark:group-hover:to-white/3" />
@@ -195,7 +203,11 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
             
             <div className="relative z-10 overflow-hidden rounded-3xl">
               {beef.imageUrl && (
-                <div className="relative overflow-hidden aspect-[16/9] group-hover:scale-105 transition-transform duration-700">
+                <div className={`relative overflow-hidden group-hover:scale-105 transition-transform duration-700 ${
+                  viewMode === 'list' 
+                    ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3]' 
+                    : 'aspect-[16/9]'
+                } ${viewMode === 'list' ? 'rounded-l-3xl' : ''}`}>
                   <img
                     src={`${apiBaseUrl}${beef.imageUrl}`}
                     alt={beef.title}
@@ -230,7 +242,7 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
                 </div>
               )}
               
-              <div className="p-8 space-y-6">
+              <div className={`p-8 space-y-6 ${viewMode === 'list' ? 'flex-1' : ''}`}>
                 {/* Meta information */}
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-4 text-gray-500 dark:text-gray-400">

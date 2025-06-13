@@ -1,3 +1,12 @@
+/**
+ * FarmList Component
+ * 
+ * Renders a collection of farm listings with interactive UI elements, animations,
+ * and supports both grid and list view modes. Features include floating particles,
+ * hover effects, and admin controls.
+ * 
+ * @module components/FarmList
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +25,11 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+/**
+ * Formats price values with Ugandan Shilling currency format
+ * @param {number} price - Price value to format
+ * @returns {string} Formatted price string with UGX currency symbol
+ */
 const formatPrice = (price) => {
   return new Intl.NumberFormat('en-UG', {
     style: 'currency',
@@ -24,15 +38,38 @@ const formatPrice = (price) => {
     maximumFractionDigits: 0
   }).format(price);
 };
-const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+/**
+ * Renders a list of farm listings with support for grid and list views
+ * 
+ * @param {Object} props - Component props
+ * @param {Array} props.farms - Array of farm objects to display
+ * @param {string} props.apiBaseUrl - Base URL for API requests (used for image paths)
+ * @param {boolean} props.isAdmin - Whether to display admin controls
+ * @param {Function} props.onDelete - Callback for delete action
+ * @param {Function} props.onEdit - Callback for edit action
+ * @param {boolean} props.isLoading - Whether data is currently loading
+ * @param {string} props.viewMode - Display mode ('grid' or 'list')
+ * @returns {JSX.Element} Rendered farm list component
+ */
+const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
+  /** State to track which card is currently being hovered */
   const [hoveredCard, setHoveredCard] = useState(null);
-  // Utility: Handle image load errors
+  
+  /**
+   * Handles image loading errors by replacing with default placeholder
+   * @param {Event} e - Image error event
+   */
   const handleImageError = (e) => {
     console.error('Image failed to load:', e.target.src);
     e.target.src = '/placeholder-farm-image.jpg';
   };
 
-  // Utility: Truncate description content
+  /**
+   * Truncates HTML description content to specified length
+   * @param {string} description - HTML content to truncate
+   * @param {number} maxLength - Maximum length before truncation
+   * @returns {string} Truncated plain text with ellipsis if needed
+   */
   const truncateDescription = (description, maxLength = 150) => {
     if (!description) return '';
     const tempElement = document.createElement('div');
@@ -41,7 +78,11 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  // Utility: Format date strings
+  /**
+   * Formats date strings into localized, human-readable format
+   * @param {string} dateString - ISO date string to format
+   * @returns {string} Formatted date string (e.g., "January 1, 2023")
+   */
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -50,14 +91,21 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
     });
   };
 
-  // Enhanced skeleton loader with glassmorphism
-  const FarmSkeleton = () => (
+  /**
+   * Enhanced skeleton loader component with glassmorphism and animated particles
+   * Supports both grid and list view modes
+   * 
+   * @param {Object} props - Component props
+   * @param {string} props.viewMode - Display mode ('grid' or 'list')
+   * @returns {JSX.Element} Animated skeleton loader
+   */
+  const FarmSkeleton = ({ viewMode = 'grid' }) => (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="group relative"
     >
-      {/* Floating particles for skeleton */}
+      {/* Floating particles for skeleton - adds visual interest during loading */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(8)].map((_, i) => (
           <motion.div
@@ -81,16 +129,20 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
         ))}
       </div>
 
-      <div className="relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
-                      shadow-xl animate-pulse space-y-4 h-full">
-        <div className="h-48 bg-gradient-to-br from-teal-100/50 to-green-100/50 rounded-xl relative overflow-hidden">
+      <div className={`relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
+                      shadow-xl animate-pulse h-full ${
+                        viewMode === 'list' ? 'flex flex-row space-x-6 space-y-0' : 'space-y-4'
+                      }`}>
+        <div className={`bg-gradient-to-br from-teal-100/50 to-green-100/50 rounded-xl relative overflow-hidden ${
+          viewMode === 'list' ? 'w-48 h-32 flex-shrink-0' : 'h-48'
+        }`}>
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
             animate={{ x: [-300, 300] }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           />
         </div>
-        <div className="space-y-3">
+        <div className={`space-y-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
           <div className="h-6 bg-gradient-to-r from-teal-200/60 to-green-200/60 rounded-lg w-4/5" />
           <div className="h-4 bg-gradient-to-r from-teal-100/50 to-green-100/50 rounded w-2/3" />
           <div className="h-4 bg-gradient-to-r from-teal-100/40 to-green-100/40 rounded w-full" />
@@ -241,19 +293,25 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
     );
   }
 
-  // Loading state: Display a grid of skeleton loaders
+  // Loading state: Display skeleton loaders
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className={viewMode === 'grid' 
+        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        : "space-y-6"
+      }>
         {[1, 2, 3].map((i) => (
-          <FarmSkeleton key={i} />
+          <FarmSkeleton key={i} viewMode={viewMode} />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className={viewMode === 'grid' 
+      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+      : "space-y-6"
+    }>
       <AnimatePresence mode="popLayout">
         {farms.map((farm, index) => (
           <motion.article
@@ -268,15 +326,19 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
               damping: 30
             }}
             whileHover={{ 
-              y: -8,
+              y: viewMode === 'grid' ? -8 : -4,
               transition: { type: "spring", stiffness: 400, damping: 25 }
             }}
             onMouseEnter={() => setHoveredCard(farm._id)}
             onMouseLeave={() => setHoveredCard(null)}
-            className="group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
-                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col
+            className={`group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
+                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden
                        before:absolute before:inset-0 before:bg-gradient-to-br before:from-teal-100/20 before:to-green-100/20 
-                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500"
+                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500 ${
+                         viewMode === 'list' 
+                           ? 'flex flex-row items-stretch' 
+                           : 'flex flex-col'
+                       }`}
           >
             {/* Floating particles on hover */}
             <AnimatePresence>
@@ -312,7 +374,11 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
 
             {/* Enhanced image container */}
             {farm.imageUrl && (
-              <div className="relative overflow-hidden aspect-[16/10] rounded-t-3xl">
+              <div className={`relative overflow-hidden ${
+                viewMode === 'list' 
+                  ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3]' 
+                  : 'aspect-[16/10] rounded-t-3xl'
+              } ${viewMode === 'list' ? 'rounded-l-3xl' : ''}`}>
                 <motion.img
                   src={`${apiBaseUrl}${farm.imageUrl}`}
                   alt={farm.name}
@@ -383,7 +449,9 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
             )}
             
             {/* Enhanced content section */}
-            <div className="p-6 flex-1 flex flex-col relative z-20">
+            <div className={`p-6 flex-1 flex flex-col relative z-20 ${
+              viewMode === 'list' ? 'justify-between' : ''
+            }`}>
               {/* Meta information */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
@@ -469,7 +537,11 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="mt-4 flex gap-2 justify-end pt-3 border-t border-teal-100/50"
+                  className={`flex gap-2 justify-end ${
+                    viewMode === 'list' 
+                      ? 'mt-2' 
+                      : 'mt-4 pt-3 border-t border-teal-100/50'
+                  }`}
                 >
                   <motion.button
                     whileHover={{ scale: 1.1 }}

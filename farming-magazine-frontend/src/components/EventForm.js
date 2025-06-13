@@ -1,3 +1,12 @@
+/**
+ * EventForm Component
+ * 
+ * Form component for creating and editing farming event listings.
+ * Features rich text editing for event descriptions, image upload,
+ * date/time selection, and comprehensive metadata management.
+ * 
+ * @module components/EventForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -5,7 +14,17 @@ import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+/**
+ * Form component for creating and editing agricultural events
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshEvents - Callback to refresh events list after submission
+ * @param {Object|null} props.editingEvent - Event object being edited, null for new events
+ * @param {Function} props.setEditingEvent - Function to clear editing state
+ * @returns {JSX.Element} Rendered event form component
+ */
 const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
+  // Core event details
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -22,15 +41,24 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
   const [summary, setSummary] = useState('');
   const [published, setPublished] = useState(true);
   
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
+  /**
+   * Populates form fields when editing an existing event
+   * Handles date formatting and metadata extraction
+   */
   useEffect(() => {
     if (editingEvent) {
+      // Set core event properties
       setTitle(editingEvent.title);
       setImagePreview(editingEvent.imageUrl);
+      
+      // Format dates for datetime-local input
       setStartDate(editingEvent.startDate ? new Date(editingEvent.startDate).toISOString().slice(0, 16) : '');
       setEndDate(editingEvent.endDate ? new Date(editingEvent.endDate).toISOString().slice(0, 16) : '');
+      
       setLocation(editingEvent.location || '');
       setPublished(editingEvent.published !== false);
       
@@ -38,10 +66,13 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
       const metadata = editingEvent.metadata || {};
       setOrganizer(metadata.organizer || '');
       setCategory(metadata.category || 'Conference');
+      
+      // Handle array or string fields for tags and keywords
       setTags(metadata.tags ? (Array.isArray(metadata.tags) ? metadata.tags.join(', ') : metadata.tags) : '');
       setKeywords(metadata.keywords ? (Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : metadata.keywords) : '');
       setSummary(metadata.summary || '');
       
+      // Set rich text editor content if editor is initialized
       if (quillEditor) {
         quillEditor.root.innerHTML = editingEvent.description;
       }

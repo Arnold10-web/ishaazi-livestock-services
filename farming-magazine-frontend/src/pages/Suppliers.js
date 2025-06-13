@@ -1,6 +1,7 @@
 // Suppliers.js - Page for livestock suppliers and vendors
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Phone, Mail, Star, Filter, Grid, List } from 'lucide-react';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -256,8 +257,17 @@ const Suppliers = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Ad */}
+      <div className="py-4">
+        <DynamicAdComponent 
+          adSlot="1234567890"
+          adFormat="horizontal"
+          adStyle={{ minHeight: '90px' }}
+        />
+      </div>
+
+      <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Livestock Suppliers</h1>
@@ -356,6 +366,15 @@ const Suppliers = () => {
           </div>
         )}
 
+        {/* In-Content Ad */}
+        <div className="py-8">
+          <DynamicAdComponent 
+            adSlot="1122334455"
+            adFormat="rectangle"
+            adStyle={{ minHeight: '200px' }}
+          />
+        </div>
+
         {/* Call to Action */}
         <div className="mt-12 bg-blue-600 rounded-lg p-8 text-center text-white">
           <h2 className="text-2xl font-bold mb-2">Are you a livestock supplier?</h2>
@@ -364,7 +383,7 @@ const Suppliers = () => {
             Register as Supplier
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

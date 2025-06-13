@@ -1,3 +1,14 @@
+/**
+ * @file Dashboard Controller
+ * @description Generates comprehensive analytics and statistics for the admin dashboard:
+ *  - Content statistics and trends across all content types
+ *  - Subscriber growth and engagement metrics
+ *  - Newsletter performance analytics
+ *  - Activity streams and recent content updates
+ *  - Data visualization datasets
+ * @module controllers/dashboardController
+ */
+
 import Blog from '../models/Blog.js';
 import News from '../models/News.js';
 import Event from '../models/Event.js';
@@ -11,7 +22,17 @@ import Beef from '../models/Beef.js';
 import Goat from '../models/Goat.js';
 import Piggery from '../models/Piggery.js';
 
-// Get dashboard statistics
+/**
+ * @function getDashboardStats
+ * @description Generates comprehensive statistics for the admin dashboard
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with multiple dashboard data sections:
+ *  - Key performance indicators with trend percentages
+ *  - Content distribution across all content types
+ *  - Six-month content trend charts data
+ *  - Recent activity stream
+ */
 export const getDashboardStats = async (req, res) => {
   try {
     // Get current month and previous month for comparison
@@ -330,6 +351,13 @@ export const getDashboardStats = async (req, res) => {
 };
 
 // Reset view counts to development-friendly values
+/**
+ * @function resetViewCounts
+ * @description Development utility to reset view counts for testing
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with reset statistics and sample data
+ */
 export const resetViewCounts = async (req, res) => {
   try {
     console.log('Starting view count reset for development...');
@@ -390,7 +418,13 @@ export const resetViewCounts = async (req, res) => {
   }
 };
 
-// Helper function to get time ago
+/**
+ * @function getTimeAgo
+ * @description Helper function that converts timestamps to human-readable relative time
+ * @param {Date|string} date - The date to convert
+ * @returns {string} Human-readable time ago string (e.g., "5 minutes ago")
+ * @private
+ */
 function getTimeAgo(date) {
   const now = new Date();
   const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
@@ -402,3 +436,12 @@ function getTimeAgo(date) {
   
   return new Date(date).toLocaleDateString();
 }
+
+/**
+ * Default export of all dashboard controller functions
+ * @exports {Object} Dashboard controller functions
+ */
+export default {
+  getDashboardStats,
+  resetViewCounts
+};

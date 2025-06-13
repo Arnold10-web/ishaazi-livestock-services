@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Calendar, User, ArrowRight } from 'lucide-react';
+import { Search, Grid, List } from 'lucide-react';
+import DairyList from '../components/DairyList';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
 
 const DairyPage = () => {
@@ -10,6 +11,7 @@ const DairyPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState('grid');
   const dairiesPerPage = 9;
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -46,22 +48,6 @@ const DairyPage = () => {
   const indexOfFirst = indexOfLast - dairiesPerPage;
   const currentDairies = filteredDairies.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredDairies.length / dairiesPerPage);
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const truncateContent = (content, maxLength = 150) => {
-    if (!content) return '';
-    const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
-    let text = tempElement.textContent || tempElement.innerText;
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-  };
 
   if (loading) {
     return (
@@ -104,91 +90,99 @@ const DairyPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="section-container section-padding">
+    <div className="min-h-screen bg-gray-50">
+      <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-heading mb-6">
-            Dairy Farming
+            Excellence in Dairy: Unlock Premium Milk Production
           </h1>
           <p className="text-body text-lg md:text-xl max-w-3xl mx-auto">
-            Master dairy farming with expert techniques, management strategies, and best practices for optimal milk production and herd health.
+            Transform your dairy operation with cutting-edge techniques, proven management strategies, and veterinary insights that maximize yield while ensuring exceptional herd wellness.
           </p>
         </div>
 
-        {/* Search Section */}
-        <div className="max-w-2xl mx-auto mb-12">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search dairy articles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-lg border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-neutral-800 placeholder-neutral-500"
-            />
+        {/* Search and View Mode Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative max-w-md mx-auto">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search dairy articles..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex justify-center">
+            <div className="flex rounded-lg border border-gray-300">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center justify-center py-2 px-4 rounded-l-lg transition ${
+                  viewMode === 'grid' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Grid className="w-4 h-4 mr-2" />
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center justify-center py-2 px-4 rounded-r-lg transition ${
+                  viewMode === 'list' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <List className="w-4 h-4 mr-2" />
+                List
+              </button>
+            </div>
           </div>
         </div>
-        {/* Dairy Articles Grid */}
+        {/* Dairy Articles */}
         <div className="mb-12">
-          {currentDairies.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-body text-lg">No dairy articles found matching your search.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {currentDairies.map((dairy) => (
-                <article key={dairy._id} className="blog-card">
-                  <div className="overflow-hidden">
-                    <img
-                      src={`${API_BASE_URL}${dairy.imageUrl}`}
-                      alt={dairy.title}
-                      className="blog-card-image hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="blog-card-content">
-                    <div className="blog-card-meta">
-                      <span>{formatDate(dairy.createdAt)}</span>
-                      {dairy.author && <span> • By {dairy.author}</span>}
-                    </div>
-                    <h3 className="blog-card-title">{dairy.title}</h3>
-                    <p className="blog-card-excerpt">{truncateContent(dairy.content)}</p>
-                    <Link
-                      to={`/dairy/${dairy._id}`}
-                      className="read-more-link"
-                    >
-                      Read More
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+          <DairyList 
+            dairies={currentDairies}
+            apiBaseUrl={API_BASE_URL}
+            isLoading={loading}
+            viewMode={viewMode}
+          />
+        </div>
+
+        {/* In-Content Ad */}
+        <div className="py-8">
+          <DynamicAdComponent 
+            adSlot="1122334455"
+            adFormat="rectangle"
+            adStyle={{ minHeight: '200px' }}
+          />
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center space-x-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-6 py-2 bg-white border border-neutral-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 hover:bg-neutral-50 transition-colors duration-200"
-            >
-              Previous
-            </button>
-
-            <span className="px-4 py-2 text-neutral-600">
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-6 py-2 bg-white border border-neutral-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 hover:bg-neutral-50 transition-colors duration-200"
-            >
-              Next
-            </button>
+          <div className="flex justify-center">
+            <div className="flex space-x-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === page
+                      ? 'bg-green-600 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </main>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import API_ENDPOINTS from '../config/apiConfig';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
 const SubscriberPage = () => {
   const [email, setEmail] = useState('');
@@ -55,6 +56,15 @@ const SubscriberPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Header Ad */}
+      <div className="py-4">
+        <DynamicAdComponent 
+          adSlot="1234567890"
+          adFormat="horizontal"
+          adStyle={{ minHeight: '90px' }}
+        />
+      </div>
+
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-8 text-center">
           <div className="text-white text-5xl mb-4">🌾</div>
@@ -156,6 +166,15 @@ const SubscriberPage = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* In-Content Ad */}
+      <div className="py-8 max-w-md mx-auto">
+        <DynamicAdComponent 
+          adSlot="1122334455"
+          adFormat="rectangle"
+          adStyle={{ minHeight: '200px' }}
+        />
       </div>
     </div>
   );

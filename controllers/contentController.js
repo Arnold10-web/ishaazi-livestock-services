@@ -1,3 +1,13 @@
+/**
+ * Content Controller
+ * 
+ * Handles all content-related operations for the online farming magazine.
+ * This controller provides CRUD operations for blogs, events, news articles,
+ * farms, magazines, dairy, goat, piggery, and beef content, as well as 
+ * functions for content engagement tracking, searching, and filtering.
+ * 
+ * @module controllers/contentController
+ */
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -19,14 +29,28 @@ import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail } from '../services/emailService.js';
 
-// Define __dirname manually for ES modules
+/**
+ * Define __dirname manually for ES modules
+ * ES modules don't have access to __dirname, so we need to create it from import.meta.url
+ */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Utility: Normalize file paths
+/**
+ * Normalize file paths relative to the project root
+ * 
+ * @param {string} filePath - Path relative to project root (starting with /)
+ * @returns {string} Absolute normalized path
+ */
 const normalizePath = (filePath) => path.resolve(__dirname, `..${filePath}`);
 
-// Utility: Validate metadata
+/**
+ * Parse and validate metadata JSON 
+ * 
+ * @param {string|null} metadata - Metadata as JSON string
+ * @returns {Object} Parsed metadata object
+ * @throws {Error} If metadata is not valid JSON
+ */
 const parseMetadata = (metadata) => {
   try {
     return metadata ? JSON.parse(metadata) : {};
@@ -35,13 +59,36 @@ const parseMetadata = (metadata) => {
   }
 };
 
-// Utility: Generic CRUD Response Helper
+/**
+ * Generate consistent response format for all API endpoints
+ * 
+ * @param {Object} res - Express response object
+ * @param {boolean} success - Whether the operation was successful
+ * @param {string} message - Response message
+ * @param {Object|null} data - Response data if any
+ * @param {Object|string|null} error - Error details if any
+ * @returns {Object} JSON response with consistent format
+ */
 const sendResponse = (res, success, message, data = null, error = null) => {
   res.status(success ? 200 : 500).json({ success, message, data, error });
 };
 
-// ENGAGEMENT TRACKING FUNCTIONS
-// Generic view tracking function for all content types
+/**
+ * ENGAGEMENT TRACKING FUNCTIONS
+ * --------------------------
+ */
+
+/**
+ * Track content views for any content type
+ * Increments the view counter for the specified content item
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.contentType - Type of content (blog, news, event, etc.)
+ * @param {string} req.params.id - ID of the content item
+ * @param {Object} res - Express response object
+ * @returns {Object} Response indicating success or failure
+ */
 export const trackView = async (req, res) => {
   try {
     const { contentType, id } = req.params;
@@ -80,12 +127,25 @@ export const trackView = async (req, res) => {
   }
 };
 
-// Generic like tracking function
+/**
+ * Track likes/unlikes for any content type
+ * Increments or decrements the like counter based on the action
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.contentType - Type of content (blog, news, event, etc.)
+ * @param {string} req.params.id - ID of the content item
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.action - Either 'like' or 'unlike'
+ * @param {Object} res - Express response object
+ * @returns {Object} Response indicating success or failure with updated like count
+ */
 export const trackLike = async (req, res) => {
   try {
     const { contentType, id } = req.params;
     const { action } = req.body; // 'like' or 'unlike'
     
+    // Map of content types to their respective models
     const modelMap = {
       blogs: Blog,
       news: News,
@@ -361,6 +421,15 @@ export const createBlog = async (req, res) => {
     sendResponse(res, false, 'Failed to create blog', null, error.message);
   }
 };
+/**
+ * Retrieve a blog post by its ID
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters 
+ * @param {string} req.params.id - ID of the blog to retrieve
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with blog data or error message
+ */
 export const getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -373,10 +442,23 @@ export const getBlogById = async (req, res) => {
   }
 };
 
+/**
+ * Get a paginated list of blog posts
+ * When accessed by admin, returns all posts; otherwise returns only published posts
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.page=1] - Page number for pagination
+ * @param {number} [req.query.limit=10] - Number of items per page
+ * @param {boolean} [req.query.admin] - Whether the request is from admin (shows unpublished)
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with paginated blog list and metadata
+ */
 export const getBlogs = async (req, res) => {
   const { page = 1, limit = 10, admin } = req.query;
 
   try {
+    // Admin can see all blogs, non-admin only sees published blogs
     const query = admin ? {} : { published: true };
 
     console.log("🔥 API HIT: Fetching blogs...");
@@ -489,7 +571,7 @@ export const deleteBlog = async (req, res) => {
 // ----- NEWS CRUD -----
 export const createNews = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, metadata, published, isBreaking } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
@@ -508,7 +590,8 @@ export const createNews = async (req, res) => {
       content,
       imageUrl,
       metadata: parsedMetadata,
-      published
+      published,
+      isBreaking: isBreaking === 'true' || isBreaking === true
     });
 
     const savedNews = await newNews.save();
@@ -531,10 +614,21 @@ export const getNewsById = async (req, res) => {
 };
 
 export const getNews = async (req, res) => {
-  const { page = 1, limit = 10, admin } = req.query;
+  const { page = 1, limit = 10, admin, breaking, category } = req.query;
 
   try {
     const query = admin ? {} : { published: true };
+    
+    // Add breaking news filter if specified
+    if (breaking === 'true') {
+      query.isBreaking = true;
+    }
+    
+    // Add category filter if specified
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
     const news = await News.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -571,8 +665,14 @@ export const getAdminNews = async (req, res) => {
 export const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-    let updateData = { title, content, metadata, published };
+    const { title, content, metadata, published, isBreaking } = req.body;
+    let updateData = { 
+      title, 
+      content, 
+      metadata, 
+      published,
+      isBreaking: isBreaking === 'true' || isBreaking === true
+    };
 
     if (req.file) {
       updateData.imageUrl = `/uploads/images/${req.file.filename}`;

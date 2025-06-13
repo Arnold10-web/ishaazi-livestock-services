@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
 import MagazineList from '../components/MagazineList';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
 
 
@@ -103,97 +102,109 @@ const MagazinePage = () => {
     sessionStorage.setItem('purchasedMagazines', JSON.stringify(purchasedMagazines));
   }, [purchasedMagazines]);
 
-  // Loading state view with an animated spinner
+  // Loading state view with a simple spinner
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-   
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          >
-            <Loader2 className="w-12 h-12 text-blue-500" />
-          </motion.div>
-          <p className="mt-4 text-gray-600 font-medium">Loading magazines...</p>
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-6 text-gray-700 dark:text-gray-300 font-medium text-lg">
+            Loading our amazing magazines...
+          </p>
         </div>
-    
       </div>
     );
   }
 
-  // Error state view with an animated error container and a retry button
+  // Error state view with a simple error container and retry button
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-      
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-red-50 rounded-lg p-6 max-w-md w-full text-center"
-          >
-            <svg
-              className="w-12 h-12 text-red-500 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Oops! Something went wrong</h2>
-            <p className="text-gray-600">{error}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full text-center shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="w-16 h-16 mx-auto mb-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-red-600 dark:text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">
+              Oops! Something went wrong
+            </h2>
+            
+            <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
+              {error}
+            </p>
+            
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors duration-200"
             >
               Try Again
             </button>
-          </motion.div>
+          </div>
         </div>
-    
       </div>
     );
   }
 
-  // Main MagazinePage content with a fade-in transition
+  // Main MagazinePage content
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-gray-50"
-    >
-      
-      <main className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="container mx-auto px-4 py-12">
         {/* Page Header */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Magazines</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Explore our latest magazine issues and purchase your favorite edition.
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
+            Premium Agriculture Editions: Your Success Library
+          </h1>
+          
+          <p className="text-gray-700 dark:text-gray-300 max-w-3xl mx-auto text-lg md:text-xl leading-relaxed">
+            Transform your farm with our exclusive collection of expert-curated magazines. 
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium"> Instant access to proven strategies, breakthrough techniques, and insider knowledge</span> that successful farmers use to maximize profits and productivity.
           </p>
-        </motion.div>
-        {/* Render the MagazineList component with purchase and download functionality */}
-        <MagazineList 
-          magazines={magazines}
-          apiBaseUrl={API_BASE_URL}
-          purchasedMagazines={purchasedMagazines}
-          onPurchase={handlePurchase}
-          onDownload={handleDownload}
-          processingPurchase={processingPurchase}
-        />
+          
+          {/* Decorative elements */}
+          <div className="flex justify-center items-center mt-8 space-x-4">
+            <div className="w-20 h-0.5 bg-emerald-500"></div>
+            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+            <div className="w-20 h-0.5 bg-blue-500"></div>
+          </div>
+        </div>
+        
+        {/* Magazine List */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+          <MagazineList 
+            magazines={magazines}
+            apiBaseUrl={API_BASE_URL}
+            purchasedMagazines={purchasedMagazines}
+            onPurchase={handlePurchase}
+            onDownload={handleDownload}
+            processingPurchase={processingPurchase}
+          />
+        </div>
+        
+        {/* Content Ad */}
+        <div className="mt-16 mb-12">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+            <DynamicAdComponent 
+              adSlot="1122334455"
+              adFormat="rectangle"
+              adStyle={{ minHeight: '200px' }}
+            />
+          </div>
+        </div>
       </main>
-   
-    </motion.div>
+    </div>
   );
 };
 

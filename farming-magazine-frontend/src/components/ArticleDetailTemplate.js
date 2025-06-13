@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, ArrowLeft, Share2, Facebook, Twitter, Linkedin,
+  Calendar, Clock, ArrowLeft, Share2, Facebook, Instagram, MessageCircle,
   X, Eye, User, Tag as TagIcon, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,11 +62,22 @@ const ArticleDetailTemplate = ({
       case 'facebook':
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
         break;
-      case 'twitter':
+      case 'x':
         shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`;
         break;
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+      case 'instagram':
+        // Instagram doesn't support direct URL sharing, so we'll copy the link
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+          console.error('Failed to copy URL:', err);
+        }
+        setShowShareMenu(false);
+        return;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`;
         break;
       case 'copy':
         try {
@@ -76,6 +87,7 @@ const ArticleDetailTemplate = ({
         } catch (err) {
           console.error('Failed to copy URL:', err);
         }
+        setShowShareMenu(false);
         return;
       default:
         return;
@@ -182,18 +194,25 @@ const ArticleDetailTemplate = ({
                         <span className="text-sm">Facebook</span>
                       </button>
                       <button
-                        onClick={() => handleShare('twitter')}
-                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/20 text-left"
+                        onClick={() => handleShare('x')}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                       >
-                        <Twitter className="w-4 h-4 text-sky-600" />
-                        <span className="text-sm">Twitter</span>
+                        <X className="w-4 h-4 text-gray-900" />
+                        <span className="text-sm">X</span>
                       </button>
                       <button
-                        onClick={() => handleShare('linkedin')}
-                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left"
+                        onClick={() => handleShare('instagram')}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900/20 text-left"
                       >
-                        <Linkedin className="w-4 h-4 text-blue-700" />
-                        <span className="text-sm">LinkedIn</span>
+                        <Instagram className="w-4 h-4 text-pink-600" />
+                        <span className="text-sm">Instagram</span>
+                      </button>
+                      <button
+                        onClick={() => handleShare('whatsapp')}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-left"
+                      >
+                        <MessageCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">WhatsApp</span>
                       </button>
                       <button
                         onClick={() => handleShare('copy')}

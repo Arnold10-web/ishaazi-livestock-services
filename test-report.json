@@ -1,0 +1,173 @@
+{
+  "summary": {
+    "total": 27,
+    "passed": 26,
+    "failed": 1,
+    "successRate": "96.3"
+  },
+  "details": [
+    {
+      "test": "Health endpoint responds",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.372Z"
+    },
+    {
+      "test": "Health endpoint returns valid JSON",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.372Z"
+    },
+    {
+      "test": "GET /api/content/blogs",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.389Z"
+    },
+    {
+      "test": "Blogs endpoint returns data structure",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.389Z"
+    },
+    {
+      "test": "GET /api/content/news",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.660Z"
+    },
+    {
+      "test": "GET /api/content/events",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.806Z"
+    },
+    {
+      "test": "GET /api/content/farms",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:56.931Z"
+    },
+    {
+      "test": "GET /api/content/auctions",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.020Z"
+    },
+    {
+      "test": "Search functionality works",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.085Z"
+    },
+    {
+      "test": "Pagination works",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.164Z"
+    },
+    {
+      "test": "Category filtering works",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.240Z"
+    },
+    {
+      "test": "Admin stats requires authentication",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.269Z"
+    },
+    {
+      "test": "Admin profile requires authentication",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.283Z"
+    },
+    {
+      "test": "Admin dashboard requires authentication",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.304Z"
+    },
+    {
+      "test": "File upload requires authentication",
+      "passed": false,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.313Z"
+    },
+    {
+      "test": "Rate limiting allows normal traffic",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.453Z"
+    },
+    {
+      "test": "X-Content-Type-Options header present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.471Z"
+    },
+    {
+      "test": "X-Frame-Options header present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.476Z"
+    },
+    {
+      "test": "Content-Security-Policy header present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.476Z"
+    },
+    {
+      "test": "Strict-Transport-Security header present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.478Z"
+    },
+    {
+      "test": "XSS input is rejected or sanitized",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.509Z"
+    },
+    {
+      "test": "NoSQL injection is prevented",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.537Z"
+    },
+    {
+      "test": "Empty data is rejected",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.636Z"
+    },
+    {
+      "test": "404 for non-existent endpoints",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.659Z"
+    },
+    {
+      "test": "Invalid ID format handled",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.685Z"
+    },
+    {
+      "test": "CORS preflight request works",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.710Z"
+    },
+    {
+      "test": "CORS headers present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-06-09T09:38:57.710Z"
+    }
+  ],
+  "timestamp": "2025-06-09T09:38:57.716Z"
+}

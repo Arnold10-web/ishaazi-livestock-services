@@ -1,3 +1,12 @@
+/**
+ * NewsForm Component
+ * 
+ * Form component for creating and editing farming news articles.
+ * Features rich text editing with Quill, image upload functionality,
+ * breaking news designation, and location-based metadata.
+ * 
+ * @module components/NewsForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -5,7 +14,17 @@ import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+/**
+ * Form component for creating and editing farming news articles
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshNews - Callback to refresh news list after submission
+ * @param {Object|null} props.editingNews - News article object being edited, or null when creating new
+ * @param {Function} props.setEditingNews - Callback to reset the editing state
+ * @returns {JSX.Element} Rendered form component
+ */
 const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
+  // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('general');
@@ -13,14 +32,28 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   const [keywords, setKeywords] = useState('');
   const [summary, setSummary] = useState('');
   const [location, setLocation] = useState('');
+  
+  // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // News-specific state
   const [published, setPublished] = useState(false);
+  const [isBreaking, setIsBreaking] = useState(false);
+  
+  // UI state
   const [error, setError] = useState('');
+  
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
-  // Helper function to convert simple inputs to metadata JSON
+  /**
+   * Generate structured metadata from form fields
+   * Creates a metadata object with SEO, location, and content preview information
+   * 
+   * @returns {Object} Formatted metadata object with keywords, summary and location
+   */
   const generateMetadata = () => {
     const metadata = {};
     if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
@@ -36,6 +69,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
       setCategory(editingNews.category || 'general');
       setTags(editingNews.tags ? editingNews.tags.join(', ') : '');
       setPublished(editingNews.published || false);
+      setIsBreaking(editingNews.isBreaking || false);
       setImagePreview(editingNews.imageUrl);
       
       // Extract metadata fields
@@ -99,6 +133,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     setSummary('');
     setLocation('');
     setPublished(false);
+    setIsBreaking(false);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
@@ -130,6 +165,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     formData.append('tags', JSON.stringify(tagsArray));
     formData.append('metadata', JSON.stringify(metadata));
     formData.append('published', published);
+    formData.append('isBreaking', isBreaking);
     if (image) formData.append('image', image);
 
     try {
@@ -253,6 +289,24 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
               />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Publish immediately</span>
             </label>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="isBreaking" className="flex items-center space-x-2">
+              <input
+                id="isBreaking"
+                type="checkbox"
+                checked={isBreaking}
+                onChange={(e) => setIsBreaking(e.target.checked)}
+                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                🚨 Mark as Breaking News
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+              Breaking news will appear in the scrolling marquee banner
+            </p>
           </div>
         </div>
 

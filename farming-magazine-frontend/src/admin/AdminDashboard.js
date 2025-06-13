@@ -9,6 +9,7 @@ const EmailTesting = lazy(() => import('./EmailTesting'));
 const EmailAnalytics = lazy(() => import('./EmailAnalytics'));
 const NotificationManagement = lazy(() => import('./NotificationManagement'));
 const PerformanceDashboard = lazy(() => import('../components/PerformanceDashboard'));
+const SecurityDashboard = lazy(() => import('../components/SecurityDashboard'));
 
 function getIconForTab(tab) {
   const icons = {
@@ -92,6 +93,7 @@ const AdminDashboard = () => {
     { id: 'email-analytics', label: 'Email Analytics' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'performance', label: 'Performance Dashboard' },
+    { id: 'security', label: 'Security' },
   ];
 
   // Generate breadcrumb based on active tab
@@ -278,6 +280,8 @@ const AdminDashboard = () => {
                   <NotificationManagement theme={darkMode ? 'dark' : 'light'} />
                 ) : activeTab === 'performance' ? (
                   <PerformanceDashboard darkMode={darkMode} />
+                ) : activeTab === 'security' ? (
+                  <SecurityDashboard darkMode={darkMode} />
                 ) : (
                   <ContentManagement activeTab={activeTab} darkMode={darkMode} />
                 )}

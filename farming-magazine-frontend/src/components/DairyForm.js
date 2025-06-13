@@ -1,3 +1,12 @@
+/**
+ * DairyForm Component
+ * 
+ * Form component for creating and editing dairy farming content.
+ * Features rich text editing with Quill, image upload and preview,
+ * and comprehensive metadata management for dairy farming articles.
+ * 
+ * @module components/DairyForm
+ */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
@@ -5,7 +14,17 @@ import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 
+/**
+ * Form component for creating and editing dairy farming articles
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.refreshDairies - Callback to refresh dairy content list after submission
+ * @param {Object|null} props.editingDairy - Dairy article object being edited, or null when creating new
+ * @param {Function} props.setEditingDairy - Callback to reset the editing state
+ * @returns {JSX.Element} Rendered form component
+ */
 const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
+  // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('Dairy');
@@ -15,14 +34,25 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
   const [readTime, setReadTime] = useState(5);
+  
+  // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // UI state
   const [error, setError] = useState('');
+  
+  // Rich text editor references
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
+  /**
+   * Populate form fields when editing an existing dairy article
+   * Handles both direct properties and nested metadata
+   */
   useEffect(() => {
     if (editingDairy) {
+      // Set basic article properties
       setTitle(editingDairy.title);
       setCategory(editingDairy.category || 'Dairy');
       setTags(editingDairy.tags ? editingDairy.tags.join(', ') : '');
@@ -37,13 +67,20 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
         setSummary(editingDairy.metadata.summary || '');
       }
       
+      // Set image preview using existing image URL
       setImagePreview(editingDairy.imageUrl);
+      
+      // Set rich text editor content
       if (quillEditor) {
         quillEditor.root.innerHTML = editingDairy.content;
       }
     }
   }, [editingDairy, quillEditor]);
 
+  /**
+   * Initialize the Quill rich text editor
+   * Sets up the editor with appropriate configuration and toolbar options
+   */
   const initializeQuill = useCallback(() => {
     if (quillRef.current && !quillEditor) {
       const editor = new Quill(quillRef.current, {
@@ -62,6 +99,10 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     }
   }, [quillEditor]);
 
+  /**
+   * Setup and cleanup for the Quill editor
+   * Initializes the editor when the component mounts and cleans up event listeners when unmounting
+   */
   useEffect(() => {
     initializeQuill();
     return () => {
@@ -71,6 +112,12 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     };
   }, [initializeQuill, quillEditor]);
 
+  /**
+   * Handle image file selection for upload
+   * Creates a preview of the selected image and stores the file for form submission
+   * 
+   * @param {Event} e - The file input change event
+   */
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setImage(file);
@@ -83,6 +130,10 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     }
   };
 
+  /**
+   * Reset the form to its initial state
+   * Clears all form fields, image preview, and editing state
+   */
   const resetForm = () => {
     setTitle('');
     setAuthor('');
@@ -101,6 +152,12 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     setEditingDairy(null);
   };
 
+  /**
+   * Generate structured metadata from form fields
+   * Creates a metadata object with SEO and content preview information
+   * 
+   * @returns {Object} Formatted metadata object with author, keywords, and summary
+   */
   const generateMetadata = () => {
     const metadata = {};
     if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
@@ -109,18 +166,27 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     return metadata;
   };
 
+  /**
+   * Handle form submission with validation
+   * Creates or updates dairy farming content through API calls
+   * 
+   * @param {Event} e - Form submission event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const content = quillEditor ? quillEditor.root.innerHTML : '';
 
+    // Form validation
     if (!title.trim() || !content.trim()) {
       setError('Title and content are required.');
       return;
     }
 
+    // Prepare data for submission
     const metadata = generateMetadata();
     const parsedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
+    // Build FormData object for submission (supports file uploads)
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
@@ -134,8 +200,9 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
 
     try {
       setError('');
+      
+      // Handle updating existing dairy content
       if (editingDairy) {
-       
         await axios.put(API_ENDPOINTS.UPDATE_DAIRY(editingDairy._id), formData,{
           headers: {
             ...getAuthHeader(),
@@ -143,7 +210,9 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
           },
         });
         alert('Dairy farming content updated successfully!');
-      } else {
+      } 
+      // Handle creating new dairy content
+      else {
         await axios.post(API_ENDPOINTS.CREATE_DAIRY, formData, {
           headers: {
             ...getAuthHeader(),
@@ -152,9 +221,12 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
         });
         alert('Dairy farming content created successfully!');
       }
+      
+      // Refresh list and reset form on success
       refreshDairies();
       resetForm();
     } catch (error) {
+      // Handle and display submission errors
       console.error('Error saving dairy farming content:', error);
       setError(error.response?.data?.message || 'Failed to save dairy farming content');
     }

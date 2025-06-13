@@ -1,9 +1,22 @@
+/**
+ * Main Application Component
+ * 
+ * Root component that sets up routing, layouts, code-splitting, performance monitoring,
+ * analytics tracking, and service worker registration. Implements lazy loading for
+ * non-critical components to optimize initial load performance.
+ * 
+ * @module App
+ */
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Outlet, useLocation } from 'react-router-dom';
 
-// Eager load components for critical paths
+// Eager load components for critical paths that should be available immediately
 import Header from './components/Header';
 import Footer from './components/Footer';
+
+// Import utilities for analytics and performance monitoring
+import { analytics } from './utils/analytics';
+import { performanceMonitor } from './utils/performance';
 
 // Lazy load pages for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -36,7 +49,12 @@ const Suppliers = lazy(() => import('./pages/Suppliers'));
 const Advertisements = lazy(() => import('./pages/Advertisements'));
 const Auctions = lazy(() => import('./pages/Auctions'));
 
-// Loading component for suspense fallbacks
+/**
+ * Loading component displayed during code-splitting lazy loads
+ * Shows a spinner with subtle animation and text for better user experience
+ * 
+ * @returns {JSX.Element} Loading spinner component
+ */
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center">
@@ -46,33 +64,75 @@ const PageLoader = () => (
   </div>
 );
 
-// Layout component with Header and Footer
-const MainLayout = () => (
-  <>
-    <Header />
-    <main className="relative flex-grow">
-      <Outlet />
-    </main>
-    <Footer />
-  </>
-);
+/**
+ * Main layout component with shared header and footer
+ * Handles analytics tracking and auto-scrolls to top on page changes
+ * 
+ * @returns {JSX.Element} Layout component with outlet for route content
+ */
+const MainLayout = () => {
+  const location = useLocation();
 
-// Layout for admin pages (no header/footer)
+  useEffect(() => {
+    // Track page views for analytics reporting
+    analytics.trackEvent('page_view', {
+      path: location.pathname,
+      title: document.title
+    });
+
+    // Scroll to top on route change for better user experience
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return (
+    <>
+      <Header />
+      <main className="relative flex-grow">
+        <Outlet />
+      </main>
+      <Footer />
+    </>
+  );
+};
+
+/**
+ * Admin layout component without standard header and footer
+ * Used for admin-specific pages like dashboard and authentication
+ * 
+ * @returns {JSX.Element} Admin layout component with outlet for route content
+ */
 const AdminLayout = () => (
   <main className="min-h-screen">
     <Outlet />
   </main>
 );
 
+/**
+ * Main application component that initializes the application
+ * Sets up performance monitoring, service worker, resource preloading,
+ * and global error handling
+ * 
+ * @returns {JSX.Element} Router with configured routes and layouts
+ */
 const App = () => {
   useEffect(() => {
-    // Register service worker
+    // Initialize performance monitoring in development environment
+    // Collects Core Web Vitals metrics for optimization
+    if (process.env.NODE_ENV === 'development') {
+      performanceMonitor.measureCoreWebVitals().then(vitals => {
+        performanceMonitor.logMetrics(vitals);
+      });
+    }
+
+    // Register service worker for offline capabilities in production
+    // Handles caching, updates, and offline functionality
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
             console.log('SW registered: ', registration);
-            
+            analytics.trackEvent('service_worker_registered');
+
             // Check for updates
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
@@ -89,6 +149,7 @@ const App = () => {
           })
           .catch((registrationError) => {
             console.log('SW registration failed: ', registrationError);
+            analytics.trackError(registrationError, { context: 'service_worker_registration' });
           });
       });
     }
@@ -105,6 +166,30 @@ const App = () => {
       link.href = resource;
       link.as = resource.endsWith('.css') ? 'style' : 'script';
       document.head.appendChild(link);
+    });
+
+    // Track app initialization
+    analytics.trackEvent('app_initialized', {
+      userAgent: navigator.userAgent,
+      screenResolution: `${window.screen.width}x${window.screen.height}`,
+      viewport: `${window.innerWidth}x${window.innerHeight}`
+    });
+
+    // Global error handler
+    window.addEventListener('error', (event) => {
+      analytics.trackError(event.error, {
+        context: 'global_error_handler',
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno
+      });
+    });
+
+    // Unhandled promise rejection handler
+    window.addEventListener('unhandledrejection', (event) => {
+      analytics.trackError(new Error(event.reason), {
+        context: 'unhandled_promise_rejection'
+      });
     });
   }, []);
 

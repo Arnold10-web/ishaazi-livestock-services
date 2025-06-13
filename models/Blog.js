@@ -1,6 +1,33 @@
-// models/Blog.js
+/**
+ * Blog Model
+ * 
+ * Represents blog articles in the farming magazine. Includes content management,
+ * metadata, engagement tracking, and a comment system.
+ * 
+ * @module models/Blog
+ */
 import mongoose from 'mongoose';
 
+/**
+ * Blog Schema Definition
+ * 
+ * @typedef {Object} BlogSchema
+ * @property {string} title - Blog post title
+ * @property {string} content - Blog post content, typically HTML from rich text editor
+ * @property {string} [imageUrl] - URL to the featured image
+ * @property {Object} [metadata] - Additional metadata like author, keywords, SEO content
+ * @property {boolean} [published=true] - Whether the blog is publicly visible
+ * @property {Date} [publishedAt] - Date when blog was first published
+ * @property {boolean} [notificationSent=false] - Whether notification was sent for this blog
+ * @property {number} [views=0] - Number of views/reads
+ * @property {number} [likes=0] - Number of likes/upvotes
+ * @property {number} [shares=0] - Number of times shared
+ * @property {string} [category=General] - Blog category
+ * @property {string[]} [tags] - Array of tags
+ * @property {number} [readTime=5] - Estimated reading time in minutes
+ * @property {boolean} [featured=false] - Whether this is a featured blog post
+ * @property {Array} [comments] - Array of user comments
+ */
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -31,7 +58,14 @@ const blogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Middleware to set publishedAt and trigger notifications
+/**
+ * Middleware to set publishedAt timestamp and trigger notifications
+ * Runs before saving a blog document
+ * 
+ * @function pre-save
+ * @async
+ * @param {Function} next - Mongoose middleware next function
+ */
 blogSchema.pre('save', async function(next) {
   try {
     // Set publishedAt when blog is published for the first time

@@ -15,7 +15,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
   const [hoveredCard, setHoveredCard] = useState(null);
   // Utility function for image error handling
   const handleImageError = (e) => {
@@ -37,7 +37,7 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
   });
 
   // Enhanced skeleton loader component with glassmorphism
-  const GoatSkeleton = () => (
+  const GoatSkeleton = ({ viewMode = 'grid' }) => (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -67,16 +67,22 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
         ))}
       </div>
 
-      <div className="relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
-                      shadow-xl animate-pulse space-y-4 h-full">
-        <div className="h-48 bg-gradient-to-br from-emerald-100/50 to-green-100/50 rounded-xl relative overflow-hidden">
+      <div className={`relative backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 
+                      shadow-xl animate-pulse space-y-4 h-full ${
+                        viewMode === 'list' ? 'flex flex-row space-x-6 space-y-0' : 'flex flex-col'
+                      }`}>
+        <div className={`bg-gradient-to-br from-emerald-100/50 to-green-100/50 rounded-xl relative overflow-hidden ${
+          viewMode === 'list' 
+            ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3]' 
+            : 'h-48'
+        }`}>
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
             animate={{ x: [-300, 300] }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           />
         </div>
-        <div className="space-y-3">
+        <div className={`space-y-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
           <div className="h-6 bg-gradient-to-r from-emerald-200/60 to-green-200/60 rounded-lg w-4/5" />
           <div className="h-4 bg-gradient-to-r from-emerald-100/50 to-green-100/50 rounded w-2/3" />
           <div className="h-4 bg-gradient-to-r from-emerald-100/40 to-green-100/40 rounded w-full" />
@@ -212,14 +218,14 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
   // Loading state
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map(i => <GoatSkeleton key={i} />)}
+      <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
+        {[1, 2, 3].map(i => <GoatSkeleton key={i} viewMode={viewMode} />)}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
       <AnimatePresence mode="popLayout">
         {goats.map((goat, index) => (
           <motion.article
@@ -234,15 +240,19 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
               damping: 30
             }}
             whileHover={{ 
-              y: -8,
+              y: viewMode === 'list' ? -4 : -8,
               transition: { type: "spring", stiffness: 400, damping: 25 }
             }}
             onMouseEnter={() => setHoveredCard(goat._id)}
             onMouseLeave={() => setHoveredCard(null)}
-            className="group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
-                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col
+            className={`group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
+                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden ${
+                         viewMode === 'list' 
+                           ? 'flex flex-row items-stretch' 
+                           : 'flex flex-col'
+                       }
                        before:absolute before:inset-0 before:bg-gradient-to-br before:from-emerald-100/20 before:to-green-100/20 
-                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500"
+                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500`}
           >
             {/* Floating particles on hover */}
             <AnimatePresence>
@@ -278,7 +288,11 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
 
             {/* Image container */}
             {goat.imageUrl && (
-              <div className="relative overflow-hidden aspect-[16/10] rounded-t-3xl">
+              <div className={`relative overflow-hidden ${
+                viewMode === 'list' 
+                  ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-l-3xl' 
+                  : 'aspect-[16/10] rounded-t-3xl'
+              }`}>
                 <motion.img
                   src={`${apiBaseUrl}${goat.imageUrl}`}
                   alt={goat.title}
@@ -339,7 +353,7 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
             )}
             
             {/* Enhanced content section */}
-            <div className="p-6 flex-1 flex flex-col relative z-20">
+            <div className={`p-6 flex-1 flex flex-col relative z-20 ${viewMode === 'list' ? 'justify-between' : ''}`}>
               {/* Meta information */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}

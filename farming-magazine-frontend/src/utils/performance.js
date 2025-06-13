@@ -1,26 +1,23 @@
 // Performance optimization utilities for farming magazine
+import React from 'react';
 
 // Image lazy loading and optimization
 export const optimizeImage = (src, options = {}) => {
-  const {
-    width = 800,
-    height = 600,
-    quality = 80,
-    format = 'webp',
-    fallback = 'jpg'
-  } = options;
+  // Extract options for future use when implementing image optimization service
+  // Currently unused but kept for API compatibility
+  // const { width = 800, height = 600, quality = 80, format = 'webp', fallback = 'jpg' } = options;
 
   // In production, this would integrate with an image optimization service
   // For now, we'll return the original with some basic optimizations
   if (!src) return '/images/placeholder.jpg';
   
-  // Check if browser supports WebP
-  const supportsWebP = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
-    return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-  };
+  // Check if browser supports WebP (reserved for future implementation)
+  // const supportsWebP = () => {
+  //   const canvas = document.createElement('canvas');
+  //   canvas.width = 1;
+  //   canvas.height = 1;
+  //   return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  // };
 
   // Return optimized image URL (mock implementation)
   const optimizedSrc = src.includes('http') 
@@ -30,9 +27,9 @@ export const optimizeImage = (src, options = {}) => {
   return optimizedSrc;
 };
 
-// Lazy loading hook for images
+// Enhanced lazy loading hook for images with error handling
 export const useLazyLoading = (ref, options = {}) => {
-  const { threshold = 0.1, rootMargin = '50px' } = options;
+  const { threshold = 0.1, rootMargin = '50px', fallbackSrc = '/images/placeholder.jpg' } = options;
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -42,8 +39,23 @@ export const useLazyLoading = (ref, options = {}) => {
             const img = entry.target;
             const src = img.dataset.src;
             if (src) {
-              img.src = src;
-              img.classList.remove('lazy');
+              // Add loading state
+              img.classList.add('loading');
+
+              // Create a new image to test loading
+              const testImg = new Image();
+              testImg.onload = () => {
+                img.src = src;
+                img.classList.remove('lazy', 'loading');
+                img.classList.add('loaded');
+              };
+              testImg.onerror = () => {
+                img.src = fallbackSrc;
+                img.classList.remove('lazy', 'loading');
+                img.classList.add('error');
+              };
+              testImg.src = src;
+
               observer.unobserve(img);
             }
           }
@@ -58,7 +70,7 @@ export const useLazyLoading = (ref, options = {}) => {
     }
 
     return () => observer.disconnect();
-  }, [ref, threshold, rootMargin]);
+  }, [ref, threshold, rootMargin, fallbackSrc]);
 };
 
 // Debounce utility for search and scroll events

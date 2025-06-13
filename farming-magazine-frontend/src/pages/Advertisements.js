@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, MessageSquare, Mail, Star, Users, Globe, TrendingUp } from 'lucide-react';
+import DynamicAdComponent from '../components/DynamicAdComponent';
 
 const Advertisements = () => {
   const [showContactModal, setShowContactModal] = useState(false);
@@ -63,6 +64,15 @@ const Advertisements = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Header Ad */}
+      <div className="py-4">
+        <DynamicAdComponent 
+          adSlot="1234567890"
+          adFormat="horizontal"
+          adStyle={{ minHeight: '90px' }}
+        />
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -166,6 +176,15 @@ const Advertisements = () => {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* In-Content Ad */}
+        <div className="py-8">
+          <DynamicAdComponent 
+            adSlot="1122334455"
+            adFormat="rectangle"
+            adStyle={{ minHeight: '200px' }}
+          />
         </div>
 
         {/* Call to Action */}

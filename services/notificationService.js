@@ -1,9 +1,31 @@
-// services/notificationService.js
+/**
+ * Notification Service
+ * 
+ * This service manages the creation, delivery, and tracking of notifications
+ * for the farming magazine platform. It supports both in-app notifications and
+ * email notifications for different types of content updates (blogs, news, events, etc.).
+ * 
+ * The service handles:
+ * - Creating notifications when new content is published
+ * - Sending email notifications to subscribers
+ * - Managing notification preferences
+ * - Tracking notification delivery and open rates
+ * - Batching notifications to prevent overwhelming users
+ * 
+ * @module services/notificationService
+ */
 import nodemailer from 'nodemailer';
 import Subscriber from '../models/Subscriber.js';
 import Notification from '../models/Notification.js';
 
-// Email configuration (reusing from emailService.js)
+/**
+ * Creates and configures a Nodemailer transporter for sending notification emails
+ * 
+ * Uses a connection pool for better performance when sending multiple notifications
+ * and implements rate limiting to prevent being flagged as spam.
+ * 
+ * @returns {nodemailer.Transporter} Configured email transporter
+ */
 const createTransporter = () => {
   const config = {
     service: 'gmail',
@@ -20,7 +42,20 @@ const createTransporter = () => {
   return nodemailer.createTransporter(config);
 };
 
-// Create notification email template
+/**
+ * Creates an HTML email template for content notifications
+ * 
+ * Generates a responsive HTML email with content information, appropriate styling
+ * based on content type, and tracking pixel for open rate analytics.
+ * 
+ * @param {string} title - The title of the content being notified about
+ * @param {string} description - Brief description or excerpt of the content
+ * @param {string} contentType - Type of content (blog, news, event, magazine)
+ * @param {string} contentUrl - URL to view the full content
+ * @param {string} subscriberEmail - Email of the subscriber (for tracking)
+ * @param {string|null} notificationId - Optional ID for tracking notification opens
+ * @returns {string} Complete HTML template for the notification email
+ */
 const createNotificationTemplate = (title, description, contentType, contentUrl, subscriberEmail, notificationId = null) => {
   const trackingPixelUrl = notificationId ? 
     `http://localhost:5000/api/email/track/open/notification/${notificationId}/${encodeURIComponent(subscriberEmail)}` : '';

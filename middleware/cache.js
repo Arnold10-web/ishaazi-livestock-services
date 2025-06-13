@@ -1,16 +1,41 @@
 /**
- * Redis caching middleware for performance optimization
+ * @file Cache Middleware
+ * @description Redis-based caching system for API performance optimization:
+ *  - Singleton cache service for centralized cache management
+ *  - Middleware for automatic response caching
+ *  - Cache invalidation on data mutations
+ *  - Graceful fallback when Redis is unavailable
+ * @module middleware/cache
  */
 
 import redis from 'redis';
 
+/**
+ * @class CacheService
+ * @description Provides Redis-based caching functionality with error handling and fallbacks
+ */
 class CacheService {
+  /**
+   * @constructor
+   * @description Creates a new CacheService instance and initializes the Redis client
+   */
   constructor() {
+    /** @private {Object} Redis client instance */
     this.client = null;
+    
+    /** @private {boolean} Connection status flag */
     this.isConnected = false;
+    
+    // Initialize the client when service is instantiated
     this.initializeClient();
   }
 
+  /**
+   * @method initializeClient
+   * @async
+   * @description Sets up Redis client with connection handling, retry logic, and error management
+   * @private
+   */
   async initializeClient() {
     try {
       // Create Redis client with fallback configuration
@@ -56,6 +81,13 @@ class CacheService {
     }
   }
 
+  /**
+   * @method get
+   * @async
+   * @description Retrieves a value from cache by key with error handling
+   * @param {string} key - Cache key to retrieve
+   * @returns {Object|null} Parsed cached value or null if not found/error
+   */
   async get(key) {
     if (!this.isConnected || !this.client) {
       return null;
@@ -70,6 +102,15 @@ class CacheService {
     }
   }
 
+  /**
+   * @method set
+   * @async
+   * @description Stores a value in cache with expiration
+   * @param {string} key - Cache key
+   * @param {*} value - Value to cache (will be JSON stringified)
+   * @param {number} ttlSeconds - Time to live in seconds (default: 300s/5min)
+   * @returns {boolean} Success status
+   */
   async set(key, value, ttlSeconds = 300) {
     if (!this.isConnected || !this.client) {
       return false;
@@ -84,6 +125,13 @@ class CacheService {
     }
   }
 
+  /**
+   * @method del
+   * @async
+   * @description Deletes a value from cache by key
+   * @param {string} key - Cache key to delete
+   * @returns {boolean} Success status
+   */
   async del(key) {
     if (!this.isConnected || !this.client) {
       return false;
@@ -98,6 +146,12 @@ class CacheService {
     }
   }
 
+  /**
+   * @method flush
+   * @async
+   * @description Clears all cached data
+   * @returns {boolean} Success status
+   */
   async flush() {
     if (!this.isConnected || !this.client) {
       return false;
@@ -112,6 +166,13 @@ class CacheService {
     }
   }
 
+  /**
+   * @method generateKey
+   * @description Creates a deterministic cache key from a prefix and parameters
+   * @param {string} prefix - Base key prefix (typically an API endpoint path)
+   * @param {Object} params - Query parameters to include in the key
+   * @returns {string} Formatted cache key
+   */
   generateKey(prefix, params = {}) {
     const paramString = Object.keys(params)
       .sort()
@@ -121,10 +182,18 @@ class CacheService {
   }
 }
 
-// Create singleton instance
+/**
+ * @constant {CacheService} cacheService
+ * @description Singleton instance of the cache service for application-wide use
+ */
 const cacheService = new CacheService();
 
-// Middleware function for caching API responses
+/**
+ * @function cacheMiddleware
+ * @description Express middleware that automatically caches GET responses
+ * @param {number} ttlSeconds - Cache time-to-live in seconds (default: 300s/5min)
+ * @returns {Function} Express middleware function
+ */
 export const cacheMiddleware = (ttlSeconds = 300) => {
   return async (req, res, next) => {
     // Skip caching for non-GET requests
@@ -171,7 +240,12 @@ export const cacheMiddleware = (ttlSeconds = 300) => {
   };
 };
 
-// Cache invalidation middleware
+/**
+ * @function invalidateCache
+ * @description Middleware that invalidates cache entries after successful operations
+ * @param {Array<string>} patterns - Cache key patterns to invalidate (not currently used)
+ * @returns {Function} Express middleware function
+ */
 export const invalidateCache = (patterns = []) => {
   return async (req, res, next) => {
     // Store original response methods
@@ -208,4 +282,8 @@ export const invalidateCache = (patterns = []) => {
   };
 };
 
+/**
+ * Default export of the singleton cache service instance
+ * @exports cacheService
+ */
 export default cacheService;

@@ -1,8 +1,28 @@
-// controllers/notificationController.js
+/**
+ * @file Notification Controller
+ * @description Handles all operations related to system notifications, including:
+ *  - Retrieving notifications with analytics
+ *  - Generating dashboard analytics for notifications
+ *  - Triggering manual notifications for content
+ *  - Managing notifications (delete/resend)
+ * @module controllers/notificationController
+ */
+
 import Notification from '../models/Notification.js';
 import { sendContentNotification } from '../services/notificationService.js';
 
-// Get all notifications with analytics
+/**
+ * @function getNotifications
+ * @description Retrieves notifications with pagination, filtering, and analytics
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.page=1] - Current page number
+ * @param {number} [req.query.limit=20] - Number of notifications per page
+ * @param {string} [req.query.status] - Filter by notification status
+ * @param {string} [req.query.contentType] - Filter by content type
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with notifications, pagination data, and analytics
+ */
 export const getNotifications = async (req, res) => {
   try {
     const { page = 1, limit = 20, status, contentType } = req.query;
@@ -71,7 +91,15 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// Get notification analytics dashboard data
+/**
+ * @function getNotificationAnalytics
+ * @description Generates comprehensive notification analytics for dashboards
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {string} [req.query.timeframe='30d'] - Time period for analytics (7d, 30d, or 90d)
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with summary stats, content type breakdown, and daily activity
+ */
 export const getNotificationAnalytics = async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
@@ -152,7 +180,19 @@ export const getNotificationAnalytics = async (req, res) => {
   }
 };
 
-// Manually trigger notification for specific content
+/**
+ * @function triggerNotification
+ * @description Manually triggers a notification for specific content
+ * @param {Object} req - Express request object
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.contentType - Type of content (blog, news, event, etc.)
+ * @param {string} req.body.contentId - MongoDB ID of the content
+ * @param {string} req.body.title - Notification title
+ * @param {string} req.body.description - Notification description
+ * @param {Array<string>} [req.body.targetSubscriptionTypes=['all']] - Target subscription types
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with notification sending result
+ */
 export const triggerNotification = async (req, res) => {
   try {
     const { contentType, contentId, title, description, targetSubscriptionTypes } = req.body;
@@ -183,7 +223,15 @@ export const triggerNotification = async (req, res) => {
   }
 };
 
-// Delete notification
+/**
+ * @function deleteNotification
+ * @description Deletes a notification from the database
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.id - Notification ID to delete
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with deletion confirmation
+ */
 export const deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
@@ -210,7 +258,15 @@ export const deleteNotification = async (req, res) => {
   }
 };
 
-// Resend failed notification
+/**
+ * @function resendNotification
+ * @description Resends a failed notification
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - URL parameters
+ * @param {string} req.params.id - Notification ID to resend
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with resend result
+ */
 export const resendNotification = async (req, res) => {
   try {
     const { id } = req.params;
