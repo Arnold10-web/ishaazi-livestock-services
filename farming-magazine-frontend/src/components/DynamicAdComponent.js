@@ -35,7 +35,7 @@ const DynamicAdComponent = ({
 }) => {
   // State management for ad loading status
   const adRef = useRef(null);
-  const [adLoaded, setAdLoaded] = useState(false);
+  const [, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState(false);
 
   /**

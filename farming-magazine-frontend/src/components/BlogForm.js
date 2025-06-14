@@ -24,7 +24,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     const metadata = {};
     if (keywords.trim()) metadata.keywords = keywords.split(',').map(k => k.trim()).filter(k => k);
     if (summary.trim()) metadata.summary = summary.trim();
-    if (author.trim()) metadata.author = author.trim();
+    // Author is now handled as a top-level field, not in metadata
     return metadata;
   };
 
@@ -36,11 +36,13 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
       setPublished(editingBlog.published || false);
       setImagePreview(editingBlog.imageUrl);
       
+      // Set author from top-level property or from metadata as fallback
+      setAuthor(editingBlog.author || (editingBlog.metadata?.author || ''));
+      
       // Extract metadata fields
       if (editingBlog.metadata) {
         setKeywords(editingBlog.metadata.keywords ? editingBlog.metadata.keywords.join(', ') : '');
         setSummary(editingBlog.metadata.summary || '');
-        setAuthor(editingBlog.metadata.author || '');
       }
       
       if (quillEditor) {
@@ -105,8 +107,8 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     e.preventDefault();
     const content = quillEditor ? quillEditor.root.innerHTML : '';
 
-    if (!title.trim() || !content.trim()) {
-      setError('Title and content are required.');
+    if (!title.trim() || !content.trim() || !author.trim()) {
+      setError('Title, content, and author are required.');
       return;
     }
 
@@ -114,20 +116,25 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     const metadata = generateMetadata();
     
     // Convert tags from comma-separated string to array
-    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
     formData.append('category', category);
-    formData.append('tags', JSON.stringify(tagsArray));
+    formData.append('author', author); // Add author as a top-level field
+    
+    // Just append tags as a comma-separated string, which is simpler for the server to parse
+    formData.append('tags', tagsArray.join(','));
+    
     formData.append('metadata', JSON.stringify(metadata));
-    formData.append('published', published);
+    formData.append('published', published.toString()); // Convert boolean to string explicitly
     if (image) formData.append('image', image);
 
     try {
       setError('');
       if (editingBlog) {
+        // Always use FormData for consistency
         await axios.put(API_ENDPOINTS.UPDATE_BLOG(editingBlog._id), formData, {
           headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
         });
@@ -164,7 +171,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label htmlFor="blog-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Blog Title
+              Blog Title <span className="text-red-500">*</span>
             </label>
             <input
               id="blog-title"
@@ -180,7 +187,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
 
           <div className="space-y-2">
             <label htmlFor="author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Author
+              Author <span className="text-red-500">*</span>
             </label>
             <input
               id="author"
@@ -188,6 +195,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
               placeholder="Enter author name"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
+              required
               className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
             />
           </div>

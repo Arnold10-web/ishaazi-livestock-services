@@ -15,7 +15,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Clock, Users, UserPlus, Tag } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import EventRegistrationModal from './EventRegistrationModal';
 
 /**

@@ -84,6 +84,9 @@ const AdPlacement = ({
             maxAdsPerPage: 1
           };
           break;
+        default:
+          // Use the default conservative config initialized above
+          break;
       }
 
       // Adjust based on user engagement

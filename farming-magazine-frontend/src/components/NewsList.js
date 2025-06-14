@@ -11,8 +11,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, ArrowRight, Eye, Newspaper, Clock, 
-  Tag, Zap, TrendingUp, User, Bookmark, Share2
+  Calendar, Newspaper, Clock
 } from 'lucide-react';
 
 /**

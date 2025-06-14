@@ -21,9 +21,48 @@ import { isValidObjectId } from './sanitization.js';
  */
 export const validate = (schema, property = 'body') => {
   return (req, res, next) => {
-    const { error } = schema.validate(req[property], { abortEarly: false });
+    // Special handling for blog posts with author in metadata
+    if (req.originalUrl.includes('/blogs') && req[property].metadata && !req[property].author) {
+      try {
+        // Try to parse metadata if it's a string
+        const metadata = typeof req[property].metadata === 'string' 
+          ? JSON.parse(req[property].metadata) 
+          : req[property].metadata;
+          
+        // If metadata contains author, add it to the top level
+        if (metadata && metadata.author) {
+          req[property].author = metadata.author;
+        }
+      } catch (err) {
+        console.error('Error parsing metadata:', err);
+        // Continue with validation even if metadata parsing fails
+      }
+    }
+    
+    // Handle blog tags before validation
+    if (req.originalUrl.includes('/blogs') && req[property].tags) {
+      try {
+        // If it's a string that looks like an array, parse it
+        if (typeof req[property].tags === 'string' && 
+            req[property].tags.trim().startsWith('[') && 
+            req[property].tags.trim().endsWith(']')) {
+          console.log('Parsing tags JSON string before validation');
+          req[property].tags = JSON.parse(req[property].tags);
+        }
+      } catch (err) {
+        console.error('Error pre-parsing tags:', err);
+        // Continue with validation, the schema will handle this
+      }
+    }
+    
+    const { error } = schema.validate(req[property], { 
+      abortEarly: false,
+      // Allow conversions between types (e.g., string to array)
+      convert: true 
+    });
     
     if (error) {
+      console.log('Validation error:', error.details);
       const errors = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message
@@ -54,13 +93,20 @@ export const blogSchemas = {
       'string.min': 'Content must be at least 10 characters long',
       'any.required': 'Content is required'
     }),
-    author: Joi.string().min(2).max(100).required().messages({
-      'string.min': 'Author name must be at least 2 characters long',
-      'string.max': 'Author name cannot exceed 100 characters',
-      'any.required': 'Author is required'
-    }),
-    category: Joi.string().valid('Agriculture', 'Livestock', 'Technology', 'General', 'News').required(),
-    tags: Joi.array().items(Joi.string().max(50)).max(10).default([]),
+    // Make author optional
+    author: Joi.string().min(2).max(100).optional(),
+    // Allow metadata to contain author information
+    metadata: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        author: Joi.string().optional(),
+        keywords: Joi.array().items(Joi.string()).optional(),
+        summary: Joi.string().optional()
+      }).unknown(true)
+    ).optional(),
+    category: Joi.string().valid('Agriculture', 'Livestock', 'Technology', 'General', 'News').default('General'),
+    // Accept any type for tags (we'll handle conversion in the controller)
+    tags: Joi.any().optional(),
     summary: Joi.string().max(500).optional(),
     published: Joi.boolean().default(false),
     featured: Joi.boolean().default(false),
@@ -71,10 +117,23 @@ export const blogSchemas = {
     title: Joi.string().min(3).max(200).optional(),
     content: Joi.string().min(10).optional(),
     author: Joi.string().min(2).max(100).optional(),
+    // Allow metadata to contain author information
+    metadata: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        author: Joi.string().optional(),
+        keywords: Joi.array().items(Joi.string()).optional(),
+        summary: Joi.string().optional()
+      }).unknown(true)
+    ).optional(),
     category: Joi.string().valid('Agriculture', 'Livestock', 'Technology', 'General', 'News').optional(),
-    tags: Joi.array().items(Joi.string().max(50)).max(10).optional(),
+    // Accept any type for tags (we'll handle conversion in the controller)
+    tags: Joi.any().optional(),
     summary: Joi.string().max(500).optional(),
-    published: Joi.boolean().optional(),
+    published: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional(),
     featured: Joi.boolean().optional(),
     readTime: Joi.number().min(1).max(120).optional()
   })
@@ -210,16 +269,15 @@ export const validateObjectId = (paramName = 'id') => {
 };
 
 /**
- * Validate file upload
+ * Validate file upload - making file optional
  */
 export const validateFileUpload = (req, res, next) => {
+  // If no file is uploaded, just continue - files are optional
   if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      message: 'No file uploaded'
-    });
+    return next();
   }
   
+  // If a file is uploaded, validate it
   const { error } = fileUploadSchema.validate({
     mimetype: req.file.mimetype,
     size: req.file.size

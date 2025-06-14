@@ -32,6 +32,7 @@ const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     content: { type: String, required: true },
+    author: { type: String, required: true },
     imageUrl: { type: String, default: null },
     metadata: { type: Object },
     published: { type: Boolean, default: true },
@@ -68,6 +69,13 @@ const blogSchema = new mongoose.Schema(
  */
 blogSchema.pre('save', async function(next) {
   try {
+    // Ensure author field is set (for backward compatibility)
+    if (!this.author && this.metadata && this.metadata.author) {
+      this.author = this.metadata.author;
+    } else if (!this.author) {
+      this.author = 'Unknown Author';
+    }
+    
     // Set publishedAt when blog is published for the first time
     if (this.published && !this.publishedAt) {
       this.publishedAt = new Date();

@@ -28,9 +28,9 @@ const newsSchema = new mongoose.Schema(
     content: { type: String, required: true },
     
     /**
-     * @property {String} author - The name of the article's author
+     * @property {String} author - The name of the article's author (optional)
      */
-    author: { type: String, required: true },
+    author: { type: String, required: false },
     
     /**
      * @property {String} category - The primary category of the news article

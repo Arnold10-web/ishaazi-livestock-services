@@ -14,7 +14,7 @@ import axios from 'axios';
 import { 
   Calendar, Clock, User, Share2, Bookmark, Eye, ArrowLeft,
   Facebook, Instagram, MessageCircle, 
-  ChevronRight, Tag, Globe
+  ChevronRight, Tag, Globe, TrendingUp
 } from 'lucide-react';
 import DynamicAdComponent from '../components/DynamicAdComponent';
 

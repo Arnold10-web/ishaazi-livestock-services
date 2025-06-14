@@ -390,11 +390,11 @@ export const approveContentComment = async (req, res) => {
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
-    const { title, content, category, tags, metadata, published } = req.body;
+    const { title, content, author, category, tags, metadata, published } = req.body;
     let imageUrl = null;
 
-    if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+    if (!title || !content || !author) {
+      return sendResponse(res, false, 'Title, content, and author are required.');
     }
 
     if (req.file) {
@@ -403,16 +403,37 @@ export const createBlog = async (req, res) => {
     }
 
     const parsedMetadata = parseMetadata(metadata);
-    const parsedTags = tags ? JSON.parse(tags) : [];
+    
+    // Handle tags more robustly
+    let parsedTags = [];
+    if (tags) {
+      if (Array.isArray(tags)) {
+        parsedTags = tags;
+      } else {
+        try {
+          parsedTags = JSON.parse(tags);
+          if (!Array.isArray(parsedTags)) {
+            parsedTags = []; // Default to empty array if parsed result isn't an array
+          }
+        } catch (e) {
+          console.error('Error parsing tags:', e);
+          // If it's a comma-separated string, convert to array
+          if (typeof tags === 'string') {
+            parsedTags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+          }
+        }
+      }
+    }
 
     const newBlog = new Blog({
       title,
       content,
+      author,
       category: category || 'General',
       tags: parsedTags,
       imageUrl,
       metadata: parsedMetadata,
-      published: published === 'true' || published === true
+      published: published === 'true' || published === true || published === "true"
     });
 
     const savedBlog = await newBlog.save();
@@ -513,22 +534,88 @@ export const getAdminBlogs = async (req, res) => {
 export const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, category, tags, metadata, published } = req.body;
+    const { title, content, author, category, metadata, published } = req.body;
+    
+    console.log('Request body:', req.body);
     
     // Parse metadata if it's a string
-    const parsedMetadata = parseMetadata(metadata);
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = parseMetadata(metadata);
+    } catch (e) {
+      console.error('Error parsing metadata:', e);
+      // Continue with empty metadata
+    }
     
-    // Parse tags if they exist
-    const parsedTags = tags ? JSON.parse(tags) : [];
+    // Handle tags from req.body using a simple approach
+    let parsedTags = [];
     
-    let updateData = { 
-      title, 
-      content, 
-      category: category || 'General',
-      tags: parsedTags,
-      metadata: parsedMetadata, 
-      published: published === 'true' || published === true
-    };
+    // Get tags from the request body
+    if (req.body.tags) {
+      // If it's already an array, use it directly
+      if (Array.isArray(req.body.tags)) {
+        parsedTags = req.body.tags;
+      }
+      // If it's a comma-separated string (most likely with FormData), parse it
+      else if (typeof req.body.tags === 'string') {
+        parsedTags = req.body.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      }
+    }
+    
+    console.log('Final parsed tags:', parsedTags);
+    
+    console.log('Final parsed tags:', parsedTags);
+    
+    // Create update data object with only defined fields
+    let updateData = {};
+    
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (author !== undefined) updateData.author = author;
+    if (category !== undefined) updateData.category = category || 'General';
+    
+    // Process tags to always be an array, regardless of how they're sent
+    if (req.body.tags !== undefined) {
+      let tags = req.body.tags;
+      
+      if (Array.isArray(tags)) {
+        // Already an array, use directly
+        updateData.tags = tags;
+      } else if (typeof tags === 'string') {
+        // String - could be comma-separated or JSON string
+        if (tags.trim().startsWith('[') && tags.trim().endsWith(']')) {
+          // Try to parse as JSON string array
+          try {
+            const parsedTags = JSON.parse(tags);
+            if (Array.isArray(parsedTags)) {
+              updateData.tags = parsedTags;
+            } else {
+              // If parsed but not an array, convert to array with single item
+              updateData.tags = [tags];
+            }
+          } catch (e) {
+            // If parse fails, treat as comma-separated
+            updateData.tags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+          }
+        } else {
+          // Regular string - treat as comma-separated
+          updateData.tags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+        }
+      } else {
+        // Handle case where tags is defined but not a string or array
+        updateData.tags = [String(tags)]; // Convert to array with single string item
+      }
+      
+      console.log('Final tags for update:', updateData.tags);
+    }
+    
+    // Only include metadata if it was provided or parsed
+    if (metadata !== undefined) updateData.metadata = parsedMetadata;
+    
+    // Handle published explicitly to support boolean or string "true"/"false"
+    if (published !== undefined) {
+      updateData.published = published === 'true' || published === true;
+    }
 
     if (req.file) {
       // Construct the relative path
@@ -538,7 +625,20 @@ export const updateBlog = async (req, res) => {
     const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, { new: true });
     res.json(updatedBlog);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating blog:', error);
+    res.status(400).json({ 
+      message: error.message,
+      details: {
+        error: error.toString(),
+        requestBody: {
+          title: req.body.title,
+          author: req.body.author,
+          category: req.body.category,
+          tagsType: req.body.tags ? typeof req.body.tags : 'undefined',
+          hasFile: !!req.file
+        }
+      }
+    });
   }
 };
 
