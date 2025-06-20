@@ -276,6 +276,337 @@ class EmailService {
     });
   }
 
+  /**
+   * Send welcome email to new editor user
+   * @param {string} companyEmail - Company email address
+   * @param {string} tempPassword - Temporary password
+   * @param {string} createdBy - Admin who created the account
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendWelcomeEmail(companyEmail, tempPassword, createdBy) {
+    try {
+      const subject = 'Welcome to Farming Magazine Admin Portal';
+      const template = await this.getTemplate('welcome-admin');
+      
+      const templateData = {
+        companyEmail,
+        tempPassword,
+        createdBy,
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+        supportEmail: this.config.replyTo,
+        companyName: 'Farming Magazine'
+      };
+
+      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultWelcomeTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${this.config.from.name} <${this.config.from.address}>`,
+        to: companyEmail,
+        subject,
+        html,
+        replyTo: this.config.replyTo
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`✅ Welcome email sent to ${companyEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: companyEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+      throw new Error(`Failed to send welcome email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send password reset email to company email
+   * @param {string} companyEmail - Company email address
+   * @param {string} tempPassword - New temporary password
+   * @param {string} resetBy - Admin who reset the password
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendPasswordResetEmail(companyEmail, tempPassword, resetBy) {
+    try {
+      const subject = 'Admin Account Password Reset - Farming Magazine';
+      const template = await this.getTemplate('password-reset-admin');
+      
+      const templateData = {
+        companyEmail,
+        tempPassword,
+        resetBy,
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+        supportEmail: this.config.replyTo,
+        companyName: 'Farming Magazine',
+        resetDate: new Date().toLocaleString()
+      };
+
+      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultPasswordResetTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${this.config.from.name} <${this.config.from.address}>`,
+        to: companyEmail,
+        subject,
+        html,
+        replyTo: this.config.replyTo,
+        priority: 'high'
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`✅ Password reset email sent to ${companyEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: companyEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+      throw new Error(`Failed to send password reset email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send account status change notification
+   * @param {string} companyEmail - Company email address
+   * @param {boolean} isActive - New account status
+   * @param {string} changedBy - Admin who changed the status
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendAccountStatusEmail(companyEmail, isActive, changedBy) {
+    try {
+      const subject = `Admin Account ${isActive ? 'Activated' : 'Deactivated'} - Farming Magazine`;
+      const template = await this.getTemplate('account-status-admin');
+      
+      const templateData = {
+        companyEmail,
+        isActive,
+        changedBy,
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+        supportEmail: this.config.replyTo,
+        companyName: 'Farming Magazine',
+        changeDate: new Date().toLocaleString()
+      };
+
+      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultAccountStatusTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${this.config.from.name} <${this.config.from.address}>`,
+        to: companyEmail,
+        subject,
+        html,
+        replyTo: this.config.replyTo
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`✅ Account status email sent to ${companyEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: companyEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send account status email:', error);
+      throw new Error(`Failed to send account status email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validate company email format
+   * @param {string} email - Email to validate
+   * @returns {boolean} True if valid company email
+   */
+  validateCompanyEmail(email) {
+    if (!email || typeof email !== 'string') {
+      return false;
+    }
+
+    const companyDomains = [
+      'yourcompany.com',
+      'farmingmagazine.com'
+    ];
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+
+    const domain = email.split('@')[1].toLowerCase();
+    return companyDomains.includes(domain);
+  }
+
+  /**
+   * Default welcome email template
+   */
+  getDefaultWelcomeTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Welcome to ${data.companyName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background: #f9f9f9; }
+          .credentials { background: white; padding: 15px; border-left: 4px solid #2c5530; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: #2c5530; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to ${data.companyName}</h1>
+            <p>Admin Portal Access</p>
+          </div>
+          <div class="content">
+            <h2>Your admin account has been created!</h2>
+            <p>Hello,</p>
+            <p>Your admin account for ${data.companyName} has been created by <strong>${data.createdBy}</strong>.</p>
+            
+            <div class="credentials">
+              <h3>Login Credentials:</h3>
+              <p><strong>Email:</strong> ${data.companyEmail}</p>
+              <p><strong>Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+            </div>
+            
+            <p>Please log in and change your password immediately for security.</p>
+            
+            <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>
+            
+            <p><strong>Important:</strong> This is a temporary password that must be changed on your first login.</p>
+            
+            <p>If you have any questions, please contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Default password reset email template
+   */
+  getDefaultPasswordResetTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Password Reset - ${data.companyName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #d9534f; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background: #f9f9f9; }
+          .credentials { background: white; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: #d9534f; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset</h1>
+            <p>${data.companyName} Admin Portal</p>
+          </div>
+          <div class="content">
+            <h2>Your password has been reset</h2>
+            <p>Hello,</p>
+            <p>Your admin account password has been reset by <strong>${data.resetBy}</strong> on ${data.resetDate}.</p>
+            
+            <div class="credentials">
+              <h3>New Login Credentials:</h3>
+              <p><strong>Email:</strong> ${data.companyEmail}</p>
+              <p><strong>New Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+            </div>
+            
+            <p>Please log in and change your password immediately for security.</p>
+            
+            <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>
+            
+            <p><strong>Security Notice:</strong> If you did not request this password reset, please contact support immediately.</p>
+            
+            <p>For security questions, contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Default account status email template
+   */
+  getDefaultAccountStatusTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Account ${data.isActive ? 'Activated' : 'Deactivated'} - ${data.companyName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: ${data.isActive ? '#5cb85c' : '#d9534f'}; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background: #f9f9f9; }
+          .status { background: white; padding: 15px; border-left: 4px solid ${data.isActive ? '#5cb85c' : '#d9534f'}; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: ${data.isActive ? '#5cb85c' : '#d9534f'}; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Account ${data.isActive ? 'Activated' : 'Deactivated'}</h1>
+            <p>${data.companyName} Admin Portal</p>
+          </div>
+          <div class="content">
+            <h2>Your account status has been updated</h2>
+            <p>Hello,</p>
+            <p>Your admin account status has been changed by <strong>${data.changedBy}</strong> on ${data.changeDate}.</p>
+            
+            <div class="status">
+              <h3>Account Status:</h3>
+              <p><strong>Email:</strong> ${data.companyEmail}</p>
+              <p><strong>Status:</strong> ${data.isActive ? 'Active' : 'Deactivated'}</p>
+            </div>
+            
+            ${data.isActive ? 
+              `<p>Your account has been activated. You can now log in to the admin portal.</p>
+               <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>` :
+              `<p>Your account has been deactivated. You will no longer be able to access the admin portal.</p>`
+            }
+            
+            <p>If you have questions about this change, please contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   // Mock email sending for development/testing
   mockSendMail(options) {
     console.log('📧 Mock Email Sent:');
@@ -318,6 +649,28 @@ export const sendNewsletter = (subscribers, newsletterData) => {
 
 export const sendWelcomeEmail = (userEmail, userData = {}) => {
   return emailService.sendWelcomeEmail(userEmail, userData);
+};
+
+// Export new company email functions
+export const sendWelcomeEmailToEditor = (companyEmail, tempPassword, createdBy) => {
+  return emailService.sendWelcomeEmail(companyEmail, tempPassword, createdBy);
+};
+
+export const sendPasswordResetEmail = (companyEmail, tempPassword, resetBy) => {
+  return emailService.sendPasswordResetEmail(companyEmail, tempPassword, resetBy);
+};
+
+export const sendAccountStatusEmail = (companyEmail, isActive, changedBy) => {
+  return emailService.sendAccountStatusEmail(companyEmail, isActive, changedBy);
+};
+
+export const validateCompanyEmail = (email) => {
+  return emailService.validateCompanyEmail(email);
+};
+
+// Generic send email function
+export const sendEmail = (to, subject, html, options = {}) => {
+  return emailService.sendEmail(to, subject, html, options);
 };
 
 // Export the class as default

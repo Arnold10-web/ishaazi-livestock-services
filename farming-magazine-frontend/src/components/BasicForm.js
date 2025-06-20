@@ -4,11 +4,11 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { calculateMediaDuration, formatDuration } from '../utils/contentUtils';
 
 const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const [title, setTitle] = useState('');
   const [fileType, setFileType] = useState('');
-  const [duration, setDuration] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('General');
   const [tags, setTags] = useState('');
@@ -18,6 +18,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const [image, setImage] = useState(null);
   const [media, setMedia] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [calculatedDuration, setCalculatedDuration] = useState(0); // Auto-calculated duration
   const [error, setError] = useState('');
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
@@ -26,7 +27,6 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     if (editingBasic) {
       setTitle(editingBasic.title);
       setFileType(editingBasic.fileType);
-      setDuration(editingBasic.duration || '');
       setCategory(editingBasic.category || 'General');
       setTags(editingBasic.tags ? editingBasic.tags.join(', ') : '');
       setPublished(editingBasic.published !== undefined ? editingBasic.published : true);
@@ -84,15 +84,27 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     }
   };
 
-  const handleMediaChange = (e) => {
+  const handleMediaChange = async (e) => {
     const file = e.target.files[0];
     setMedia(file);
+    
+    if (file) {
+      // Auto-calculate duration for media files
+      try {
+        const duration = await calculateMediaDuration(file);
+        setCalculatedDuration(duration);
+      } catch (error) {
+        console.error('Error calculating media duration:', error);
+        setCalculatedDuration(0);
+      }
+    } else {
+      setCalculatedDuration(0);
+    }
   };
 
   const resetForm = () => {
     setTitle('');
     setFileType('');
-    setDuration('');
     setAuthor('');
     setCategory('General');
     setTags('');
@@ -102,6 +114,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     setImage(null);
     setMedia(null);
     setImagePreview(null);
+    setCalculatedDuration(0);
     if (quillEditor) {
       quillEditor.setText('');
     }
@@ -116,7 +129,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
       summary: summary.trim(),
       published: published,
-      duration: duration.trim()
+      duration: calculatedDuration // Include auto-calculated duration
     };
   };
 
@@ -140,7 +153,6 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     formData.append('title', title);
     formData.append('fileType', fileType);
     formData.append('description', description);
-    formData.append('duration', duration);
     formData.append('author', author);
     formData.append('category', category);
     formData.append('tags', JSON.stringify(metadataObj.tags));
@@ -289,31 +301,16 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Duration
-            </label>
+        <div className="space-y-2 flex items-center">
+          <div className="flex items-center space-x-2">
             <input
-              id="duration"
-              type="text"
-              placeholder="e.g., 5:30 or 10 minutes"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-colors duration-200 ease-in-out"
+              type="checkbox"
+              id="published"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
             />
-          </div>
-          <div className="space-y-2 flex items-center">
-            <div className="flex items-center space-x-2 mt-6">
-              <input
-                type="checkbox"
-                id="published"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <label htmlFor="published" className="text-sm font-medium text-gray-700 dark:text-gray-300">Published</label>
-            </div>
+            <label htmlFor="published" className="text-sm font-medium text-gray-700 dark:text-gray-300">Published</label>
           </div>
         </div>
 
@@ -402,9 +399,16 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
               </svg>
               Choose Media
             </label>
-            <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
-              {media ? media.name : 'No file chosen'}
-            </span>
+            {media && (
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {media.name}
+                {calculatedDuration > 0 && (
+                  <span className="ml-2 text-blue-600 dark:text-blue-400">
+                    Duration: {formatDuration(calculatedDuration)}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         </div>
 
@@ -427,7 +431,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
             </svg>
-            {editingBasic ? 'Update Component' : 'Create Component'}
+            {editingBasic ? 'Update Content' : 'Publish Content'}
           </button>
 
           {editingBasic && (

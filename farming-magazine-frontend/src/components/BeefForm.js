@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { calculateReadTime } from '../utils/contentUtils';
 
 /**
  * Form component for creating and editing beef farming articles
@@ -33,7 +34,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
   const [summary, setSummary] = useState('');
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
-  const [readTime, setReadTime] = useState(5);
+  const [autoReadTime, setAutoReadTime] = useState(1); // Auto-calculated read time
   
   // Image handling state
   const [image, setImage] = useState(null);
@@ -47,6 +48,31 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
   const [quillEditor, setQuillEditor] = useState(null);
 
   /**
+   * Auto-calculate read time when content changes
+   */
+  const updateReadTime = useCallback(() => {
+    if (quillEditor) {
+      const content = quillEditor.root.innerHTML;
+      const readTime = calculateReadTime(content);
+      setAutoReadTime(readTime);
+    }
+  }, [quillEditor]);
+
+  /**
+   * Update read time when content changes
+   */
+  useEffect(() => {
+    if (quillEditor) {
+      quillEditor.on('text-change', updateReadTime);
+      // Calculate initial read time if editing
+      updateReadTime();
+      return () => {
+        quillEditor.off('text-change', updateReadTime);
+      };
+    }
+  }, [quillEditor, updateReadTime]);
+
+  /**
    * Populate form fields when editing an existing beef article
    * Handles both direct properties and nested metadata
    */
@@ -58,7 +84,6 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
       setTags(editingBeef.tags ? editingBeef.tags.join(', ') : '');
       setPublished(editingBeef.published !== undefined ? editingBeef.published : true);
       setFeatured(editingBeef.featured || false);
-      setReadTime(editingBeef.readTime || 5);
       
       // Extract from metadata if it exists
       if (editingBeef.metadata) {
@@ -139,7 +164,6 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
     setSummary('');
     setPublished(true);
     setFeatured(false);
-    setReadTime(5);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
@@ -156,8 +180,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
       keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
       summary: summary.trim(),
       published: published,
-      featured: featured,
-      readTime: parseInt(readTime) || 5
+      featured: featured
     };
   };
 
@@ -182,7 +205,6 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
     formData.append('summary', summary);
     formData.append('published', published);
     formData.append('featured', featured);
-    formData.append('readTime', readTime);
     formData.append('metadata', JSON.stringify(metadataObj));
     if (image) formData.append('image', image);
 
@@ -294,19 +316,12 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
             onChange={(e) => setFeatured(e.target.checked)}
             className="w-4 h-4"
           />
-          <label htmlFor="featured" className="text-sm">Featured</label>
+          <label htmlFor="featured" className="text-sm">Featured content</label>
         </div>
-        <div className="flex items-center space-x-2">
-          <label htmlFor="readTime" className="text-sm">Read Time (min):</label>
-          <input
-            type="number"
-            id="readTime"
-            value={readTime}
-            onChange={(e) => setReadTime(Math.max(1, parseInt(e.target.value) || 1))}
-            min="1"
-            max="60"
-            className="w-16 p-1 border rounded"
-          />
+        
+        {/* Auto-calculated read time display */}
+        <div className="text-sm text-gray-500 italic">
+          Estimated read time: {autoReadTime} minute{autoReadTime !== 1 ? 's' : ''}
         </div>
       </div>
       <div className="flex items-center space-x-2">
@@ -328,7 +343,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
       <div ref={quillRef} className="h-72 border rounded" />
       <div className="flex space-x-2">
         <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-          {editingBeef ? 'Update Beef Farming Content' : 'Create Beef Farming Content'}
+          {editingBeef ? 'Update Content' : 'Publish Content'}
         </button>
         {editingBeef && (
           <button type="button" onClick={resetForm} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">

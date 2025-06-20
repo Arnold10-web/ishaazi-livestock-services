@@ -15,7 +15,7 @@ import {
   getNewsletterAnalytics,
   getOverallEmailAnalytics
 } from '../controllers/emailTrackingController.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import { requireRole } from '../middleware/enhancedAuthMiddleware.js';
 
 const router = express.Router();
 
@@ -50,7 +50,7 @@ router.get('/track/notification/open/:notificationId/:email', trackNotificationO
 router.get('/track/notification/click/:notificationId/:email/:url', trackNotificationClick);
 
 // Email analytics routes (admin only)
-router.use(authMiddleware);
+router.use(requireRole(['system_admin']));
 
 /**
  * @route   GET /api/email/analytics/newsletter/:newsletterId

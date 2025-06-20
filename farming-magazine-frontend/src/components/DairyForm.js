@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { calculateReadTime } from '../utils/contentUtils';
 
 /**
  * Form component for creating and editing dairy farming articles
@@ -33,7 +34,7 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
   const [summary, setSummary] = useState('');
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
-  const [readTime, setReadTime] = useState(5);
+  const [autoReadTime, setAutoReadTime] = useState(1); // Auto-calculated read time
   
   // Image handling state
   const [image, setImage] = useState(null);
@@ -47,6 +48,31 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
   const [quillEditor, setQuillEditor] = useState(null);
 
   /**
+   * Auto-calculate read time when content changes
+   */
+  const updateReadTime = useCallback(() => {
+    if (quillEditor) {
+      const content = quillEditor.root.innerHTML;
+      const readTime = calculateReadTime(content);
+      setAutoReadTime(readTime);
+    }
+  }, [quillEditor]);
+
+  /**
+   * Update read time when content changes
+   */
+  useEffect(() => {
+    if (quillEditor) {
+      quillEditor.on('text-change', updateReadTime);
+      // Calculate initial read time if editing
+      updateReadTime();
+      return () => {
+        quillEditor.off('text-change', updateReadTime);
+      };
+    }
+  }, [quillEditor, updateReadTime]);
+
+  /**
    * Populate form fields when editing an existing dairy article
    * Handles both direct properties and nested metadata
    */
@@ -58,7 +84,6 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
       setTags(editingDairy.tags ? editingDairy.tags.join(', ') : '');
       setPublished(editingDairy.published !== undefined ? editingDairy.published : true);
       setFeatured(editingDairy.featured || false);
-      setReadTime(editingDairy.readTime || 5);
       
       // Extract from metadata if it exists
       if (editingDairy.metadata) {
@@ -143,7 +168,6 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     setSummary('');
     setPublished(true);
     setFeatured(false);
-    setReadTime(5);
     setImage(null);
     setImagePreview(null);
     if (quillEditor) {
@@ -195,7 +219,6 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
     formData.append('metadata', JSON.stringify(metadata));
     formData.append('published', published);
     formData.append('featured', featured);
-    formData.append('readTime', readTime);
     if (image) formData.append('image', image);
 
     try {
@@ -303,19 +326,6 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
             />
             <p className="text-xs text-gray-500 mt-1">e.g., dairy farming, milk production, cattle care</p>
           </div>
-          
-          <div>
-            <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 mb-1">Read Time (minutes)</label>
-            <input
-              id="readTime"
-              type="number"
-              min="1"
-              max="60"
-              value={readTime}
-              onChange={(e) => setReadTime(parseInt(e.target.value) || 5)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
-            />
-          </div>
         </div>
 
         <div>
@@ -370,6 +380,11 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
               Featured content
             </label>
           </div>
+          
+          {/* Auto-calculated read time display */}
+          <div className="text-sm text-gray-500 italic">
+            Estimated read time: {autoReadTime} minute{autoReadTime !== 1 ? 's' : ''}
+          </div>
         </div>
         
         <div>
@@ -406,7 +421,7 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
           type="submit"
           className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out"
         >
-          {editingDairy ? 'Update Dairy Farming Content' : 'Create Dairy Farming Content'}
+          {editingDairy ? 'Update Content' : 'Publish Content'}
         </button>
         {editingDairy && (
           <button

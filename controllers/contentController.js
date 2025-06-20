@@ -47,12 +47,17 @@ const normalizePath = (filePath) => path.resolve(__dirname, `..${filePath}`);
 /**
  * Parse and validate metadata JSON 
  * 
- * @param {string|null} metadata - Metadata as JSON string
+ * @param {string|Object|null} metadata - Metadata as JSON string or already parsed object
  * @returns {Object} Parsed metadata object
  * @throws {Error} If metadata is not valid JSON
  */
 const parseMetadata = (metadata) => {
   try {
+    // If metadata is already an object, return it directly
+    if (typeof metadata === 'object' && metadata !== null) {
+      return metadata;
+    }
+    // If metadata is a string, try to parse it
     return metadata ? JSON.parse(metadata) : {};
   } catch {
     throw new Error('Invalid metadata format. Must be a valid JSON string.');
@@ -69,8 +74,17 @@ const parseMetadata = (metadata) => {
  * @param {Object|string|null} error - Error details if any
  * @returns {Object} JSON response with consistent format
  */
-const sendResponse = (res, success, message, data = null, error = null) => {
-  res.status(success ? 200 : 500).json({ success, message, data, error });
+const sendResponse = (res, success, message, data = null, error = null, statusCode = null) => {
+  let status;
+  if (statusCode) {
+    status = statusCode;
+  } else if (success) {
+    status = 200;
+  } else {
+    // Default to 400 for client errors, unless specified otherwise
+    status = 400;
+  }
+  res.status(status).json({ success, message, data, error });
 };
 
 /**
@@ -390,19 +404,35 @@ export const approveContentComment = async (req, res) => {
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
+    console.log('🔍 DEBUG: Starting createBlog function');
+    console.log('🔍 DEBUG: Request body:', req.body);
+    
     const { title, content, author, category, tags, metadata, published } = req.body;
     let imageUrl = null;
 
+    console.log('🔍 DEBUG: Extracted fields:', { title, content, author, category, tags, published });
+
     if (!title || !content || !author) {
+      console.log('🔍 DEBUG: Missing required fields');
       return sendResponse(res, false, 'Title, content, and author are required.');
     }
 
     if (req.file) {
       // Construct the relative path
       imageUrl = `/uploads/images/${req.file.filename}`;
+      console.log('🔍 DEBUG: Image URL:', imageUrl);
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    console.log('🔍 DEBUG: Parsing metadata...');
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = parseMetadata(metadata);
+    } catch (e) {
+      console.error('🔍 DEBUG: Error parsing metadata, using empty metadata:', e);
+      // Continue with empty metadata instead of throwing error
+      parsedMetadata = {};
+    }
+    console.log('🔍 DEBUG: Parsed metadata:', parsedMetadata);
     
     // Handle tags more robustly
     let parsedTags = [];
@@ -424,7 +454,10 @@ export const createBlog = async (req, res) => {
         }
       }
     }
+    
+    console.log('🔍 DEBUG: Parsed tags:', parsedTags);
 
+    console.log('🔍 DEBUG: Creating new Blog instance...');
     const newBlog = new Blog({
       title,
       content,
@@ -436,9 +469,14 @@ export const createBlog = async (req, res) => {
       published: published === 'true' || published === true || published === "true"
     });
 
+    console.log('🔍 DEBUG: Blog instance created, attempting to save...');
     const savedBlog = await newBlog.save();
+    console.log('🔍 DEBUG: Blog saved successfully:', savedBlog._id);
+    
     sendResponse(res, true, 'Blog created successfully', savedBlog);
   } catch (error) {
+    console.error('❌ DEBUG: Error in createBlog:', error);
+    console.error('❌ DEBUG: Error stack:', error.stack);
     sendResponse(res, false, 'Failed to create blog', null, error.message);
   }
 };
@@ -510,7 +548,7 @@ export const getBlogs = async (req, res) => {
   }
 };
 export const getAdminBlogs = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const blogs = await Blog.find()
@@ -671,11 +709,11 @@ export const deleteBlog = async (req, res) => {
 // ----- NEWS CRUD -----
 export const createNews = async (req, res) => {
   try {
-    const { title, content, metadata, published, isBreaking } = req.body;
+    const { title, content, author, category, tags, metadata, published, featured, isBreaking } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+      return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
     if (req.file) {
@@ -683,21 +721,54 @@ export const createNews = async (req, res) => {
       imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    // Parse metadata (check if it's already an object or needs parsing)
+    let parsedMetadata = {};
+    try {
+      if (typeof metadata === 'object' && metadata !== null) {
+        parsedMetadata = metadata;
+      } else {
+        parsedMetadata = metadata ? JSON.parse(metadata) : {};
+      }
+    } catch (error) {
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Handle tags (they may already be processed by processFormData middleware)
+    let parsedTags = [];
+    if (Array.isArray(tags)) {
+      // Tags already processed by middleware
+      parsedTags = tags;
+    } else if (typeof tags === 'string') {
+      try {
+        // Try parsing as JSON first
+        parsedTags = JSON.parse(tags);
+      } catch (error) {
+        // If parsing fails, try splitting as comma-separated string
+        parsedTags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      }
+    } else {
+      parsedTags = [];
+    }
 
     const newNews = new News({
       title,
       content,
+      author: author || '',
+      category: category || 'general',
+      tags: parsedTags,
       imageUrl,
       metadata: parsedMetadata,
-      published,
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true,
       isBreaking: isBreaking === 'true' || isBreaking === true
     });
 
     const savedNews = await newNews.save();
-    sendResponse(res, true, 'News created successfully', savedNews);
+    sendResponse(res, true, 'News created successfully', savedNews, null, 201);
   } catch (error) {
-    sendResponse(res, false, 'Failed to create news', null, error.message);
+    console.error('Error creating news:', error);
+    sendResponse(res, false, 'Failed to create news', null, error.message, 500);
   }
 };
 
@@ -741,7 +812,7 @@ export const getNews = async (req, res) => {
 };
 
 export const getAdminNews = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const news = await News.find()
@@ -826,7 +897,7 @@ export const createBasic = async (req, res) => {
 
     // Ensure media file is provided
     if (!title || !description || !fileType || !media) {
-      return sendResponse(res, false, 'Title, description, file type, and media file are required.');
+      return sendResponse(res, false, 'Title, description, file type, and media file are required.', null, null, 400);
     }
 
     // Construct file paths
@@ -847,9 +918,10 @@ export const createBasic = async (req, res) => {
     });
 
     const savedBasic = await newBasic.save();
-    sendResponse(res, true, 'Basic media created successfully', savedBasic);
+    sendResponse(res, true, 'Basic media created successfully', savedBasic, null, 201);
   } catch (error) {
-    sendResponse(res, false, 'Failed to create basic media', null, error.message);
+    console.error('Error creating basic media:', error);
+    sendResponse(res, false, 'Failed to create basic media', null, error.message, 500);
   }
 };
 
@@ -873,7 +945,7 @@ export const getBasics = async (req, res) => {
 
 // Get all Basics for admin (with pagination)
 export const getAdminBasics = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
 
   try {
     const basics = await Basic.find()
@@ -1100,7 +1172,7 @@ export const getFarms = async (req, res) => {
 
 // Get farms (admin view with pagination)
 export const getAdminFarms = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
 
   try {
     const farms = await Farm.find()
@@ -1177,11 +1249,11 @@ export const deleteFarm = async (req, res) => {
 // Create a new magazine
 export const createMagazine = async (req, res) => {
   try {
-    const { title, description, issue, price, discount, metadata } = req.body;
+    const { title, description, issue, price, discount, metadata, featured, author, category, tags, keywords, summary, published } = req.body;
 
     // Check required fields
     if (!title || !description || !issue) {
-      return sendResponse(res, false, 'Title, description, and issue are required.');
+      return sendResponse(res, false, 'Title, description, and issue are required.', null, null, 400);
     }
 
     // Handle file uploads
@@ -1190,7 +1262,7 @@ export const createMagazine = async (req, res) => {
     const pdf = files.pdf?.[0];
 
     if (!image || !pdf) {
-      return sendResponse(res, false, 'Both image and PDF file are required.');
+      return sendResponse(res, false, 'Both image and PDF file are required.', null, null, 400);
     }
 
     const imageUrl = `/uploads/images/${image.filename}`;
@@ -1199,9 +1271,28 @@ export const createMagazine = async (req, res) => {
     // Parse metadata
     let parsedMetadata = {};
     try {
-      parsedMetadata = parseMetadata(metadata);
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
     } catch (error) {
-      return sendResponse(res, false, 'Invalid metadata format.');
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Parse tags if it's a JSON string
+    let parsedTags = [];
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    }
+
+    // Parse keywords if it's a JSON string
+    let parsedKeywords = [];
+    try {
+      parsedKeywords = keywords ? JSON.parse(keywords) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedKeywords = keywords ? keywords.split(',').map(keyword => keyword.trim()).filter(Boolean) : [];
     }
 
     const newMagazine = new Magazine({
@@ -1210,16 +1301,25 @@ export const createMagazine = async (req, res) => {
       issue,
       price: price || 0,
       discount: discount || 0,
+      author: author || '',
+      category: category || 'Magazine',
+      tags: parsedTags,
       imageUrl,
       fileUrl,
-      metadata: parsedMetadata,
+      metadata: {
+        ...parsedMetadata,
+        keywords: parsedKeywords,
+        summary: summary || ''
+      },
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     });
 
     const savedMagazine = await newMagazine.save();
-    sendResponse(res, true, 'Magazine created successfully', savedMagazine);
+    sendResponse(res, true, 'Magazine created successfully', savedMagazine, null, 201);
   } catch (error) {
     console.error('Error creating magazine:', error);
-    sendResponse(res, false, 'Failed to create magazine', null, error.message);
+    sendResponse(res, false, 'Failed to create magazine', null, error.message, 500);
   }
 };
 
@@ -1254,7 +1354,7 @@ export const getMagazines = async (req, res) => {
 };
 // Get all magazines for admin (with pagination)
 export const getAdminMagazines = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
 
   try {
     const magazines = await Magazine.find()
@@ -1361,7 +1461,7 @@ export const deleteMagazine = async (req, res) => {
 // ----- PIGGERY CRUD -----
 export const createPiggery = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, metadata, published, featured, category, tags, readTime } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
@@ -1373,14 +1473,36 @@ export const createPiggery = async (req, res) => {
       imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    // Parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Parse tags if it's a JSON string
+    let parsedTags = [];
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    }
 
     const newPiggery = new Piggery({
       title,
       content,
+      category: category || 'Piggery',
+      tags: parsedTags,
       imageUrl,
-      metadata: parsedMetadata,
-      published
+      metadata: {
+        ...parsedMetadata,
+        readTime: readTime || 5
+      },
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     });
 
     const savedPiggery = await newPiggery.save();
@@ -1419,7 +1541,7 @@ export const getPiggeries = async (req, res) => {
 };
 
 export const getAdminPiggeries = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const piggeries = await Piggery.find()
@@ -1501,31 +1623,66 @@ export const deletePiggery = async (req, res) => {
 
 export const createGoat = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+      return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
     if (req.file) {
       imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    // Parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Parse tags if it's a JSON string
+    let parsedTags = [];
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    }
+
+    // Parse keywords if it's a JSON string
+    let parsedKeywords = [];
+    try {
+      parsedKeywords = keywords ? JSON.parse(keywords) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedKeywords = keywords ? keywords.split(',').map(keyword => keyword.trim()).filter(Boolean) : [];
+    }
 
     const newGoat = new Goat({
       title,
       content,
+      author: author || '',
+      category: category || 'Goat',
+      tags: parsedTags,
       imageUrl,
-      metadata: parsedMetadata,
-      published
+      metadata: {
+        ...parsedMetadata,
+        keywords: parsedKeywords,
+        summary: summary || '',
+        readTime: readTime || 5
+      },
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     });
 
     const savedGoat = await newGoat.save();
-    sendResponse(res, true, 'Goat content created successfully', savedGoat);
+    sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
   } catch (error) {
-    sendResponse(res, false, 'Failed to create goat content', null, error.message);
+    console.error('Error creating goat content:', error);
+    sendResponse(res, false, 'Failed to create goat content', null, error.message, 500);
   }
 };
 
@@ -1558,7 +1715,7 @@ export const getGoats = async (req, res) => {
 };
 
 export const getAdminGoats = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const goats = await Goat.find()
@@ -1636,32 +1793,65 @@ export const deleteGoat = async (req, res) => {
 
 export const createDairy = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+      return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
     if (req.file) {
-      // Construct the relative path
       imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    // Parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Parse tags if it's a JSON string
+    let parsedTags = [];
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    }
+
+    // Parse keywords if it's a JSON string
+    let parsedKeywords = [];
+    try {
+      parsedKeywords = keywords ? JSON.parse(keywords) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedKeywords = keywords ? keywords.split(',').map(keyword => keyword.trim()).filter(Boolean) : [];
+    }
 
     const newDairy = new Dairy({
       title,
       content,
+      category: category || 'Dairy',
+      tags: parsedTags,
       imageUrl,
-      metadata: parsedMetadata,
-      published
+      metadata: {
+        ...parsedMetadata,
+        keywords: parsedKeywords,
+        summary: summary || '',
+        readTime: readTime || 5
+      },
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     });
 
     const savedDairy = await newDairy.save();
-    sendResponse(res, true, 'Dairy content created successfully', savedDairy);
+    sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
   } catch (error) {
-    sendResponse(res, false, 'Failed to create dairy content', null, error.message);
+    console.error('Error creating dairy content:', error);
+    sendResponse(res, false, 'Failed to create dairy content', null, error.message, 500);
   }
 };
 
@@ -1694,7 +1884,7 @@ export const getDairies = async (req, res) => {
 };
 
 export const getAdminDairies = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const dairies = await Dairy.find()
@@ -1767,31 +1957,65 @@ export const deleteDairy = async (req, res) => {
 
 export const createBeef = async (req, res) => {
   try {
-    const { title, content, metadata, published } = req.body;
+    const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
     let imageUrl = null;
 
     if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+      return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
     if (req.file) {
       imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
-    const parsedMetadata = parseMetadata(metadata);
+    // Parse metadata
+    let parsedMetadata = {};
+    try {
+      parsedMetadata = metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.warn('Invalid metadata format, using empty object:', error);
+      parsedMetadata = {};
+    }
+
+    // Parse tags if it's a JSON string
+    let parsedTags = [];
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    }
+
+    // Parse keywords if it's a JSON string
+    let parsedKeywords = [];
+    try {
+      parsedKeywords = keywords ? JSON.parse(keywords) : [];
+    } catch (error) {
+      // If parsing fails, try splitting as comma-separated string
+      parsedKeywords = keywords ? keywords.split(',').map(keyword => keyword.trim()).filter(Boolean) : [];
+    }
 
     const newBeef = new Beef({
       title,
       content,
+      category: category || 'Beef',
+      tags: parsedTags,
       imageUrl,
-      metadata: parsedMetadata,
-      published
+      metadata: {
+        ...parsedMetadata,
+        keywords: parsedKeywords,
+        summary: summary || '',
+        readTime: readTime || 5
+      },
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     });
 
     const savedBeef = await newBeef.save();
-    sendResponse(res, true, 'Beef content created successfully', savedBeef);
+    sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
   } catch (error) {
-    sendResponse(res, false, 'Failed to create beef content', null, error.message);
+    console.error('Error creating beef content:', error);
+    sendResponse(res, false, 'Failed to create beef content', null, error.message, 500);
   }
 };
 
@@ -1824,7 +2048,7 @@ export const getBeefs = async (req, res) => {
 };
 
 export const getAdminBeefs = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     const beefs = await Beef.find()
@@ -2168,13 +2392,10 @@ export const getNewsletters = async (req, res) => {
 
 // Enhanced newsletter creation
 export const createNewsletter = async (req, res) => {
-  const { title, body, subject, targetSubscriptionTypes = ['all'] } = req.body;
+  const { title, body, subject, targetSubscriptionTypes = ['all'], featured = false } = req.body;
   
   if (!title || !body || !subject) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Title, subject, and body are required' 
-    });
+    return sendResponse(res, false, 'Title, subject, and body are required', null, null, 400);
   }
 
   try {
@@ -2183,29 +2404,22 @@ export const createNewsletter = async (req, res) => {
       body, 
       subject,
       targetSubscriptionTypes,
+      featured,
       createdBy: req.admin?._id // Assuming admin info is in request
     });
     await newsletter.save();
     
-    res.status(201).json({
-      success: true,
-      message: 'Newsletter created successfully',
-      data: newsletter
-    });
+    sendResponse(res, true, 'Newsletter created successfully', newsletter, null, 201);
   } catch (error) {
     console.error('Error creating newsletter:', error);
-    res.status(400).json({ 
-      success: false, 
-      message: 'Error creating newsletter',
-      error: error.message 
-    });
+    sendResponse(res, false, 'Error creating newsletter', null, error.message, 500);
   }
 };
 
 // Enhanced newsletter update
 export const updateNewsletter = async (req, res) => {
   try {
-    const { title, body, subject, targetSubscriptionTypes } = req.body;
+    const { title, body, subject, targetSubscriptionTypes, featured } = req.body;
     
     const newsletter = await Newsletter.findById(req.params.id);
     if (!newsletter) {
@@ -2225,7 +2439,7 @@ export const updateNewsletter = async (req, res) => {
 
     const updatedNewsletter = await Newsletter.findByIdAndUpdate(
       req.params.id,
-      { title, body, subject, targetSubscriptionTypes },
+      { title, body, subject, targetSubscriptionTypes, featured },
       { new: true }
     );
     
@@ -2444,7 +2658,7 @@ export const getEvents = async (req, res) => {
 };
 
 export const getAdminEvents = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
   
   try {
     // Updated sort to use startDate instead of date
@@ -2668,7 +2882,7 @@ export const getAuctionById = async (req, res) => {
 
 // Get all auctions for admin (with pagination)
 export const getAdminAuctions = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // Increased default limit for admin
 
   try {
     const auctions = await Auction.find()

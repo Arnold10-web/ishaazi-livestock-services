@@ -7,12 +7,12 @@ import {
   deleteNotification,
   resendNotification
 } from '../controllers/notificationController.js';
-import { authenticateAdmin } from '../middleware/authMiddleware.js';
+import { requireRole } from '../middleware/enhancedAuthMiddleware.js';
 
 const router = express.Router();
 
 // Apply admin authentication to all routes
-router.use(authenticateAdmin);
+router.use(requireRole(['system_admin']));
 
 // Get all notifications with pagination and filtering
 router.get('/', getNotifications);

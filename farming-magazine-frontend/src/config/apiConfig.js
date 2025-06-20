@@ -8,12 +8,42 @@ if (!BASE_URL) {
 console.log('API Base URL:', BASE_URL);
 
 const API_ENDPOINTS = {
-  // Admin Authentication
+  // Export BASE_URL for direct use
+  BASE_URL: BASE_URL,
+  
+  // Enhanced Admin Authentication
   ADMIN_REGISTER: `${BASE_URL}/api/admin/register`,
   ADMIN_LOGIN: `${BASE_URL}/api/admin/login`,
+  ADMIN_LOGOUT: `${BASE_URL}/api/admin/logout`,
   
-  // Dashboard
-  DASHBOARD_STATS: `${BASE_URL}/api/admin/stats`,
+  // Dashboard Endpoints
+  DASHBOARD_STATS: `${BASE_URL}/api/admin/dashboard`,
+  EDITOR_DASHBOARD: `${BASE_URL}/api/admin/dashboard`,
+  SYSTEM_ADMIN_DASHBOARD: `${BASE_URL}/api/admin/dashboard/security`,
+  
+  // Role-specific Dashboard Endpoints
+  SECURITY_DASHBOARD: `${BASE_URL}/api/admin/dashboard/security`,
+  PERFORMANCE_DASHBOARD: `${BASE_URL}/api/admin/dashboard/performance`,
+  ANALYTICS_DASHBOARD: `${BASE_URL}/api/admin/dashboard/analytics`,
+  SYSTEM_HEALTH_DASHBOARD: `${BASE_URL}/api/admin/dashboard/system-health`,
+  
+  // Additional System Admin Dashboard Endpoints
+  DASHBOARD_SECURITY: `${BASE_URL}/api/admin/dashboard/security`,
+  DASHBOARD_PERFORMANCE: `${BASE_URL}/api/admin/dashboard/performance`,
+  DASHBOARD_ANALYTICS: `${BASE_URL}/api/admin/dashboard/analytics`,
+  DASHBOARD_SYSTEM_HEALTH: `${BASE_URL}/api/admin/dashboard/system-health`,
+  DASHBOARD_USERS_STATS: `${BASE_URL}/api/admin/users/stats`,
+  DASHBOARD_ACTIVITY_LOGS: `${BASE_URL}/api/admin/activity-logs`,
+  
+  // User Management (System Admin only)
+  GET_USERS: `${BASE_URL}/api/admin/users`,
+  CREATE_USER: `${BASE_URL}/api/admin/users`,
+  UPDATE_USER: (id) => `${BASE_URL}/api/admin/users/${id}`,
+  DELETE_USER: (id) => `${BASE_URL}/api/admin/users/${id}`,
+  
+  // Activity Logs (System Admin only)
+  GET_ACTIVITY_LOGS: `${BASE_URL}/api/admin/logs/activity`,
+  EXPORT_ACTIVITY_LOGS: `${BASE_URL}/api/admin/logs/activity/export`,
 
   // Blog Management
   CREATE_BLOG: `${BASE_URL}/api/content/blogs`,

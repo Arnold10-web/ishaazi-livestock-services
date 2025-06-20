@@ -134,14 +134,15 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
     try {
       setError('');
       if (editingBlog) {
-        // Always use FormData for consistency
+        // Remove Content-Type header - let axios set it automatically for FormData
         await axios.put(API_ENDPOINTS.UPDATE_BLOG(editingBlog._id), formData, {
-          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+          headers: { ...getAuthHeader() },
         });
         alert('Blog updated successfully!');
       } else {
+        // Remove Content-Type header - let axios set it automatically for FormData
         await axios.post(API_ENDPOINTS.CREATE_BLOG, formData, {
-          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+          headers: { ...getAuthHeader() },
         });
         alert('Blog created successfully!');
       }
@@ -216,7 +217,6 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
               <option value="Technology">Technology</option>
               <option value="Agriculture">Agriculture</option>
               <option value="Livestock">Livestock</option>
-              <option value="Tips">Tips</option>
               <option value="News">News</option>
             </select>
           </div>

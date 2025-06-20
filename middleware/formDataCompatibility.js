@@ -40,7 +40,7 @@ export const processFormData = (req, res, next) => {
     }
     
     // Process boolean fields (convert string to boolean)
-    const booleanFields = ['published', 'featured', 'urgent', 'notificationSent'];
+    const booleanFields = ['published', 'featured', 'urgent', 'isBreaking', 'notificationSent'];
     booleanFields.forEach(field => {
       if (req.body[field] !== undefined && typeof req.body[field] === 'string') {
         req.body[field] = req.body[field].toLowerCase() === 'true';

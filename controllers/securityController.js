@@ -6,10 +6,11 @@
  * It provides endpoints for administrators to monitor security events, review
  * login attempts, verify system health, and configure security parameters.
  * 
- * The controller uses the Admin model for user information and the logger
- * utility to track security-related events for auditing purposes.
+ * The controller uses the User model for user information and the ActivityLog
+ * model to track security-related events for auditing purposes.
  */
-import Admin from '../models/Admin.js';
+import User from '../models/User.js';
+import ActivityLog from '../models/ActivityLog.js';
 import { logSecurityEvent } from '../utils/logger.js';
 
 /**

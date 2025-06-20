@@ -52,6 +52,26 @@ const magazineSchema = new mongoose.Schema(
     fileUrl: { type: String, required: true },
     
     /**
+     * @property {String} author - Author or editor of the magazine issue
+     */
+    author: { type: String, default: '' },
+    
+    /**
+     * @property {String} category - Category classification for the magazine
+     */
+    category: { type: String, default: 'Magazine' },
+    
+    /**
+     * @property {Array<String>} tags - Keywords for magazine searchability and filtering
+     */
+    tags: [{ type: String }],
+    
+    /**
+     * @property {Boolean} featured - Whether this is a featured magazine issue
+     */
+    featured: { type: Boolean, default: false },
+    
+    /**
      * @property {Object} metadata - Flexible storage for additional magazine attributes
      * - featured: Whether this is a featured issue
      * - pageCount: Number of pages in the magazine

@@ -131,12 +131,21 @@ export const isValidObjectId = (id) => {
  * - Provides customized error messages
  * - Skips rate limiting in test environment
  */
-// TEMPORARILY DISABLED: Using a dummy middleware that does nothing instead of rate limiter
-export const sensitiveOperationLimiter = (req, res, next) => {
-  // This is a temporary replacement that just passes through without rate limiting
-  console.log("RATE LIMITER DISABLED FOR TESTING");
-  next();
-};
+// FIXED: Rate limiter with higher limits for development
+export const sensitiveOperationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Much higher limit for development
+  message: {
+    success: false,
+    message: 'Too many sensitive operations from this IP, please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting in test environment or development
+    return process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
+  }
+});
 
 /**
  * @function securityHeaders

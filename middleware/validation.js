@@ -39,6 +39,11 @@ export const validate = (schema, property = 'body') => {
       }
     }
     
+    // If no author is provided anywhere, set a default one for blogs
+    if (req.originalUrl.includes('/blogs') && !req[property].author) {
+      req[property].author = 'Unknown Author';
+    }
+    
     // Handle blog tags before validation
     if (req.originalUrl.includes('/blogs') && req[property].tags) {
       try {
@@ -148,10 +153,23 @@ export const newsSchemas = {
     content: Joi.string().min(10).required(),
     author: Joi.string().min(2).max(100).required(),
     category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').required(),
-    tags: Joi.array().items(Joi.string().max(50)).max(10).default([]),
-    summary: Joi.string().max(500).optional(),
-    published: Joi.boolean().default(false),
-    urgent: Joi.boolean().default(false)
+    tags: Joi.alternatives().try(
+      Joi.array().items(Joi.string().max(50)).max(10),
+      Joi.string().allow('')
+    ).default([]),
+    metadata: Joi.object().optional(),
+    published: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).default(false),
+    featured: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).default(false),
+    isBreaking: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).default(false)
   }),
   
   update: Joi.object({
@@ -159,10 +177,23 @@ export const newsSchemas = {
     content: Joi.string().min(10).optional(),
     author: Joi.string().min(2).max(100).optional(),
     category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').optional(),
-    tags: Joi.array().items(Joi.string().max(50)).max(10).optional(),
-    summary: Joi.string().max(500).optional(),
-    published: Joi.boolean().optional(),
-    urgent: Joi.boolean().optional()
+    tags: Joi.alternatives().try(
+      Joi.array().items(Joi.string().max(50)).max(10),
+      Joi.string().allow('')
+    ).optional(),
+    metadata: Joi.object().optional(),
+    published: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional(),
+    featured: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional(),
+    isBreaking: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional()
   })
 };
 

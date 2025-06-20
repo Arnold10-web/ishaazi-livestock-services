@@ -9,6 +9,7 @@ const SubscriberPage = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
 
   const subscriptionOptions = [
     { value: 'all', label: 'All Updates', description: 'Get all our newsletters and updates' },
@@ -42,13 +43,38 @@ const SubscriberPage = () => {
       
       setMessage(response.data.message || 'Thank you for subscribing to our newsletter!');
       setIsSuccess(true);
+      setShowNotification(true);
       setEmail('');
       setSubscriptionType('all');
+      
+      // Auto-hide notification after 5 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 5000);
     } catch (error) {
       console.error('Subscription Error:', error);
-      const backendMessage = error.response?.data?.message || error.message;
-      setMessage(backendMessage || 'Error subscribing. Please try again.');
+      
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Error subscribing. Please try again.';
+      
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data.message || 'Invalid subscription details provided.';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'You are already subscribed with this email address.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error occurred. Please try again later.';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      setMessage(errorMessage);
       setIsSuccess(false);
+      setShowNotification(true);
+      
+      // Auto-hide error notification after 7 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 7000);
     } finally {
       setLoading(false);
     }
@@ -136,26 +162,46 @@ const SubscriberPage = () => {
             </button>
           </form>
 
-          {message && (
-            <div className={`mt-6 p-4 rounded-lg border ${
+          {message && showNotification && (
+            <div className={`mt-6 p-4 rounded-lg border transition-all duration-300 ${
               isSuccess 
                 ? 'bg-green-50 border-green-200 text-green-800' 
                 : 'bg-red-50 border-red-200 text-red-800'
             }`}>
-              {isSuccess && (
-                <div className="flex items-center mb-2">
-                  <svg className="h-5 w-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span className="font-medium">Success!</span>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  {isSuccess && (
+                    <div className="flex items-center mb-2">
+                      <svg className="h-5 w-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <span className="font-medium">Success!</span>
+                    </div>
+                  )}
+                  {!isSuccess && (
+                    <div className="flex items-center mb-2">
+                      <svg className="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span className="font-medium">Error</span>
+                    </div>
+                  )}
+                  <p className="text-sm">{message}</p>
+                  {isSuccess && (
+                    <p className="text-sm mt-2 text-green-600">
+                      Please check your email for a welcome message and confirmation.
+                    </p>
+                  )}
                 </div>
-              )}
-              <p className="text-sm">{message}</p>
-              {isSuccess && (
-                <p className="text-sm mt-2 text-green-600">
-                  Please check your email for a welcome message and confirmation.
-                </p>
-              )}
+                <button 
+                  onClick={() => setShowNotification(false)}
+                  className={`ml-4 ${isSuccess ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'}`}
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           )}
 

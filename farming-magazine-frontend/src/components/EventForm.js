@@ -168,12 +168,12 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
       setError('');
       if (editingEvent) {
         await axios.put(API_ENDPOINTS.UPDATE_EVENT(editingEvent._id), formData, {
-          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+          headers: { ...getAuthHeader() },
         });
         alert('Event updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_EVENT, formData, {
-          headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+          headers: { ...getAuthHeader() },
         });
         alert('Event created successfully!');
       }

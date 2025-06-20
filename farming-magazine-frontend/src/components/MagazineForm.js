@@ -130,9 +130,9 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
     try {
       setError('');
       if (editingMagazine) {
-        await axios.put(API_ENDPOINTS.UPDATE_MAGAZINE(editingMagazine._id), formData, { headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' } });
+        await axios.put(API_ENDPOINTS.UPDATE_MAGAZINE(editingMagazine._id), formData, { headers: { ...getAuthHeader() } });
       } else {
-        await axios.post(API_ENDPOINTS.CREATE_MAGAZINE, formData, { headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' } });
+        await axios.post(API_ENDPOINTS.CREATE_MAGAZINE, formData, { headers: { ...getAuthHeader() } });
       }
       refreshMagazines();
       resetForm();
@@ -177,14 +177,14 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
         </div>
         <div className="flex items-center space-x-2">
           <input type="checkbox" id="featured" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="w-4 h-4" />
-          <label htmlFor="featured" className="text-sm">Featured</label>
+          <label htmlFor="featured" className="text-sm">Featured content</label>
         </div>
       </div>
       <div ref={quillRef} className="h-40 bg-gray-100 border p-2 rounded"></div>
       <input type="file" onChange={handleImageChange} accept="image/*" className="w-full p-2 border rounded" />
       {imagePreview && <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover mt-2" />}
       <input type="file" onChange={(e) => setPdf(e.target.files[0])} accept=".pdf" className="w-full p-2 border rounded" />
-      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">{editingMagazine ? 'Update Magazine' : 'Create Magazine'}</button>
+      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">{editingMagazine ? 'Update Content' : 'Publish Content'}</button>
     </form>
   );
 };

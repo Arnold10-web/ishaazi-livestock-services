@@ -27,18 +27,19 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
-  const [category, setCategory] = useState('general');
+  const [category, setCategory] = useState('News');
   const [tags, setTags] = useState('');
   const [keywords, setKeywords] = useState('');
   const [summary, setSummary] = useState('');
   const [location, setLocation] = useState('');
+  const [published, setPublished] = useState(false);
+  const [featured, setFeatured] = useState(false);
   
   // Image handling state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   
   // News-specific state
-  const [published, setPublished] = useState(false);
   const [isBreaking, setIsBreaking] = useState(false);
   
   // UI state
@@ -69,6 +70,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
       setCategory(editingNews.category || 'general');
       setTags(editingNews.tags ? editingNews.tags.join(', ') : '');
       setPublished(editingNews.published || false);
+      setFeatured(editingNews.featured || false);
       setIsBreaking(editingNews.isBreaking || false);
       setImagePreview(editingNews.imageUrl);
       
@@ -127,12 +129,13 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   const resetForm = () => {
     setTitle('');
     setAuthor('');
-    setCategory('general');
+    setCategory('News');
     setTags('');
     setKeywords('');
     setSummary('');
     setLocation('');
     setPublished(false);
+    setFeatured(false);
     setIsBreaking(false);
     setImage(null);
     setImagePreview(null);
@@ -165,6 +168,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
     formData.append('tags', JSON.stringify(tagsArray));
     formData.append('metadata', JSON.stringify(metadata));
     formData.append('published', published);
+    formData.append('featured', featured);
     formData.append('isBreaking', isBreaking);
     if (image) formData.append('image', image);
 
@@ -270,11 +274,11 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white transition-all duration-200 ease-in-out"
             >
-              <option value="general">General</option>
-              <option value="agriculture">Agriculture</option>
-              <option value="livestock">Livestock</option>
-              <option value="technology">Technology</option>
-              <option value="market">Market</option>
+              <option value="General">General</option>
+              <option value="Breaking">Breaking</option>
+              <option value="Market">Market</option>
+              <option value="Weather">Weather</option>
+              <option value="Policy">Policy</option>
             </select>
           </div>
 
@@ -291,22 +295,32 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
             </label>
           </div>
 
-          <div className="space-y-2">
+          {/* Featured Toggle */}
+          <div className="flex items-center">
+            <label htmlFor="featured" className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="featured"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Featured content</span>
+            </label>
+          </div>
+
+          {/* Breaking News Toggle */}
+          <div className="flex items-center">
             <label htmlFor="isBreaking" className="flex items-center space-x-2">
               <input
-                id="isBreaking"
                 type="checkbox"
+                id="isBreaking"
+                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                 checked={isBreaking}
                 onChange={(e) => setIsBreaking(e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                🚨 Mark as Breaking News
-              </span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Breaking News</span>
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
-              Breaking news will appear in the scrolling marquee banner
-            </p>
           </div>
         </div>
 

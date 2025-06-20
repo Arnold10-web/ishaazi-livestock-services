@@ -56,9 +56,9 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
       case 'newsletters':
         return [
           { label: 'Total Items', value: content.length, icon: 'list', color: 'teal', description: 'All content items' },
-          { label: 'Published', value: content.filter(item => item.isPublished).length, icon: 'check-circle', color: 'green', description: 'Live content' },
+          { label: 'Published', value: content.filter(item => item.published).length, icon: 'check-circle', color: 'green', description: 'Live content' },
           { label: 'Recent (30 days)', value: content.filter(item => new Date(item.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, icon: 'calendar-alt', color: 'blue', description: 'New content' },
-          { label: 'Draft', value: content.filter(item => !item.isPublished).length, icon: 'file-alt', color: 'yellow', description: 'Unpublished content' }
+          { label: 'Draft', value: content.filter(item => !item.published).length, icon: 'file-alt', color: 'yellow', description: 'Unpublished content' }
         ];
       case 'subscribers':
         const currentMonth = new Date().getMonth();
@@ -77,9 +77,9 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
       default:
         return [
           { label: 'Total Items', value: content.length, icon: 'list', color: 'teal', description: 'All content items' },
-          { label: 'Published', value: content.filter(item => item.isPublished).length, icon: 'check-circle', color: 'green', description: 'Live content' },
+          { label: 'Published', value: content.filter(item => item.published).length, icon: 'check-circle', color: 'green', description: 'Live content' },
           { label: 'Recent (30 days)', value: content.filter(item => new Date(item.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, icon: 'calendar-alt', color: 'blue', description: 'New content' },
-          { label: 'Draft', value: content.filter(item => !item.isPublished).length, icon: 'file-alt', color: 'yellow', description: 'Unpublished content' }
+          { label: 'Draft', value: content.filter(item => !item.published).length, icon: 'file-alt', color: 'yellow', description: 'Unpublished content' }
         ];
     }
   };
@@ -108,7 +108,7 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
 
       const published = content.filter(item => {
         const itemDate = new Date(item.createdAt);
-        return itemDate >= monthStart && itemDate <= monthEnd && item.isPublished;
+        return itemDate >= monthStart && itemDate <= monthEnd && item.published;
       }).length;
 
       timeData.push({
@@ -137,8 +137,8 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
 
     // Status data (published vs draft)
     const statusData = [
-      { name: 'Published', value: content.filter(item => item.isPublished).length },
-      { name: 'Draft', value: content.filter(item => !item.isPublished).length }
+      { name: 'Published', value: content.filter(item => item.published).length },
+      { name: 'Draft', value: content.filter(item => !item.published).length }
     ];
 
     // Engagement data (if available)
@@ -431,7 +431,7 @@ const ContentManagement = ({ activeTab, darkMode }) => {
           if (!value || value === 'all') return true;
           
           if (key === 'isPublished') {
-            return value === 'published' ? item.isPublished : !item.isPublished;
+            return value === 'published' ? item.published : !item.published;
           }
           
           if (key === 'category') {
@@ -575,7 +575,7 @@ const ContentManagement = ({ activeTab, darkMode }) => {
           ...rest,
           createdAt: new Date(item.createdAt).toLocaleDateString(),
           updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '',
-          status: item.isPublished ? 'Published' : 'Draft'
+          status: item.published ? 'Published' : 'Draft'
         };
       });
       
@@ -866,35 +866,35 @@ const ContentManagement = ({ activeTab, darkMode }) => {
     const getListComponent = () => {
       switch (activeTab) {
         case 'blogs':
-          return <BlogList blogs={content} {...commonProps} />;
+          return <BlogList blogs={filteredAndSortedContent} {...commonProps} />;
         case 'news':
-          return <NewsList news={content} {...commonProps} />;
+          return <NewsList news={filteredAndSortedContent} {...commonProps} />;
         case 'farms':
-          return <FarmList farms={content} {...commonProps} />;
+          return <FarmList farms={filteredAndSortedContent} {...commonProps} />;
         case 'magazines':
-          return <MagazineList magazines={content} {...commonProps} />;
+          return <MagazineList magazines={filteredAndSortedContent} {...commonProps} />;
         case 'basics':
           return (
             <BasicList 
-              basics={content} 
+              basics={filteredAndSortedContent} 
               onDeleteComment={handleDeleteComment}
               {...commonProps}
             />
           );
         case 'piggeries':
-          return <PiggeryList piggeries={content} {...commonProps} />;
+          return <PiggeryList piggeries={filteredAndSortedContent} {...commonProps} />;
         case 'dairies':
-          return <DairyList dairies={content} {...commonProps} />;
+          return <DairyList dairies={filteredAndSortedContent} {...commonProps} />;
         case 'goats':
-          return <GoatList goats={content} {...commonProps} />;
+          return <GoatList goats={filteredAndSortedContent} {...commonProps} />;
         case 'events':
-            return <EventList events={content} {...commonProps} />;
+            return <EventList events={filteredAndSortedContent} {...commonProps} />;
         case 'beefs':
-          return <BeefList beefs={content} {...commonProps} />;
+          return <BeefList beefs={filteredAndSortedContent} {...commonProps} />;
         case 'newsletters':
-          return <NewsletterList newsletters={content} {...commonProps} darkMode={darkMode} />;
+          return <NewsletterList newsletters={filteredAndSortedContent} {...commonProps} darkMode={darkMode} />;
         case 'subscribers':
-          return <SubscriberList subscribers={content} onDelete={handleDelete} darkMode={darkMode} />;
+          return <SubscriberList subscribers={filteredAndSortedContent} onDelete={handleDelete} darkMode={darkMode} />;
         default:
           return <div>Select a content type to manage</div>;
       }

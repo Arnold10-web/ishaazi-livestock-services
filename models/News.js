@@ -34,12 +34,12 @@ const newsSchema = new mongoose.Schema(
     
     /**
      * @property {String} category - The primary category of the news article
-     * @enum ['agriculture', 'livestock', 'technology', 'market', 'general']
+     * @enum ['Breaking', 'Market', 'Weather', 'Policy', 'General']
      */
     category: { 
       type: String, 
-      enum: ['agriculture', 'livestock', 'technology', 'market', 'general'],
-      default: 'general'
+      enum: ['Breaking', 'Market', 'Weather', 'Policy', 'General'],
+      default: 'General'
     },
     
     /**
@@ -76,6 +76,11 @@ const newsSchema = new mongoose.Schema(
      * @property {Boolean} isBreaking - Indicates high-priority breaking news
      */
     isBreaking: { type: Boolean, default: false },
+    
+    /**
+     * @property {Boolean} featured - Indicates if this is featured news
+     */
+    featured: { type: Boolean, default: false },
     
     /**
      * @property {Number} views - Count of article views for analytics

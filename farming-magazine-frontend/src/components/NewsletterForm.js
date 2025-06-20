@@ -9,6 +9,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [targetSubscriptionTypes, setTargetSubscriptionTypes] = useState(['all']);
+  const [featured, setFeatured] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
@@ -34,6 +35,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
       setTitle(editingNewsletter.title || '');
       setSubject(editingNewsletter.subject || editingNewsletter.title || '');
       setTargetSubscriptionTypes(editingNewsletter.targetSubscriptionTypes || ['all']);
+      setFeatured(editingNewsletter.featured || false);
       if (quillEditor) {
         quillEditor.root.innerHTML = editingNewsletter.body || '';
       }
@@ -76,6 +78,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
     setTitle('');
     setSubject('');
     setTargetSubscriptionTypes(['all']);
+    setFeatured(false);
     if (quillEditor) {
       quillEditor.setText('');
     }
@@ -115,7 +118,8 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
       title: title.trim(), 
       subject: subject.trim(),
       body,
-      targetSubscriptionTypes
+      targetSubscriptionTypes,
+      featured
     };
 
     try {
@@ -318,6 +322,29 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
               </label>
             ))}
           </div>
+        </div>
+
+        {/* Featured Newsletter */}
+        <div>
+          <label className={`flex items-center cursor-pointer`}>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={() => setFeatured(!featured)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                disabled={loading}
+              />
+              <span className={`ml-2 text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                Featured content
+              </span>
+            </div>
+            <div className={`ml-4 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {featured 
+                ? 'This newsletter will be highlighted as a featured newsletter.' 
+                : 'Check to mark this newsletter as featured.'}
+            </div>
+          </label>
         </div>
 
         {/* Content Editor */}

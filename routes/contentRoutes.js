@@ -1,6 +1,6 @@
 import express from 'express';
 import upload, { optimizeImage } from '../middleware/fileUpload.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 import { validate, blogSchemas, newsSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
@@ -119,7 +119,7 @@ router.post('/upload/media', upload.single('file'), (req, res) => {
 
 // Blog Routes with validation and enhanced form data compatibility
 router.post('/blogs',
-  authMiddleware,
+  authenticateToken, requireRole(['system_admin', 'editor']),
   // sensitiveOperationLimiter, // Temporarily disabled for testing
   upload.single('image'),
   validateFileUpload,
@@ -130,10 +130,10 @@ router.post('/blogs',
   createBlog
 );
 router.get('/blogs', cacheMiddleware(300), getBlogs);
-router.get('/blogs/admin', authMiddleware, getAdminBlogs);
+router.get('/blogs/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminBlogs);
 router.get('/blogs/:id', validateObjectId('id'), cacheMiddleware(600), getBlogById);
 router.put('/blogs/:id',
-  authMiddleware,
+  authenticateToken, requireRole(['system_admin', 'editor']),
   validateObjectId('id'),
   upload.single('image'),
   validateFileUpload,
@@ -144,29 +144,30 @@ router.put('/blogs/:id',
   updateBlog
 );
 router.delete('/blogs/:id',
-  authMiddleware,
+  authenticateToken, requireRole(['system_admin', 'editor']),
   // sensitiveOperationLimiter, // Temporarily disabled for testing
   validateObjectId('id'),
   invalidateCache(['blogs']),
   deleteBlog
 );
 
-// News Routes with enhanced form data compatibility
-router.post('/news', 
-  authMiddleware, 
-  upload.single('image'), 
-  validateFileUpload, 
-  optimizeImage, 
-  processFormData, // Add form data processing
-  validate(newsSchemas.create), // Add validation
-  invalidateCache(['news']), 
+// News Routes with validation and enhanced form data compatibility
+router.post('/news',
+  authenticateToken, requireRole(['system_admin', 'editor']),
+  // sensitiveOperationLimiter, // Temporarily disabled for testing
+  upload.single('image'),
+  validateFileUpload,
+  optimizeImage,
+  processFormData, // Process FormData fields for POST as well
+  validate(newsSchemas.create),
+  invalidateCache(['news']),
   createNews
 );
 router.get('/news', cacheMiddleware(300), getNews);
-router.get('/news/admin', authMiddleware, getAdminNews);
+router.get('/news/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminNews);
 router.get('/news/:id', cacheMiddleware(600), getNewsById);
 router.put('/news/:id', 
-  authMiddleware, 
+  authenticateToken, requireRole(['system_admin', 'editor']), 
   upload.single('image'), 
   optimizeImage, 
   processFormData, // Add form data processing
@@ -174,7 +175,7 @@ router.put('/news/:id',
   invalidateCache(['news']), 
   updateNews
 );
-router.delete('/news/:id', authMiddleware, invalidateCache(['news']), deleteNews);
+router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['news']), deleteNews);
 
 
 // Basic Routes
@@ -182,7 +183,7 @@ router.delete('/news/:id', authMiddleware, invalidateCache(['news']), deleteNews
 // Create a new Basic media (video/audio)
 router.post(
   '/basics',
-  authMiddleware,
+  authenticateToken, requireRole(['system_admin', 'editor']),
   upload.fields([
     { name: 'image', maxCount: 1 }, // Optional thumbnail image
     { name: 'media', maxCount: 1 }, // Required media file (video/audio)
@@ -196,7 +197,7 @@ router.post(
 router.get('/basics', cacheMiddleware(300), getBasics);
 
 // Get all Basics for admin (admin view, supports pagination)
-router.get('/basics/admin', authMiddleware, getAdminBasics);
+router.get('/basics/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminBasics);
 
 // Get a single Basic media by ID
 router.get('/basics/:id', cacheMiddleware(600), getBasicById);
@@ -204,7 +205,7 @@ router.get('/basics/:id', cacheMiddleware(600), getBasicById);
 // Update a Basic media by ID
 router.put(
   '/basics/:id',
-  authMiddleware,
+  authenticateToken, requireRole(['system_admin', 'editor']),
   upload.fields([
     { name: 'image', maxCount: 1 }, // Optional updated thumbnail image
     { name: 'media', maxCount: 1 }, // Optional updated media file (video/audio)
@@ -215,98 +216,98 @@ router.put(
 );
 
 // Delete a Basic media by ID
-router.delete('/basics/:id', authMiddleware, invalidateCache(['basics']), deleteBasic);
+router.delete('/basics/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['basics']), deleteBasic);
 
 // Add a comment to a Basic media
 router.post('/basics/:id/comments', invalidateCache(['basics']), addComment);
 
 // Delete a comment from a Basic media
-router.delete('/basics/:id/comments/:commentId', authMiddleware, invalidateCache(['basics']), deleteComment);
+router.delete('/basics/:id/comments/:commentId', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['basics']), deleteComment);
 // Farms Routes
-router.post('/farms', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['farms']), createFarm);
+router.post('/farms', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['farms']), createFarm);
 router.get('/farms', cacheMiddleware(300), getFarms);
-router.get('/farms/admin', authMiddleware, getAdminFarms);
+router.get('/farms/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminFarms);
 router.get('/farms/:id', cacheMiddleware(600), getFarmById);
-router.put('/farms/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['farms']), updateFarm);
-router.delete('/farms/:id', authMiddleware, invalidateCache(['farms']), deleteFarm);
+router.put('/farms/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), optimizeImage, invalidateCache(['farms']), updateFarm);
+router.delete('/farms/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['farms']), deleteFarm);
 
 // Magazine Routes
-router.post('/magazines', authMiddleware, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), optimizeImage, invalidateCache(['magazines']), createMagazine);
+router.post('/magazines', authenticateToken, requireRole(['system_admin', 'editor']), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), optimizeImage, invalidateCache(['magazines']), createMagazine);
 router.get('/magazines', cacheMiddleware(300), getMagazines);
-router.get('/magazines/admin', authMiddleware, getAdminMagazines);
+router.get('/magazines/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminMagazines);
 router.get('/magazines/:id', cacheMiddleware(600), getMagazineById);
-router.put('/magazines/:id', authMiddleware, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), optimizeImage, invalidateCache(['magazines']), updateMagazine);
-router.delete('/magazines/:id', authMiddleware, invalidateCache(['magazines']), deleteMagazine);
+router.put('/magazines/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), optimizeImage, invalidateCache(['magazines']), updateMagazine);
+router.delete('/magazines/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['magazines']), deleteMagazine);
 
 // Piggery Routes
-router.post('/piggeries', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['piggeries']), createPiggery);
+router.post('/piggeries', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['piggeries']), createPiggery);
 router.get('/piggeries', cacheMiddleware(300), getPiggeries);
-router.get('/piggeries/admin', authMiddleware, getAdminPiggeries);
+router.get('/piggeries/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminPiggeries);
 router.get('/piggeries/:id', cacheMiddleware(600), getPiggeryById);
-router.put('/piggeries/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['piggeries']), updatePiggery);
-router.delete('/piggeries/:id', authMiddleware, invalidateCache(['piggeries']), deletePiggery);
+router.put('/piggeries/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), optimizeImage, invalidateCache(['piggeries']), updatePiggery);
+router.delete('/piggeries/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['piggeries']), deletePiggery);
 
 // Dairy Routes
-router.post('/dairies', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['dairies']), createDairy);
+router.post('/dairies', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['dairies']), createDairy);
 router.get('/dairies', cacheMiddleware(300), getDairies);
-router.get('/dairies/admin', authMiddleware, getAdminDairies);
+router.get('/dairies/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminDairies);
 router.get('/dairies/:id', cacheMiddleware(600), getDairyById);
-router.put('/dairies/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['dairies']), updateDairy);
-router.delete('/dairies/:id', authMiddleware, invalidateCache(['dairies']), deleteDairy);
+router.put('/dairies/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), optimizeImage, invalidateCache(['dairies']), updateDairy);
+router.delete('/dairies/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['dairies']), deleteDairy);
 
 // Beef Routes
-router.post('/beefs', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['beefs']), createBeef);
+router.post('/beefs', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['beefs']), createBeef);
 router.get('/beefs', cacheMiddleware(300), getBeefs);
-router.get('/beefs/admin', authMiddleware, getAdminBeefs);
+router.get('/beefs/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminBeefs);
 router.get('/beefs/:id', cacheMiddleware(600), getBeefById);
-router.put('/beefs/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['beefs']), updateBeef);
-router.delete('/beefs/:id', authMiddleware, invalidateCache(['beefs']), deleteBeef);
+router.put('/beefs/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), optimizeImage, invalidateCache(['beefs']), updateBeef);
+router.delete('/beefs/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['beefs']), deleteBeef);
 
 // Goat Routes
-router.post('/goats', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['goats']), createGoat);
+router.post('/goats', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['goats']), createGoat);
 router.get('/goats', cacheMiddleware(300), getGoats);
-router.get('/goats/admin', authMiddleware, getAdminGoats);
+router.get('/goats/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminGoats);
 router.get('/goats/:id', cacheMiddleware(600), getGoatById);
-router.put('/goats/:id', authMiddleware, upload.single('image'), optimizeImage, invalidateCache(['goats']), updateGoat);
-router.delete('/goats/:id', authMiddleware, invalidateCache(['goats']), deleteGoat);
+router.put('/goats/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), optimizeImage, invalidateCache(['goats']), updateGoat);
+router.delete('/goats/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['goats']), deleteGoat);
 
 
 // Subscriber Routes
-router.get('/subscribers', authMiddleware, getSubscribers);
+router.get('/subscribers', authenticateToken, requireRole(['system_admin', 'editor']), getSubscribers);
 router.post('/subscribers', createSubscriber);
-router.delete('/subscribers/:id', authMiddleware, deleteSubscriber);
-router.put('/subscribers/bulk', authMiddleware, bulkUpdateSubscribers);
+router.delete('/subscribers/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteSubscriber);
+router.put('/subscribers/bulk', authenticateToken, requireRole(['system_admin', 'editor']), bulkUpdateSubscribers);
 
 // Newsletter Routes
 router.get('/newsletters', getNewsletters);
-router.post('/newsletters', authMiddleware, createNewsletter);
-router.put('/newsletters/:id', authMiddleware, updateNewsletter);
-router.delete('/newsletters/:id', authMiddleware, deleteNewsletter);
-router.post('/newsletters/:id/send', authMiddleware, sendNewsletter);
+router.post('/newsletters', authenticateToken, requireRole(['system_admin', 'editor']), createNewsletter);
+router.put('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), updateNewsletter);
+router.delete('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteNewsletter);
+router.post('/newsletters/:id/send', authenticateToken, requireRole(['system_admin', 'editor']), sendNewsletter);
 
 // Event Routes
-router.post('/events', authMiddleware, upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['events']), createEvent);
+router.post('/events', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['events']), createEvent);
 router.get('/events', getEvents);
-router.get('/events/admin', authMiddleware, getAdminEvents);
+router.get('/events/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminEvents);
 router.get('/events/:id', getEventById);
-router.put('/events/:id', authMiddleware, upload.single('image'), updateEvent);
-router.delete('/events/:id', authMiddleware, deleteEvent);
+router.put('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), updateEvent);
+router.delete('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEvent);
 
 // Event Registration Routes (Public)
 router.post('/events/:eventId/register', registerForEvent);
-router.get('/events/:eventId/registrations', authMiddleware, getEventRegistrations);
+router.get('/events/:eventId/registrations', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrations);
 router.get('/events/:eventId/registration', getRegistrationByEmail);
 router.post('/events/:eventId/cancel', cancelEventRegistration);
-router.get('/events/:eventId/stats', authMiddleware, getEventRegistrationStats);
+router.get('/events/:eventId/stats', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrationStats);
 
 // Auction Routes
-router.post('/auctions', authMiddleware, upload.single('image'), createAuction);
+router.post('/auctions', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), createAuction);
 router.get('/auctions', getAuctions);
 router.get('/auctions/upcoming', getUpcomingAuctions);
-router.get('/auctions/admin', authMiddleware, getAdminAuctions);
+router.get('/auctions/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminAuctions);
 router.get('/auctions/:id', getAuctionById);
-router.put('/auctions/:id', authMiddleware, upload.single('image'), updateAuction);
-router.delete('/auctions/:id', authMiddleware, deleteAuction);
+router.put('/auctions/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), updateAuction);
+router.delete('/auctions/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteAuction);
 router.post('/auctions/:id/register', registerInterest);
 
 // ENGAGEMENT TRACKING ROUTES
@@ -327,9 +328,9 @@ router.get('/:contentType/:id/stats', getEngagementStats);
 router.post('/:contentType/:id/comments', addContentComment);
 
 // Delete comment from any content type (admin only)
-router.delete('/:contentType/:id/comments/:commentId', authMiddleware, deleteContentComment);
+router.delete('/:contentType/:id/comments/:commentId', authenticateToken, requireRole(['system_admin', 'editor']), deleteContentComment);
 
 // Approve comment for any content type (admin only)
-router.patch('/:contentType/:id/comments/:commentId/approve', authMiddleware, approveContentComment);
+router.patch('/:contentType/:id/comments/:commentId/approve', authenticateToken, requireRole(['system_admin', 'editor']), approveContentComment);
 
 export default router;

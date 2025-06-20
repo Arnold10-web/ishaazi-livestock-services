@@ -61,6 +61,12 @@ const newsletterSchema = new mongoose.Schema({
     default: 'draft' 
   },
   
+  // Featured status
+  featured: { 
+    type: Boolean, 
+    default: false 
+  },
+  
   // Author reference
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
