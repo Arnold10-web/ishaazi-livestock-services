@@ -29,9 +29,13 @@ const eventRegistrationSchema = new mongoose.Schema(
       trim: true,
       validate: {
         validator: function(v) {
-          return !v || /^[\+]?[1-9][\d]{0,15}$/.test(v);
+          if (!v) return true; // Phone is optional
+          // Remove spaces, dashes, and parentheses for validation
+          const cleanPhone = v.replace(/[\s\-\(\)]/g, '');
+          // Must start with + and have 1-4 digit country code followed by 6-14 digits
+          return /^\+\d{1,4}\d{6,14}$/.test(cleanPhone);
         },
-        message: 'Please enter a valid phone number'
+        message: 'Phone number must include a country code (e.g., +1234567890)'
       }
     },
     registrationDate: {

@@ -70,7 +70,7 @@ const newsletterSchema = new mongoose.Schema({
   // Author reference
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Admin',
+    ref: 'User',
     required: true
   }
 }, {

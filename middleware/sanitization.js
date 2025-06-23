@@ -92,7 +92,7 @@ const sanitizeObject = (obj) => {
     if (obj.hasOwnProperty(key)) {
       if (typeof obj[key] === 'string') {
         // Special handling for content fields that may contain HTML
-        if (key === 'content' || key === 'description' || key === 'summary') {
+        if (key === 'content' || key === 'description' || key === 'summary' || key === 'body') {
           obj[key] = sanitizeHTML(obj[key]);
         } else {
           obj[key] = sanitizeText(obj[key]);

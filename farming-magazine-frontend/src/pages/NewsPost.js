@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import API_ENDPOINTS from '../config/apiConfig';
 import { 
   Calendar, Clock, User, Share2, Bookmark, Eye, ArrowLeft,
   Facebook, Instagram, MessageCircle, 
@@ -33,6 +34,24 @@ const NewsPost = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentNews, setRecentNews] = useState([]);
+
+  // Newsletter subscription state
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterMessage, setNewsletterMessage] = useState('');
+  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [showNewsletterNotification, setShowNewsletterNotification] = useState(false);
+  const [showNewsletterPreferences, setShowNewsletterPreferences] = useState(false);
+  const [newsletterSubscriptionType, setNewsletterSubscriptionType] = useState('all');
+
+  const subscriptionOptions = [
+    { value: 'all', label: 'All Updates', description: 'Get all our newsletters and updates' },
+    { value: 'newsletters', label: 'Newsletters Only', description: 'Weekly farming insights and tips' },
+    { value: 'events', label: 'Events', description: 'Upcoming farming events and workshops' },
+    { value: 'auctions', label: 'Livestock Auctions', description: 'Auction announcements and schedules' },
+    { value: 'farming-tips', label: 'Farming Tips', description: 'Expert advice and best practices' },
+    { value: 'livestock-updates', label: 'Livestock Updates', description: 'Animal care and management news' }
+  ];
 
   // API configuration
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -70,6 +89,78 @@ const NewsPost = () => {
   // User interaction state
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+
+  // Newsletter subscription handlers
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    setNewsletterMessage('');
+    setNewsletterSuccess(false);
+    setShowNewsletterNotification(false);
+
+    // Email validation
+    const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+    if (!isValidEmail(newsletterEmail)) {
+      setNewsletterMessage('Please enter a valid email address.');
+      setNewsletterSuccess(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide error message after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+      return;
+    }
+
+    // Show preferences popup
+    setShowNewsletterPreferences(true);
+  };
+
+  const handleNewsletterSubscription = async () => {
+    setNewsletterLoading(true);
+    setNewsletterMessage('');
+    setNewsletterSuccess(false);
+    setShowNewsletterNotification(false);
+
+    try {
+      const response = await axios.post(API_ENDPOINTS.CREATE_SUBSCRIBER, { 
+        email: newsletterEmail,
+        subscriptionType: newsletterSubscriptionType
+      });
+      
+      setNewsletterMessage(response.data.message || 'Thank you for subscribing! Welcome to our farming community.');
+      setNewsletterSuccess(true);
+      setNewsletterEmail('');
+      setNewsletterSubscriptionType('all');
+      setShowNewsletterPreferences(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide success notification after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      
+      let errorMessage = 'Subscription failed. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again in a moment.';
+      }
+      
+      setNewsletterMessage(errorMessage);
+      setNewsletterSuccess(false);
+      setShowNewsletterPreferences(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide error message after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
 
   /**
    * Check for bookmarked status in local storage when article changes
@@ -343,12 +434,12 @@ const NewsPost = () => {
                 <div className="px-8 pb-8">
                   <div className="flex items-center flex-wrap gap-2 pt-6 border-t border-gray-200">
                     <Tag className="w-4 h-4 text-gray-500 mr-2" />
-                    {news.tags.split(',').map((tag, index) => (
+                    {(Array.isArray(news.tags) ? news.tags : news.tags.split(',')).map((tag, index) => (
                       <span
                         key={index}
                         className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-200 transition-colors cursor-pointer"
                       >
-                        #{tag.trim()}
+                        #{typeof tag === 'string' ? tag.trim() : tag}
                       </span>
                     ))}
                   </div>
@@ -459,16 +550,128 @@ const NewsPost = () => {
                 <p className="text-green-100 mb-4 text-sm">
                   Get agricultural insights delivered to your inbox every morning.
                 </p>
-                <div className="space-y-3">
+                <form onSubmit={handleNewsletterSubmit} className="space-y-3">
                   <input
                     type="email"
                     placeholder="Enter your email"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
+                    required
+                    disabled={newsletterLoading}
                   />
-                  <button className="w-full bg-white text-green-600 font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    Subscribe
+                  <button 
+                    type="submit"
+                    disabled={newsletterLoading}
+                    className="w-full bg-white text-green-600 font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {newsletterLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Subscribing...
+                      </>
+                    ) : (
+                      'Subscribe'
+                    )}
                   </button>
-                </div>
+                </form>
+
+                {/* Preferences Popup */}
+                {showNewsletterPreferences && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Choose Your Preferences</h3>
+                        <button
+                          onClick={() => setShowNewsletterPreferences(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-4">
+                        What would you like to receive updates about?
+                      </p>
+                      
+                      <div className="space-y-3 mb-6">
+                        {subscriptionOptions.map((option) => (
+                          <label key={option.value} className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="newsletterSubscriptionType"
+                              value={option.value}
+                              checked={newsletterSubscriptionType === option.value}
+                              onChange={(e) => setNewsletterSubscriptionType(e.target.value)}
+                              className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                              <div className="text-xs text-gray-500">{option.description}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => setShowNewsletterPreferences(false)}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleNewsletterSubscription}
+                          disabled={newsletterLoading}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          {newsletterLoading ? 'Subscribing...' : 'Subscribe'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Newsletter Notification */}
+                {newsletterMessage && showNewsletterNotification && (
+                  <div className={`mt-4 p-3 rounded-lg border transition-all duration-300 ${
+                    newsletterSuccess 
+                      ? 'bg-green-50 border-green-200 text-green-800' 
+                      : 'bg-red-50 border-red-200 text-red-800'
+                  }`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        {newsletterSuccess && (
+                          <div className="flex items-center mb-1">
+                            <svg className="h-4 w-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span className="font-medium text-sm">Success!</span>
+                          </div>
+                        )}
+                        {!newsletterSuccess && (
+                          <div className="flex items-center mb-1">
+                            <svg className="h-4 w-4 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span className="font-medium text-sm">Error</span>
+                          </div>
+                        )}
+                        <p className="text-xs">{newsletterMessage}</p>
+                      </div>
+                      <button 
+                        onClick={() => setShowNewsletterNotification(false)}
+                        className={`ml-4 ${newsletterSuccess ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'}`}
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar Ad */}

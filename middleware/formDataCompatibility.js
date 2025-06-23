@@ -22,19 +22,36 @@ export const processFormData = (req, res, next) => {
     console.log(`Processing form data for ${req.method} request to ${req.originalUrl}...`);
     
     // Process tags specifically - convert string to array when needed
-    if (req.body.tags && typeof req.body.tags === 'string') {
-      try {
-        // First try to parse as JSON
-        if (req.body.tags.trim().startsWith('[') && req.body.tags.trim().endsWith(']')) {
-          req.body.tags = JSON.parse(req.body.tags);
-        } else {
-          // Otherwise treat as comma-separated
-          req.body.tags = req.body.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+    if (req.body.tags) {
+      console.log('Processing tags in middleware. Type:', typeof req.body.tags);
+      
+      if (typeof req.body.tags === 'string') {
+        try {
+          console.log('Processing tags in middleware. Type:', typeof req.body.tags, 'Value:', req.body.tags);
+          
+          // Check if it's an empty string and convert to empty array
+          if (req.body.tags.trim() === '') {
+            req.body.tags = [];
+            console.log('Empty tags string converted to empty array');
+          }
+          // First try to parse as JSON
+          else if (req.body.tags.trim().startsWith('[') && req.body.tags.trim().endsWith(']')) {
+            req.body.tags = JSON.parse(req.body.tags);
+            console.log('Tags parsed from JSON in middleware:', req.body.tags);
+          } else {
+            // Otherwise treat as comma-separated
+            req.body.tags = req.body.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+            console.log('Tags split from string in middleware:', req.body.tags);
+          }
+        } catch (err) {
+          console.error('Error processing tags in form data:', err);
+          // Fallback to empty array if parsing fails
+          req.body.tags = [];
         }
-        console.log('Tags processed:', req.body.tags);
-      } catch (err) {
-        console.error('Error processing tags in form data:', err);
-        // Fallback to empty array if parsing fails
+      } else if (!Array.isArray(req.body.tags)) {
+        // If tags exists but is not a string or array, convert to empty array
+        console.warn('Tags in invalid format (not string or array). Converting to empty array.');
+        console.warn('Received type:', typeof req.body.tags);
         req.body.tags = [];
       }
     }

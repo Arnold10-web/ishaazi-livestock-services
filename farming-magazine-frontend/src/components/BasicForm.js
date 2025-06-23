@@ -121,18 +121,6 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
     setEditingBasic(null);
   };
 
-  const generateMetadata = () => {
-    return {
-      author: author.trim(),
-      category: category,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
-      summary: summary.trim(),
-      published: published,
-      duration: calculatedDuration // Include auto-calculated duration
-    };
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const description = quillEditor ? quillEditor.root.innerHTML : '';
@@ -142,26 +130,30 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       return;
     }
 
-    if (!media) {
-      setError('Media file is required.');
+    if (!media && !editingBasic) {
+      setError('Media file is required for new basic components.');
       return;
     }
 
-    const metadataObj = generateMetadata();
+    // Create metadata object with all the additional fields
+    const metadataObj = {
+      author: author.trim(),
+      category: category,
+      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
+      summary: summary.trim(),
+      duration: calculatedDuration
+    };
 
     const formData = new FormData();
     formData.append('title', title);
-    formData.append('fileType', fileType);
     formData.append('description', description);
-    formData.append('author', author);
-    formData.append('category', category);
-    formData.append('tags', JSON.stringify(metadataObj.tags));
-    formData.append('keywords', JSON.stringify(metadataObj.keywords));
-    formData.append('summary', summary);
-    formData.append('published', published);
+    formData.append('fileType', fileType);
+    formData.append('duration', String(calculatedDuration));
+    formData.append('published', String(published));
     formData.append('metadata', JSON.stringify(metadataObj));
     if (image) formData.append('image', image);
-    formData.append('media', media);
+    if (media) formData.append('media', media);
 
     try {
       setError('');
@@ -186,7 +178,21 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       resetForm();
     } catch (error) {
       console.error('Error saving basic component:', error);
-      setError(error.response?.data?.message || 'Failed to save basic component');
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = 'Failed to save basic component';
+      
+      if (error.response?.status === 413 || error.message?.includes('413')) {
+        errorMessage = 'File too large. Video files must be under 100MB and images under 10MB.';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || 'Invalid file format or data.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message?.includes('File too large')) {
+        errorMessage = 'File too large. Video files must be under 100MB and images under 10MB.';
+      }
+      
+      setError(errorMessage);
     }
   };
 
@@ -410,6 +416,9 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
               </span>
             )}
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Supported formats: MP4, AVI, MOV, WMV (video) | MP3, WAV (audio). Max size: 100MB
+          </p>
         </div>
 
         <div className="space-y-2">

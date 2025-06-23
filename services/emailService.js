@@ -286,7 +286,7 @@ class EmailService {
   async sendWelcomeEmail(companyEmail, tempPassword, createdBy) {
     try {
       const subject = 'Welcome to Farming Magazine Admin Portal';
-      const template = await this.getTemplate('welcome-admin');
+      const template = this.templates.get('welcome-admin');
       
       const templateData = {
         companyEmail,
@@ -297,7 +297,7 @@ class EmailService {
         companyName: 'Farming Magazine'
       };
 
-      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultWelcomeTemplate(templateData);
+      const html = template ? this.renderTemplate('welcome-admin', templateData) : this.getDefaultWelcomeTemplate(templateData);
       
       const mailOptions = {
         from: `${this.config.from.name} <${this.config.from.address}>`,
@@ -332,7 +332,7 @@ class EmailService {
   async sendPasswordResetEmail(companyEmail, tempPassword, resetBy) {
     try {
       const subject = 'Admin Account Password Reset - Farming Magazine';
-      const template = await this.getTemplate('password-reset-admin');
+      const template = this.templates.get('password-reset-admin');
       
       const templateData = {
         companyEmail,
@@ -344,7 +344,7 @@ class EmailService {
         resetDate: new Date().toLocaleString()
       };
 
-      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultPasswordResetTemplate(templateData);
+      const html = template ? this.renderTemplate('password-reset-admin', templateData) : this.getDefaultPasswordResetTemplate(templateData);
       
       const mailOptions = {
         from: `${this.config.from.name} <${this.config.from.address}>`,
@@ -380,7 +380,7 @@ class EmailService {
   async sendAccountStatusEmail(companyEmail, isActive, changedBy) {
     try {
       const subject = `Admin Account ${isActive ? 'Activated' : 'Deactivated'} - Farming Magazine`;
-      const template = await this.getTemplate('account-status-admin');
+      const template = this.templates.get('account-status-admin');
       
       const templateData = {
         companyEmail,
@@ -392,7 +392,7 @@ class EmailService {
         changeDate: new Date().toLocaleString()
       };
 
-      const html = template ? this.renderTemplate(template, templateData) : this.getDefaultAccountStatusTemplate(templateData);
+      const html = template ? this.renderTemplate('account-status-admin', templateData) : this.getDefaultAccountStatusTemplate(templateData);
       
       const mailOptions = {
         from: `${this.config.from.name} <${this.config.from.address}>`,

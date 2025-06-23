@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Search, Grid, List } from 'lucide-react';
 import GoatList from '../components/GoatList';
@@ -38,14 +38,19 @@ const GoatPage = () => {
     fetchGoats();
   }, [API_BASE_URL, currentPage]);
 
-  const filteredGoats = goats.filter(goat =>
-    goat.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    goat.content?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGoats = useMemo(() => 
+    goats.filter(goat =>
+      goat.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      goat.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [goats, searchTerm]
   );
 
-  const indexOfLast = currentPage * goatsPerPage;
-  const indexOfFirst = indexOfLast - goatsPerPage;
-  const currentGoats = filteredGoats.slice(indexOfFirst, indexOfLast);
+  const currentGoats = useMemo(() => {
+    const indexOfLast = currentPage * goatsPerPage;
+    const indexOfFirst = indexOfLast - goatsPerPage;
+    return filteredGoats.slice(indexOfFirst, indexOfLast);
+  }, [filteredGoats, currentPage, goatsPerPage]);
+  
   const totalPages = Math.ceil(filteredGoats.length / goatsPerPage);
 
   const formatDate = (dateString) => {

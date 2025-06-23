@@ -21,6 +21,7 @@ import BeefForm from '../components/BeefForm';
 import BeefList from '../components/BeefList';
 import EventForm from '../components/EventForm';
 import EventList from '../components/EventList';
+import EventRegistrationList from '../components/EventRegistrationList';
 import SubscriberList from '../components/SubscriberList';
 import NewsletterForm from '../components/NewsletterForm';
 import NewsletterList from '../components/NewsletterList';
@@ -40,6 +41,7 @@ const DELETE_ENDPOINTS = {
   newsletters: 'DELETE_NEWSLETTER',
   subscribers: 'DELETE_SUBSCRIBER',
   events: 'DELETE_EVENT',
+  registrations: 'DELETE_EVENT_REGISTRATION',
 };
 
 const ContentStats = ({ activeTab, content, darkMode }) => {
@@ -73,6 +75,15 @@ const ContentStats = ({ activeTab, content, darkMode }) => {
           { label: 'Active', value: content.filter(item => item.isActive).length, icon: 'user-check', color: 'green', description: 'Engaged subscribers' },
           { label: 'Inactive', value: content.filter(item => !item.isActive).length, icon: 'user-slash', color: 'red', description: 'Disengaged subscribers' },
           { label: 'Growth Rate', value: growthDisplay, icon: 'chart-line', color: 'blue', description: 'Monthly growth' }
+        ];
+      case 'registrations':
+        const currentMonthRegs = content.filter(item => new Date(item.registrationDate || item.createdAt).getMonth() === new Date().getMonth()).length;
+        
+        return [
+          { label: 'Total Registrations', value: content.length, icon: 'user-plus', color: 'teal', description: 'All event registrations' },
+          { label: 'Confirmed', value: content.filter(item => item.status === 'confirmed').length, icon: 'check-circle', color: 'green', description: 'Confirmed attendees' },
+          { label: 'Pending', value: content.filter(item => item.status === 'pending').length, icon: 'clock', color: 'yellow', description: 'Awaiting confirmation' },
+          { label: 'This Month', value: currentMonthRegs, icon: 'calendar-alt', color: 'blue', description: 'New registrations' }
         ];
       default:
         return [
@@ -375,7 +386,20 @@ const ContentManagement = ({ activeTab, darkMode }) => {
       const response = await axios.get(endpoint, {
         headers: getAuthHeader(),
       });
-      setContent(response.data[activeTab] || []); // Fallback to empty array
+      
+      // Handle special cases for different response structures
+      if (activeTab === 'beefs' && response.data.data && response.data.data.beefs) {
+        setContent(response.data.data.beefs || []);
+      } else if (activeTab === 'newsletters' && response.data.data && response.data.data.newsletters) {
+        setContent(response.data.data.newsletters || []);
+      } else if (activeTab === 'subscribers' && response.data.data && response.data.data.subscribers) {
+        setContent(response.data.data.subscribers || []);
+      } else if (activeTab === 'registrations' && response.data.data && response.data.data.registrations) {
+        setContent(response.data.data.registrations || []);
+      } else {
+        setContent(response.data[activeTab] || []); // Fallback to empty array
+      }
+      
       setLoading(false);
     } catch (err) {
       console.error(`Error fetching ${activeTab}:`, err);
@@ -419,7 +443,11 @@ const ContentManagement = ({ activeTab, darkMode }) => {
           (item.description && item.description.toLowerCase().includes(lowerSearchTerm)) ||
           (item.content && item.content.toLowerCase().includes(lowerSearchTerm)) ||
           (item.category && item.category.toLowerCase().includes(lowerSearchTerm)) ||
-          (item.email && item.email.toLowerCase().includes(lowerSearchTerm))
+          (item.email && item.email.toLowerCase().includes(lowerSearchTerm)) ||
+          (item.firstName && item.firstName.toLowerCase().includes(lowerSearchTerm)) ||
+          (item.lastName && item.lastName.toLowerCase().includes(lowerSearchTerm)) ||
+          (item.company && item.company.toLowerCase().includes(lowerSearchTerm)) ||
+          (item.status && item.status.toLowerCase().includes(lowerSearchTerm))
         );
       });
     }
@@ -895,6 +923,8 @@ const ContentManagement = ({ activeTab, darkMode }) => {
           return <NewsletterList newsletters={filteredAndSortedContent} {...commonProps} darkMode={darkMode} />;
         case 'subscribers':
           return <SubscriberList subscribers={filteredAndSortedContent} onDelete={handleDelete} darkMode={darkMode} />;
+        case 'registrations':
+          return <EventRegistrationList registrations={filteredAndSortedContent} onDelete={handleDelete} darkMode={darkMode} selectedItems={selectedItems} onToggleSelect={toggleItemSelection} />;
         default:
           return <div>Select a content type to manage</div>;
       }
@@ -910,8 +940,8 @@ const ContentManagement = ({ activeTab, darkMode }) => {
           {/* Top Row - Add New, Search, and View Toggle */}
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              {/* Add New Button (not for subscribers) */}
-              {activeTab !== 'subscribers' && (
+              {/* Add New Button (not for subscribers or registrations) */}
+              {activeTab !== 'subscribers' && activeTab !== 'registrations' && (
                 <button
                   onClick={toggleForm}
                   className={`${
@@ -932,7 +962,7 @@ const ContentManagement = ({ activeTab, darkMode }) => {
                     {selectedItems.length} selected
                   </span>
                   <div className="flex space-x-1">
-                    {activeTab !== 'subscribers' && (
+                    {activeTab !== 'subscribers' && activeTab !== 'registrations' && (
                       <>
                         <button
                           onClick={() => handleBatchOperation('publish')}
@@ -1052,7 +1082,7 @@ const ContentManagement = ({ activeTab, darkMode }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Status Filter */}
-                {activeTab !== 'subscribers' && (
+                {activeTab !== 'subscribers' && activeTab !== 'registrations' && (
                   <div>
                     <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
                     <select
@@ -1111,6 +1141,10 @@ const ContentManagement = ({ activeTab, darkMode }) => {
                     <option value="updatedAt">Date Updated</option>
                     <option value="title">Title</option>
                     {activeTab === 'subscribers' && <option value="email">Email</option>}
+                    {activeTab === 'registrations' && <option value="email">Email</option>}
+                    {activeTab === 'registrations' && <option value="firstName">First Name</option>}
+                    {activeTab === 'registrations' && <option value="lastName">Last Name</option>}
+                    {activeTab === 'registrations' && <option value="status">Status</option>}
                     {['blogs', 'news', 'farms'].includes(activeTab) && <option value="category">Category</option>}
                   </select>
                 </div>
@@ -1245,10 +1279,10 @@ const ContentManagement = ({ activeTab, darkMode }) => {
               ) : (
                 <>
                   <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2`}>No {activeTab} found</h3>
-                  {activeTab !== 'subscribers' && (
+                  {activeTab !== 'subscribers' && activeTab !== 'registrations' && (
                     <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>Get started by creating a new {activeTab.slice(0, -1)}</p>
                   )}
-                  {activeTab !== 'subscribers' && !formVisible && (
+                  {activeTab !== 'subscribers' && activeTab !== 'registrations' && !formVisible && (
                     <button
                       onClick={toggleForm}
                       className={`${darkMode ? 'bg-teal-700 hover:bg-teal-600' : 'bg-teal-600 hover:bg-teal-700'} text-white font-medium py-2 px-4 rounded-lg shadow-sm transition duration-200`}

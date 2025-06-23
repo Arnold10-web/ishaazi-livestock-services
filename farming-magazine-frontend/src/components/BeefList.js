@@ -1,18 +1,250 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Edit2, Trash2, ArrowRight, Calendar, Tag, Eye, Scale, 
   Clock, Award, Heart 
 } from 'lucide-react';
+import { useEngagement } from '../hooks/useEngagement';
 
 const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
-  // Utility function for image error handling
+  
+  /**
+   * Individual beef item component with per-item engagement functionality
+   */
+  const BeefItem = React.memo(({ beef, index }) => {
+    // Per-item engagement hook - no view tracking to prevent false counts
+    const { stats, toggleLike, loading: engagementLoading } = useEngagement('beef', beef._id, { trackViews: false });
+    const [isLiked, setIsLiked] = useState(stats.isLiked || false);
+
+    // Update isLiked state when stats change
+    React.useEffect(() => {
+      setIsLiked(stats.isLiked || false);
+    }, [stats.isLiked]);
+
+    const handleLike = useCallback(async () => {
+      if (isAdmin || engagementLoading) return; // Don't allow likes in admin view
+      
+      try {
+        const newLikedState = await toggleLike(isLiked);
+        setIsLiked(newLikedState);
+      } catch (error) {
+        console.error('Failed to toggle like:', error);
+      }
+    }, [isAdmin, engagementLoading, toggleLike, isLiked]);
+
+    return (
+      <motion.article
+        key={beef._id}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+        transition={{ 
+          delay: index * 0.1,
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }}
+        whileHover={{ 
+          y: viewMode === 'list' ? -4 : -8,
+          transition: { type: "spring", stiffness: 400, damping: 25 }
+        }}
+        className={`group relative backdrop-blur-md bg-white/10 border border-white/20 
+                   shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden
+                   before:absolute before:inset-0 before:bg-gradient-to-br before:from-red-100/20 before:to-orange-100/20 
+                   before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500
+                   ${viewMode === 'list' 
+                     ? 'flex rounded-3xl' 
+                     : 'flex flex-col rounded-3xl'
+                   }`}
+      >
+        {/* Image container */}
+        {beef.imageUrl && (
+          <div className={`relative overflow-hidden ${
+            viewMode === 'list' 
+              ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-l-3xl' 
+              : 'aspect-[16/10] rounded-t-3xl'
+          }`}>
+            <motion.img
+              src={`${apiBaseUrl}${beef.imageUrl}`}
+              alt={beef.title}
+              onError={handleImageError}
+              className="w-full h-full object-cover"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+            
+            {/* Enhanced overlay with gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent 
+                           opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Category badge */}
+            {beef.category && (
+              <motion.span 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="absolute top-4 left-4 backdrop-blur-md bg-red-500/90 text-white text-xs font-semibold 
+                           px-3 py-2 rounded-full border border-white/20 shadow-lg
+                           flex items-center gap-1.5"
+              >
+                <Scale className="w-3 h-3" />
+                {beef.category}
+              </motion.span>
+            )}
+
+            {/* Read time badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 
+                         rounded-xl px-3 py-1.5 text-white text-xs font-medium shadow-lg
+                         flex items-center gap-1.5"
+            >
+              <Clock className="w-3 h-3" />
+              {Math.ceil((beef.content?.length || 500) / 200)} min read
+            </motion.div>
+          </div>
+        )}
+        
+        {/* Enhanced content section */}
+        <div className={`p-6 flex-1 flex flex-col relative z-20 ${viewMode === 'list' ? 'justify-between' : ''}`}>
+          {/* Meta information */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center justify-between text-xs text-red-600/70 mb-3"
+          >
+            <div className="flex items-center gap-2 backdrop-blur-sm bg-red-50/50 px-3 py-1.5 rounded-full border border-red-200/30">
+              <Calendar className="w-3 h-3" />
+              {formatDate(beef.createdAt)}
+            </div>
+          </motion.div>
+          
+          {/* Enhanced title */}
+          <Link to={`/beef/${beef._id}`} className="group/title mb-3 block">
+            <motion.h2 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent
+                         group-hover/title:from-red-600 group-hover/title:to-orange-600 transition-all duration-300
+                         leading-tight line-clamp-2"
+            >
+              {beef.title}
+            </motion.h2>
+          </Link>
+          
+          {/* Enhanced content preview */}
+          <motion.p 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-gray-600/80 text-sm leading-relaxed flex-grow line-clamp-3 mb-4"
+          >
+            {truncateContent(beef.content)}
+          </motion.p>
+          
+          {/* Enhanced stats and interaction section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex justify-between items-center pt-4 border-t border-red-100/50"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-red-600/70 text-sm">
+                <Eye className="w-4 h-4" />
+                <span className="font-medium">{beef.views || 0}</span>
+              </div>
+              
+              {/* Like section - different behavior for admin vs public */}
+              {isAdmin ? (
+                // Admin view: display-only likes count
+                <div className="flex items-center gap-1.5 text-orange-600/70 text-sm">
+                  <Heart className="w-4 h-4" />
+                  <span className="font-medium">{stats.likes || beef.likes || 0}</span>
+                </div>
+              ) : (
+                // Public view: interactive like button
+                <motion.button
+                  onClick={handleLike}
+                  disabled={engagementLoading}
+                  className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
+                    isLiked 
+                      ? 'text-red-600' 
+                      : 'text-orange-600/70 hover:text-orange-600'
+                  } ${engagementLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <motion.div
+                    animate={engagementLoading ? { scale: [1, 1.2, 1] } : {}}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                  </motion.div>
+                  <span className="font-medium">{stats.likes || beef.likes || 0}</span>
+                </motion.button>
+              )}
+            </div>
+            
+            <Link
+              to={`/beef/${beef._id}`}
+              className="group/link inline-flex items-center gap-2 text-red-600 hover:text-orange-600 
+                         font-semibold text-sm transition-all duration-300
+                         hover:gap-3 relative"
+            >
+              <span>Read More</span>
+              <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-300" />
+              <motion.div
+                className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-red-600 to-orange-600 
+                           w-0 group-hover/link:w-full transition-all duration-300"
+              />
+            </Link>
+          </motion.div>
+          
+          {/* Enhanced admin controls */}
+          {isAdmin && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-4 flex gap-2 justify-end pt-3 border-t border-red-100/50"
+            >
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onEdit(beef._id)}
+                className="p-2.5 rounded-xl backdrop-blur-sm bg-blue-50/80 border border-blue-200/50
+                           text-blue-600 hover:bg-blue-100/80 hover:text-blue-700 
+                           transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                <Edit2 className="w-4 h-4" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onDelete(beef._id)}
+                className="p-2.5 rounded-xl backdrop-blur-sm bg-red-50/80 border border-red-200/50
+                           text-red-600 hover:bg-red-100/80 hover:text-red-700 
+                           transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                <Trash2 className="w-4 h-4" />
+              </motion.button>
+            </motion.div>
+          )}
+        </div>
+      </motion.article>
+    );
+  });
+
+  // Utility functions
   const handleImageError = (e) => {
     e.target.src = '/placeholder-image.jpg';
   };
 
-  // Utility function to truncate HTML content
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
@@ -21,7 +253,6 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, vie
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  // Utility function to format dates
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -156,190 +387,11 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, vie
     <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
       <AnimatePresence mode="popLayout">
         {beefs.map((beef, index) => (
-          <motion.article
-            key={beef._id}
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            whileHover={{ y: viewMode === 'list' ? -4 : -8, scale: 1.02 }}
-            transition={{ 
-              delay: index * 0.1,
-              type: "spring",
-              stiffness: 200,
-              damping: 20
-            }}
-            className={`relative group cursor-pointer ${
-              viewMode === 'list' 
-                ? 'flex flex-row items-stretch' 
-                : 'flex flex-col'
-            }`}
-          >
-            {/* Glassmorphism background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 dark:from-white/5 dark:to-transparent backdrop-blur-xl rounded-3xl border border-white/20 dark:border-white/10 transition-all duration-500 group-hover:from-white/15 group-hover:to-white/10 dark:group-hover:from-white/8 dark:group-hover:to-white/3" />
-            
-            {/* Hover glow effect */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-red-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            {/* Floating particles on hover */}
-            <div className="absolute inset-0 overflow-hidden rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1 h-1 bg-red-400/30 rounded-full"
-                  initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: [0, 1, 0],
-                    x: 20 + Math.random() * 300,
-                    y: 20 + Math.random() * 200,
-                  }}
-                  transition={{
-                    duration: 3 + Math.random() * 2,
-                    repeat: Infinity,
-                    delay: Math.random() * 2,
-                  }}
-                />
-              ))}
-            </div>
-            
-            <div className="relative z-10 overflow-hidden rounded-3xl">
-              {beef.imageUrl && (
-                <div className={`relative overflow-hidden group-hover:scale-105 transition-transform duration-700 ${
-                  viewMode === 'list' 
-                    ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3]' 
-                    : 'aspect-[16/9]'
-                } ${viewMode === 'list' ? 'rounded-l-3xl' : ''}`}>
-                  <img
-                    src={`${apiBaseUrl}${beef.imageUrl}`}
-                    alt={beef.title}
-                    onError={handleImageError}
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Image overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  {beef.cutType && (
-                    <motion.span 
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="absolute top-6 left-6 bg-gradient-to-r from-red-500 to-orange-600 text-white text-sm px-4 py-2 rounded-full shadow-lg backdrop-blur-sm border border-white/20"
-                    >
-                      <Tag className="inline w-3 h-3 mr-1" />
-                      {beef.cutType}
-                    </motion.span>
-                  )}
-                  
-                  {/* Premium badge for featured content */}
-                  {beef.featured && (
-                    <motion.div
-                      initial={{ opacity: 0, rotate: -12 }}
-                      animate={{ opacity: 1, rotate: 0 }}
-                      className="absolute top-6 right-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-2 rounded-full shadow-lg"
-                    >
-                      <Award className="w-4 h-4" />
-                    </motion.div>
-                  )}
-                </div>
-              )}
-              
-              <div className={`p-8 space-y-6 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-                {/* Meta information */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4 text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(beef.createdAt)}
-                    </span>
-                    <span className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm">
-                      <Clock className="w-4 h-4" />
-                      {Math.ceil((beef.content?.length || 0) / 200)} min read
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Title */}
-                <Link to={`/beef/${beef._id}`} className="group/title block">
-                  <motion.h2 
-                    className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent group-hover/title:from-red-600 group-hover/title:to-orange-600 transition-all duration-300 leading-tight"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    {beef.title}
-                  </motion.h2>
-                </Link>
-                
-                {/* Content preview */}
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  {truncateContent(beef.content)}
-                </p>
-
-                {/* Stats and actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-white/10 dark:border-white/5">
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <motion.span 
-                      className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm hover:bg-white/10 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Eye className="w-4 h-4" />
-                      {beef.views || 0}
-                    </motion.span>
-                    <motion.span 
-                      className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm hover:bg-red-500/10 hover:text-red-500 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Heart className="w-4 h-4" />
-                      {beef.likes || 0}
-                    </motion.span>
-                  </div>
-                  
-                  <Link
-                    to={`/beef/${beef._id}`}
-                    className="group/read-more inline-flex items-center text-red-600 dark:text-red-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-                  >
-                    <motion.span
-                      className="mr-2 font-medium"
-                      whileHover={{ x: -2 }}
-                    >
-                      Read More
-                    </motion.span>
-                    <motion.div
-                      whileHover={{ x: 4 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </motion.div>
-                  </Link>
-                </div>
-                
-                {/* Admin controls */}
-                {isAdmin && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3 justify-end pt-4 border-t border-white/10 dark:border-white/5"
-                  >
-                    <motion.button
-                      onClick={() => onEdit(beef._id)}
-                      className="p-3 rounded-full bg-white/5 dark:bg-white/5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors backdrop-blur-sm"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      onClick={() => onDelete(beef._id)}
-                      className="p-3 rounded-full bg-white/5 dark:bg-white/5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors backdrop-blur-sm"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </motion.article>
+          <BeefItem 
+            key={beef._id} 
+            beef={beef} 
+            index={index}
+          />
         ))}
       </AnimatePresence>
     </div>

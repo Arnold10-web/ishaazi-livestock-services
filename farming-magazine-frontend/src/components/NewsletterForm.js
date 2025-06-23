@@ -30,18 +30,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
     setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
   };
 
-  useEffect(() => {
-    if (editingNewsletter) {
-      setTitle(editingNewsletter.title || '');
-      setSubject(editingNewsletter.subject || editingNewsletter.title || '');
-      setTargetSubscriptionTypes(editingNewsletter.targetSubscriptionTypes || ['all']);
-      setFeatured(editingNewsletter.featured || false);
-      if (quillEditor) {
-        quillEditor.root.innerHTML = editingNewsletter.body || '';
-      }
-    }
-  }, [editingNewsletter, quillEditor]);
-
+  // Initialize Quill editor
   const initializeQuill = useCallback(() => {
     if (quillRef.current && !quillEditor) {
       const editor = new Quill(quillRef.current, {
@@ -61,9 +50,15 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
         },
       });
       setQuillEditor(editor);
+      
+      // If we have editing data, populate it after editor is initialized
+      if (editingNewsletter) {
+        editor.root.innerHTML = editingNewsletter.body || '';
+      }
     }
-  }, [quillEditor]);
+  }, [quillEditor, editingNewsletter]);
 
+  // Initialize editor on mount
   useEffect(() => {
     initializeQuill();
 
@@ -72,9 +67,40 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
         quillEditor.off('text-change');
       }
     };
-  }, [initializeQuill, quillEditor]);
+  }, [initializeQuill]);
 
-  const resetForm = () => {
+  // Populate form when editing newsletter changes
+  useEffect(() => {
+    console.log('NewsletterForm: editingNewsletter changed:', editingNewsletter);
+    if (editingNewsletter) {
+      console.log('NewsletterForm: Setting form fields with data:', {
+        title: editingNewsletter.title,
+        subject: editingNewsletter.subject,
+        body: editingNewsletter.body,
+        targetSubscriptionTypes: editingNewsletter.targetSubscriptionTypes,
+        featured: editingNewsletter.featured
+      });
+      
+      setTitle(editingNewsletter.title || '');
+      setSubject(editingNewsletter.subject || editingNewsletter.title || '');
+      setTargetSubscriptionTypes(editingNewsletter.targetSubscriptionTypes || ['all']);
+      setFeatured(editingNewsletter.featured || false);
+      
+      // Set editor content if editor is already initialized
+      if (quillEditor) {
+        console.log('NewsletterForm: Setting Quill editor content');
+        quillEditor.root.innerHTML = editingNewsletter.body || '';
+      } else {
+        console.log('NewsletterForm: Quill editor not ready yet');
+      }
+    } else {
+      console.log('NewsletterForm: Clearing form fields');
+      // Clear form when not editing
+      resetFormFields();
+    }
+  }, [editingNewsletter, quillEditor]);
+
+  const resetFormFields = () => {
     setTitle('');
     setSubject('');
     setTargetSubscriptionTypes(['all']);
@@ -82,6 +108,10 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
     if (quillEditor) {
       quillEditor.setText('');
     }
+  };
+
+  const resetForm = () => {
+    resetFormFields();
     setEditingNewsletter(null);
     setError('');
     if (onClose) onClose();

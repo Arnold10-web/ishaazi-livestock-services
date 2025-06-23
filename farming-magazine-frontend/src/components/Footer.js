@@ -5,19 +5,36 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
+  const [subscriptionType, setSubscriptionType] = useState('all');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
 
-  const handleSubscribe = async (e) => {
+  const subscriptionOptions = [
+    { value: 'all', label: 'All Updates', description: 'Get all our newsletters and updates' },
+    { value: 'newsletters', label: 'Newsletters Only', description: 'Weekly farming insights and tips' },
+    { value: 'events', label: 'Events', description: 'Upcoming farming events and workshops' },
+    { value: 'auctions', label: 'Livestock Auctions', description: 'Auction announcements and schedules' },
+    { value: 'farming-tips', label: 'Farming Tips', description: 'Expert advice and best practices' },
+    { value: 'livestock-updates', label: 'Livestock Updates', description: 'Animal care and management news' }
+  ];
+
+  const handleEmailSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
+    
     // Email Validation
     const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
     if (!isValidEmail(email)) {
       setMessage('Please enter a valid email address.');
-      setLoading(false);
+      setIsSuccess(false);
+      setShowNotification(true);
+      
+      // Auto-hide error notification after 10 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 10000);
       return;
     }
 
@@ -25,19 +42,66 @@ const Footer = () => {
     const honeypotValue = document.querySelector('input[name="hidden-field"]')?.value;
     if (honeypotValue) {
       setMessage('Spam detected! Subscription not allowed.');
-      setLoading(false);
+      setIsSuccess(false);
+      setShowNotification(true);
+      
+      // Auto-hide error notification after 10 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 10000);
       return;
     }
 
+    // Show preferences popup
+    setShowPreferences(true);
+  };
+
+  const handleSubscribe = async () => {
+    setLoading(true);
+    setMessage('');
+    setIsSuccess(false);
+
     try {
-      await axios.post(API_ENDPOINTS.CREATE_SUBSCRIBER, { email });
-      setMessage('Subscribed successfully!');
+      const response = await axios.post(API_ENDPOINTS.CREATE_SUBSCRIBER, { 
+        email, 
+        subscriptionType 
+      });
+      
+      setMessage(response.data.message || 'Thank you for subscribing! Welcome to our farming community.');
+      setIsSuccess(true);
+      setShowNotification(true);
       setEmail('');
+      setSubscriptionType('all');
+      setShowPreferences(false);
+      
+      // Auto-hide success notification after 10 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 10000);
     } catch (error) {
       console.error('Subscription Error:', error);
-      setMessage(
-        error.response?.data?.message || 'Error subscribing. Please try again.'
-      );
+      
+      let errorMessage = 'Subscription failed. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Please check your email address and try again.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again in a moment.';
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      
+      setMessage(errorMessage);
+      setIsSuccess(false);
+      setShowNotification(true);
+      setShowPreferences(false);
+      
+      // Auto-hide error notification after 10 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 10000);
     } finally {
       setLoading(false);
     }
@@ -152,7 +216,7 @@ const Footer = () => {
           <div>
             <h3 className="text-xl font-serif font-bold text-amber-500 mb-4">Newsletter</h3>
             <p className="text-gray-200 mb-4">Stay updated with the latest farming news and tips. Subscribe now!</p>
-            <form onSubmit={handleSubscribe} className="space-y-3">
+            <form onSubmit={handleEmailSubmit} className="space-y-3">
               {/* Honeypot Field for Spam Protection */}
               <input type="text" name="hidden-field" className="hidden" />
               
@@ -165,6 +229,7 @@ const Footer = () => {
                   aria-label="Enter your email to subscribe"
                   className="w-full px-4 py-2 bg-green-600 text-white placeholder-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                   required
+                  disabled={loading}
                 />
               </div>
               
@@ -181,13 +246,104 @@ const Footer = () => {
                 ) : null}
                 {loading ? 'Subscribing...' : 'Subscribe'}
               </button>
-              
-              {message && (
-                <p className={`text-sm font-medium ${message.includes('successfully') ? 'text-green-300' : 'text-amber-300'} animate-fade-in`}>
-                  {message}
-                </p>
-              )}
             </form>
+
+            {/* Preferences Popup */}
+            {showPreferences && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">Choose Your Preferences</h3>
+                    <button
+                      onClick={() => setShowPreferences(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-4">
+                    What would you like to receive updates about?
+                  </p>
+                  
+                  <div className="space-y-3 mb-6">
+                    {subscriptionOptions.map((option) => (
+                      <label key={option.value} className="flex items-start space-x-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="subscriptionType"
+                          value={option.value}
+                          checked={subscriptionType === option.value}
+                          onChange={(e) => setSubscriptionType(e.target.value)}
+                          className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                          <div className="text-xs text-gray-500">{option.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowPreferences(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={loading}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Subscribing...' : 'Subscribe'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Enhanced Notification */}
+            {message && showNotification && (
+              <div className={`mt-4 p-4 rounded-lg border transition-all duration-300 ${
+                isSuccess 
+                  ? 'bg-green-50 border-green-200 text-green-800' 
+                  : 'bg-red-50 border-red-200 text-red-800'
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {isSuccess && (
+                      <div className="flex items-center mb-2">
+                        <svg className="h-5 w-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span className="font-medium">Success!</span>
+                      </div>
+                    )}
+                    {!isSuccess && (
+                      <div className="flex items-center mb-2">
+                        <svg className="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span className="font-medium">Error</span>
+                      </div>
+                    )}
+                    <p className="text-sm">{message}</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowNotification(false)}
+                    className={`ml-4 ${isSuccess ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'}`}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

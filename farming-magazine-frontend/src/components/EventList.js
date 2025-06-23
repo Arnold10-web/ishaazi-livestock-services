@@ -14,7 +14,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Clock, Users, UserPlus, Tag } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, UserPlus, Tag, Edit2, Trash2 } from 'lucide-react';
 import EventRegistrationModal from './EventRegistrationModal';
 
 /**
@@ -25,9 +25,12 @@ import EventRegistrationModal from './EventRegistrationModal';
  * @param {Object[]} events - Array of event objects to display
  * @param {string} apiBaseUrl - Base URL for API calls and resource loading
  * @param {boolean} isLoading - Loading state to show loading indicators when true
+ * @param {boolean} isAdmin - Whether the user has admin privileges to edit/delete
+ * @param {Function} onEdit - Function to handle editing an event
+ * @param {Function} onDelete - Function to handle deleting an event
  * @returns {JSX.Element} Rendered EventList component
  */
-const EventList = ({ events, apiBaseUrl, isLoading }) => {
+const EventList = ({ events, apiBaseUrl, isLoading, isAdmin, onEdit, onDelete }) => {
   // State management for event registration modal
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -243,6 +246,30 @@ const EventList = ({ events, apiBaseUrl, isLoading }) => {
                     <span>{isPastEvent ? 'Event Ended' : 'Register Now'}</span>
                   </button>
                 </div>
+                
+                {/* Admin controls */}
+                {isAdmin && (
+                  <div className="flex space-x-2 justify-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <motion.button
+                      onClick={() => onEdit(event._id)}
+                      className="p-2 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-100 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      onClick={() => onDelete(event._id)}
+                      className="p-2 rounded-full text-gray-600 hover:text-red-600 hover:bg-red-100 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

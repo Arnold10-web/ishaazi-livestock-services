@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Search, Grid, List } from 'lucide-react';
 import PiggeryList from '../components/PiggeryList';
@@ -38,31 +38,22 @@ const PiggeryPage = () => {
     fetchPiggeries();
   }, [API_BASE_URL, currentPage]);
 
-  const filteredPiggeries = piggeries.filter(piggery =>
-    piggery.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    piggery.content?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPiggeries = useMemo(() => {
+    return piggeries.filter(piggery =>
+      piggery.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      piggery.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [piggeries, searchTerm]);
 
-  const indexOfLast = currentPage * piggeriesPerPage;
-  const indexOfFirst = indexOfLast - piggeriesPerPage;
-  const currentPiggeries = filteredPiggeries.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(filteredPiggeries.length / piggeriesPerPage);
+  const currentPiggeries = useMemo(() => {
+    const indexOfLast = currentPage * piggeriesPerPage;
+    const indexOfFirst = indexOfLast - piggeriesPerPage;
+    return filteredPiggeries.slice(indexOfFirst, indexOfLast);
+  }, [filteredPiggeries, currentPage, piggeriesPerPage]);
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const truncateContent = (content, maxLength = 150) => {
-    if (!content) return '';
-    const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
-    let text = tempElement.textContent || tempElement.innerText;
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-  };
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredPiggeries.length / piggeriesPerPage);
+  }, [filteredPiggeries.length, piggeriesPerPage]);
 
   if (loading) {
     return (

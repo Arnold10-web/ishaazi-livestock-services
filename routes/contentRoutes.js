@@ -1,8 +1,8 @@
 import express from 'express';
-import upload, { optimizeImage } from '../middleware/fileUpload.js';
+import upload, { optimizeImage, uploadMedia } from '../middleware/fileUpload.js';
 import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
-import { validate, blogSchemas, newsSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
+import { validate, blogSchemas, newsSchemas, magazineSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import processFormData from '../middleware/formDataCompatibility.js';
 import {
@@ -68,6 +68,7 @@ import {
   bulkUpdateSubscribers,
   createNewsletter,
   getNewsletters,
+  getAdminNewsletters,
   updateNewsletter,
   deleteNewsletter,
   sendNewsletter,
@@ -79,6 +80,8 @@ import {
   deleteEvent,
   registerForEvent,
   getEventRegistrations,
+  getAllEventRegistrations,
+  deleteEventRegistration,
   getRegistrationByEmail,
   cancelEventRegistration,
   getEventRegistrationStats,
@@ -184,7 +187,7 @@ router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'edit
 router.post(
   '/basics',
   authenticateToken, requireRole(['system_admin', 'editor']),
-  upload.fields([
+  uploadMedia.fields([
     { name: 'image', maxCount: 1 }, // Optional thumbnail image
     { name: 'media', maxCount: 1 }, // Required media file (video/audio)
   ]),
@@ -206,7 +209,7 @@ router.get('/basics/:id', cacheMiddleware(600), getBasicById);
 router.put(
   '/basics/:id',
   authenticateToken, requireRole(['system_admin', 'editor']),
-  upload.fields([
+  uploadMedia.fields([
     { name: 'image', maxCount: 1 }, // Optional updated thumbnail image
     { name: 'media', maxCount: 1 }, // Optional updated media file (video/audio)
   ]),
@@ -232,7 +235,51 @@ router.put('/farms/:id', authenticateToken, requireRole(['system_admin', 'editor
 router.delete('/farms/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['farms']), deleteFarm);
 
 // Magazine Routes
-router.post('/magazines', authenticateToken, requireRole(['system_admin', 'editor']), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), optimizeImage, invalidateCache(['magazines']), createMagazine);
+// Magazine Routes with validation and enhanced form data compatibility
+router.post('/magazines', 
+  authenticateToken, requireRole(['system_admin', 'editor']),
+  (req, res, next) => {
+    console.log('📝 Magazine creation request received');
+    console.log('📝 Headers:', req.headers['content-type']);
+    next();
+  },
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]),
+  (req, res, next) => {
+    console.log('📝 After file upload middleware');
+    console.log('📝 Files received:', req.files ? Object.keys(req.files) : 'none');
+    console.log('📝 Body fields:', Object.keys(req.body));
+    next();
+  }, 
+  validateFileUpload,
+  (req, res, next) => {
+    console.log('📝 After file validation');
+    next();
+  },
+  optimizeImage, 
+  (req, res, next) => {
+    console.log('📝 After image optimization');
+    next();
+  },
+  processFormData, // Add form data processing
+  (req, res, next) => {
+    console.log('📝 After form data processing');
+    console.log('📝 Processed body:', Object.keys(req.body));
+    if (req.body.tags) console.log('📝 Tags type:', typeof req.body.tags);
+    if (req.body.metadata) console.log('📝 Metadata type:', typeof req.body.metadata);
+    next();
+  },
+  validate(magazineSchemas.create), // Add magazine validation
+  (req, res, next) => {
+    console.log('📝 After schema validation');
+    next();
+  },
+  invalidateCache(['magazines']),
+  (req, res, next) => {
+    console.log('📝 After cache invalidation');
+    next();
+  }, 
+  createMagazine
+);
 router.get('/magazines', cacheMiddleware(300), getMagazines);
 router.get('/magazines/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminMagazines);
 router.get('/magazines/:id', cacheMiddleware(600), getMagazineById);
@@ -280,6 +327,7 @@ router.put('/subscribers/bulk', authenticateToken, requireRole(['system_admin', 
 
 // Newsletter Routes
 router.get('/newsletters', getNewsletters);
+router.get('/newsletters/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminNewsletters);
 router.post('/newsletters', authenticateToken, requireRole(['system_admin', 'editor']), createNewsletter);
 router.put('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), updateNewsletter);
 router.delete('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteNewsletter);
@@ -295,7 +343,11 @@ router.delete('/events/:id', authenticateToken, requireRole(['system_admin', 'ed
 
 // Event Registration Routes (Public)
 router.post('/events/:eventId/register', registerForEvent);
+router.get('/events/:eventId/register', getRegistrationByEmail);
 router.get('/events/:eventId/registrations', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrations);
+router.get('/event-registrations', authenticateToken, requireRole(['system_admin', 'editor']), getAllEventRegistrations);
+router.get('/event-registrations/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAllEventRegistrations);
+router.delete('/event-registrations/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEventRegistration);
 router.get('/events/:eventId/registration', getRegistrationByEmail);
 router.post('/events/:eventId/cancel', cancelEventRegistration);
 router.get('/events/:eventId/stats', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrationStats);

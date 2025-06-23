@@ -7,13 +7,14 @@
  * 
  * @module components/BlogList
  */
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, Tag, Eye, Heart, ArrowRight, Edit2, Trash2, BookOpen, 
   Clock, Star
 } from 'lucide-react';
+import { useEngagement } from '../hooks/useEngagement';
 
 /**
  * Renders a list of blog articles with various interactive UI elements
@@ -25,9 +26,223 @@ import {
  * @param {Function} props.onDelete - Callback function when delete button is clicked
  * @param {Function} props.onEdit - Callback function when edit button is clicked
  * @param {boolean} props.isLoading - Whether the component is in loading state
+ * @param {string} props.viewMode - Display mode ('grid' or 'list')
  * @returns {JSX.Element} Rendered blog list component
  */
-const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) => {
+const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
+  /**
+   * Individual blog item component with per-item engagement functionality
+   */
+  const BlogItem = React.memo(({ blog, index }) => {
+    // Per-item engagement hook - no view tracking to prevent false counts
+    const { stats, toggleLike, loading: engagementLoading } = useEngagement('blogs', blog._id, { trackViews: false });
+    const [isLiked, setIsLiked] = useState(stats.isLiked || false);
+
+    // Update isLiked state when stats change
+    React.useEffect(() => {
+      setIsLiked(stats.isLiked || false);
+    }, [stats.isLiked]);
+
+    const handleLike = useCallback(async () => {
+      if (isAdmin || engagementLoading) return; // Don't allow likes in admin view
+      
+      try {
+        const newLikedState = await toggleLike(isLiked);
+        setIsLiked(newLikedState);
+      } catch (error) {
+        console.error('Failed to toggle like:', error);
+      }
+    }, [isAdmin, engagementLoading, toggleLike, isLiked]);
+
+    return (
+      <motion.article
+        key={blog._id}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+        transition={{ 
+          delay: index * 0.1,
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }}
+        whileHover={{ 
+          y: viewMode === 'list' ? -4 : -8,
+          transition: { type: "spring", stiffness: 400, damping: 25 }
+        }}
+        className={`group relative backdrop-blur-md bg-white/10 border border-white/20 
+                   shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden
+                   before:absolute before:inset-0 before:bg-gradient-to-br before:from-blue-100/20 before:to-purple-100/20 
+                   before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500
+                   ${viewMode === 'list' 
+                     ? 'flex rounded-3xl' 
+                     : 'flex flex-col rounded-3xl'
+                   }`}
+      >
+        {/* Image container */}
+        <div className={`relative overflow-hidden ${
+          viewMode === 'list' 
+            ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-l-3xl' 
+            : 'aspect-[16/10] rounded-t-3xl'
+        }`}>
+          {blog.imageUrl && (
+            <motion.img
+              src={`${apiBaseUrl}${blog.imageUrl}`}
+              alt={blog.title}
+              onError={handleImageError}
+              className="w-full h-full object-cover"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+          )}
+          
+          {/* Enhanced overlay with gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent 
+                         opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Category badge */}
+          {blog.category && (
+            <motion.span 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="absolute top-4 left-4 backdrop-blur-md bg-blue-500/90 text-white text-xs font-semibold 
+                         px-3 py-2 rounded-full border border-white/20 shadow-lg
+                         flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3 h-3" />
+              {blog.category}
+            </motion.span>
+          )}
+        </div>
+        
+        {/* Enhanced content section */}
+        <div className={`p-6 flex-1 flex flex-col relative z-20 ${viewMode === 'list' ? 'justify-between' : ''}`}>
+          {/* Meta information */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center justify-between text-xs text-blue-600/70 mb-3"
+          >
+            <div className="flex items-center gap-2 backdrop-blur-sm bg-blue-50/50 px-3 py-1.5 rounded-full border border-blue-200/30">
+              <Calendar className="w-3 h-3" />
+              {formatDate(blog.createdAt)}
+            </div>
+          </motion.div>
+          
+          {/* Enhanced title */}
+          <Link to={`/blog/${blog._id}`} className="group/title mb-3 block">
+            <motion.h2 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent
+                         group-hover/title:from-blue-600 group-hover/title:to-purple-600 transition-all duration-300
+                         leading-tight line-clamp-2"
+            >
+              {blog.title}
+            </motion.h2>
+          </Link>
+          
+          {/* Enhanced content preview */}
+          <motion.p 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-gray-600/80 text-sm leading-relaxed flex-grow line-clamp-3 mb-4"
+          >
+            {truncateContent(blog.content)}
+          </motion.p>
+
+          {/* Enhanced stats and interaction section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex justify-between items-center pt-4 border-t border-blue-100/50"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-blue-600/70 text-sm">
+                <Eye className="w-4 h-4" />
+                <span className="font-medium">{blog.views || 0}</span>
+              </div>
+              
+              {/* Like section - different behavior for admin vs public */}
+              {isAdmin ? (
+                // Admin view: display-only likes count
+                <div className="flex items-center gap-1.5 text-purple-600/70 text-sm">
+                  <Heart className="w-4 h-4" />
+                  <span className="font-medium">{stats.likes || blog.likes || 0}</span>
+                </div>
+              ) : (
+                // Public view: interactive like button
+                <motion.button
+                  onClick={handleLike}
+                  disabled={engagementLoading}
+                  className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
+                    isLiked 
+                      ? 'text-red-600' 
+                      : 'text-purple-600/70 hover:text-purple-600'
+                  } ${engagementLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <motion.div
+                    animate={engagementLoading ? { scale: [1, 1.2, 1] } : {}}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                  </motion.div>
+                  <span className="font-medium">{stats.likes || blog.likes || 0}</span>
+                </motion.button>
+              )}
+            </div>
+            
+            <Link
+              to={`/blog/${blog._id}`}
+              className="group/link inline-flex items-center gap-2 text-blue-600 hover:text-purple-600 
+                         font-semibold text-sm transition-all duration-300
+                         hover:gap-3 relative"
+            >
+              <span>Read More</span>
+              <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-300" />
+            </Link>
+          </motion.div>
+          
+          {/* Enhanced admin controls */}
+          {isAdmin && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-4 flex gap-2 justify-end pt-3 border-t border-blue-100/50"
+            >
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onEdit(blog._id)}
+                className="p-2.5 rounded-xl backdrop-blur-sm bg-blue-50/80 border border-blue-200/50
+                           text-blue-600 hover:bg-blue-100/80 hover:text-blue-700 
+                           transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                <Edit2 className="w-4 h-4" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onDelete(blog._id)}
+                className="p-2.5 rounded-xl backdrop-blur-sm bg-red-50/80 border border-red-200/50
+                           text-red-600 hover:bg-red-100/80 hover:text-red-700 
+                           transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                <Trash2 className="w-4 h-4" />
+              </motion.button>
+            </motion.div>
+          )}
+        </div>
+      </motion.article>
+    );
+  });
   /**
    * Handles image loading errors by replacing with default placeholder
    * @param {Event} e - Image error event
@@ -187,182 +402,7 @@ const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading }) =
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       <AnimatePresence mode="popLayout">
         {blogs.map((blog, index) => (
-          <motion.article
-            key={blog._id}
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            whileHover={{ y: -8, scale: 1.02 }}
-            transition={{ 
-              delay: index * 0.1,
-              type: "spring",
-              stiffness: 200,
-              damping: 20
-            }}
-            className="relative group cursor-pointer"
-          >
-            {/* Glassmorphism background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 dark:from-white/5 dark:to-transparent backdrop-blur-xl rounded-3xl border border-white/20 dark:border-white/10 transition-all duration-500 group-hover:from-white/15 group-hover:to-white/10 dark:group-hover:from-white/8 dark:group-hover:to-white/3" />
-            
-            {/* Hover glow effect */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            {/* Floating particles on hover */}
-            <div className="absolute inset-0 overflow-hidden rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
-                  initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: [0, 1, 0],
-                    x: 20 + Math.random() * 300,
-                    y: 20 + Math.random() * 200,
-                  }}
-                  transition={{
-                    duration: 3 + Math.random() * 2,
-                    repeat: Infinity,
-                    delay: Math.random() * 2,
-                  }}
-                />
-              ))}
-            </div>
-            
-            <div className="relative z-10 overflow-hidden rounded-3xl">
-              {blog.imageUrl && (
-                <div className="relative overflow-hidden aspect-[16/9] group-hover:scale-105 transition-transform duration-700">
-                  <img
-                    src={`${apiBaseUrl}${blog.imageUrl}`}
-                    alt={blog.title}
-                    onError={handleImageError}
-                    className="object-cover w-full h-full"
-                  />
-                  
-                  {/* Image overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                  {blog.category && (
-                    <motion.span 
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="absolute top-6 left-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm px-4 py-2 rounded-full shadow-lg backdrop-blur-sm border border-white/20"
-                    >
-                      <Tag className="inline w-3 h-3 mr-1" />
-                      {blog.category}
-                    </motion.span>
-                  )}
-                  
-                  {/* Premium badge for featured content */}
-                  {blog.featured && (
-                    <motion.div
-                      initial={{ opacity: 0, rotate: -12 }}
-                      animate={{ opacity: 1, rotate: 0 }}
-                      className="absolute top-6 right-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-2 rounded-full shadow-lg"
-                    >
-                      <Star className="w-4 h-4" />
-                    </motion.div>
-                  )}
-                </div>
-              )}
-
-              <div className="p-8 space-y-6">
-                {/* Meta information */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4 text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(blog.createdAt)}
-                    </span>
-                    <span className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm">
-                      <Clock className="w-4 h-4" />
-                      {Math.ceil((blog.content?.length || 0) / 200)} min read
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Title */}
-                <Link to={`/blog/${blog._id}`} className="group/title block">
-                  <motion.h2 
-                    className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent group-hover/title:from-blue-600 group-hover/title:to-purple-600 transition-all duration-300 leading-tight"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    {blog.title}
-                  </motion.h2>
-                </Link>
-                
-                {/* Content preview */}
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  {truncateContent(blog.content)}
-                </p>
-
-                {/* Stats and actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-white/10 dark:border-white/5">
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <motion.span 
-                      className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm hover:bg-white/10 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Eye className="w-4 h-4" />
-                      {blog.views || 0}
-                    </motion.span>
-                    <motion.span 
-                      className="flex items-center gap-2 bg-white/5 dark:bg-white/5 px-3 py-1 rounded-full backdrop-blur-sm hover:bg-red-500/10 hover:text-red-500 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Heart className="w-4 h-4" />
-                      {blog.likes || 0}
-                    </motion.span>
-                  </div>
-                  
-                  <Link
-                    to={`/blog/${blog._id}`}
-                    className="group/read-more inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-                  >
-                    <motion.span
-                      className="mr-2 font-medium"
-                      whileHover={{ x: -2 }}
-                    >
-                      Read More
-                    </motion.span>
-                    <motion.div
-                      whileHover={{ x: 4 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </motion.div>
-                  </Link>
-                </div>
-
-                {/* Admin controls */}
-                {isAdmin && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3 justify-end pt-4 border-t border-white/10 dark:border-white/5"
-                  >
-                    <motion.button
-                      onClick={() => onEdit(blog._id)}
-                      className="p-3 rounded-full bg-white/5 dark:bg-white/5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors backdrop-blur-sm"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      onClick={() => onDelete(blog._id)}
-                      className="p-3 rounded-full bg-white/5 dark:bg-white/5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors backdrop-blur-sm"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </motion.article>
+          <BlogItem key={blog._id} blog={blog} index={index} />
         ))}
       </AnimatePresence>
     </div>

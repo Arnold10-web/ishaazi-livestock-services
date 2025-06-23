@@ -41,40 +41,40 @@ const SubscriberPage = () => {
         subscriptionType 
       });
       
-      setMessage(response.data.message || 'Thank you for subscribing to our newsletter!');
+      setMessage(response.data.message || 'Thank you for subscribing to our newsletter! Welcome to our farming community.');
       setIsSuccess(true);
       setShowNotification(true);
       setEmail('');
       setSubscriptionType('all');
       
-      // Auto-hide notification after 5 seconds
+      // Auto-hide success notification after 10 seconds
       setTimeout(() => {
         setShowNotification(false);
-      }, 5000);
+      }, 10000);
     } catch (error) {
       console.error('Subscription Error:', error);
       
       // Enhanced error handling with specific messages
-      let errorMessage = 'Error subscribing. Please try again.';
+      let errorMessage = 'Subscription failed. Please try again.';
       
-      if (error.response?.status === 400) {
-        errorMessage = error.response.data.message || 'Invalid subscription details provided.';
-      } else if (error.response?.status === 409) {
-        errorMessage = 'You are already subscribed with this email address.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Please check your email address and try again.';
       } else if (error.response?.status === 500) {
-        errorMessage = 'Server error occurred. Please try again later.';
+        errorMessage = 'Server error. Please try again in a moment.';
       } else if (error.code === 'NETWORK_ERROR') {
-        errorMessage = 'Network error. Please check your connection and try again.';
+        errorMessage = 'Network error. Please check your connection.';
       }
       
       setMessage(errorMessage);
       setIsSuccess(false);
       setShowNotification(true);
       
-      // Auto-hide error notification after 7 seconds
+      // Auto-hide error notification after 10 seconds
       setTimeout(() => {
         setShowNotification(false);
-      }, 7000);
+      }, 10000);
     } finally {
       setLoading(false);
     }
@@ -187,11 +187,6 @@ const SubscriberPage = () => {
                     </div>
                   )}
                   <p className="text-sm">{message}</p>
-                  {isSuccess && (
-                    <p className="text-sm mt-2 text-green-600">
-                      Please check your email for a welcome message and confirmation.
-                    </p>
-                  )}
                 </div>
                 <button 
                   onClick={() => setShowNotification(false)}

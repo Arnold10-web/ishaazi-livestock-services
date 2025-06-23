@@ -125,6 +125,13 @@ DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
   UPDATE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
   DELETE_EVENT: (id) => `${BASE_URL}/api/content/events/${id}`,
 
+  // Event Registration Management (Admin)
+  GET_EVENT_REGISTRATIONS: (eventId) => `${BASE_URL}/api/content/events/${eventId}/registrations`,
+  GET_ALL_EVENT_REGISTRATIONS: `${BASE_URL}/api/content/event-registrations`,
+  GET_ADMIN_EVENT_REGISTRATIONS: `${BASE_URL}/api/content/event-registrations/admin`,
+  GET_ADMIN_REGISTRATIONS: `${BASE_URL}/api/content/event-registrations/admin`,
+  DELETE_EVENT_REGISTRATION: (registrationId) => `${BASE_URL}/api/content/event-registrations/${registrationId}`,
+
   // Auction Management
   CREATE_AUCTION: `${BASE_URL}/api/content/auctions`,
   GET_AUCTIONS: `${BASE_URL}/api/content/auctions`,
@@ -141,10 +148,14 @@ DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
   DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
   BULK_UPDATE_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers/bulk`,
 
+  // Event Registration Management
+  GET_ADMIN_REGISTRATIONS: `${BASE_URL}/api/content/event-registrations/admin`,
+  DELETE_EVENT_REGISTRATION: (id) => `${BASE_URL}/api/content/event-registrations/${id}`,
+
   // NEWSLETTER ENDPOINTS
   CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
   GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
-  GET_ADMIN_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,
+  GET_ADMIN_NEWSLETTERS: `${BASE_URL}/api/content/newsletters/admin`,
   UPDATE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
   DELETE_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}`,
   SEND_NEWSLETTER: (id) => `${BASE_URL}/api/content/newsletters/${id}/send`,

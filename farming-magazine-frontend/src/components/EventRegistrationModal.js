@@ -15,6 +15,14 @@ const EventRegistrationModal = ({ event, isOpen, onClose, onRegistrationSuccess 
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+  const validatePhoneNumber = (phone) => {
+    if (!phone) return true; // Phone is optional
+    
+    // Check if phone starts with + and country code (at least +X where X is 1-4 digits)
+    const countryCodePattern = /^\+\d{1,4}\d{6,14}$/;
+    return countryCodePattern.test(phone.replace(/[\s\-\(\)]/g, ''));
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -29,6 +37,13 @@ const EventRegistrationModal = ({ event, isOpen, onClose, onRegistrationSuccess 
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Validate phone number if provided
+    if (formData.phone && !validatePhoneNumber(formData.phone)) {
+      setError('Phone number must include a country code (e.g., +1234567890)');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await axios.post(
@@ -204,9 +219,12 @@ const EventRegistrationModal = ({ event, isOpen, onClose, onRegistrationSuccess 
                         value={formData.phone}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                        placeholder="Enter your phone number"
+                        placeholder="e.g., +1234567890 (include country code)"
                       />
                     </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      If provided, phone number must include country code (e.g., +1 for US, +44 for UK)
+                    </p>
                   </div>
 
                   {/* Event Description Preview */}

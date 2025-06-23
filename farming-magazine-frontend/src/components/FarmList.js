@@ -22,7 +22,8 @@ import {
   Crown,
   TreePine,
   Sprout,
-  TrendingUp
+  TrendingUp,
+  Tag
 } from 'lucide-react';
 
 /**
@@ -372,7 +373,7 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
               )}
             </AnimatePresence>
 
-            {/* Enhanced image container */}
+            {/* Enhanced image container - clean with no overlays */}
             {farm.imageUrl && (
               <div className={`relative overflow-hidden ${
                 viewMode === 'list' 
@@ -389,62 +390,9 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
                   transition={{ duration: 0.6, ease: "easeOut" }}
                 />
                 
-                {/* Enhanced overlay with gradient */}
+                {/* Enhanced overlay with gradient - no badges */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent 
                                opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                {/* Enhanced price badge */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="absolute top-4 left-4 backdrop-blur-md bg-teal-500/90 text-white 
-                             px-3 py-2 rounded-full border border-white/20 shadow-lg
-                             flex items-center gap-1.5 text-xs font-semibold"
-                >
-                  <DollarSign className="w-3 h-3" />
-                  {formatPrice(farm.price)}
-                </motion.div>
-                
-                {/* Enhanced location badge */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="absolute top-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 
-                             rounded-xl px-3 py-2 text-white text-xs font-medium shadow-lg
-                             flex items-center gap-1.5"
-                >
-                  <MapPin className="w-3 h-3" />
-                  {farm.location}
-                </motion.div>
-
-                {/* Featured badge */}
-                {farm.featured && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="absolute bottom-4 left-4 backdrop-blur-md bg-gradient-to-r from-yellow-400 to-orange-500 
-                               text-white text-xs font-bold px-3 py-2 rounded-full 
-                               border border-white/30 shadow-lg flex items-center gap-1"
-                  >
-                    <Crown className="w-3 h-3" />
-                    Featured
-                  </motion.span>
-                )}
-
-                {/* Enhanced size badge */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 
-                             rounded-xl px-3 py-1.5 text-white text-xs font-medium shadow-lg
-                             flex items-center gap-1.5"
-                >
-                  <Tractor className="w-3 h-3" />
-                  {farm.size || 'N/A'}
-                </motion.div>
               </div>
             )}
             
@@ -452,7 +400,74 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
             <div className={`p-6 flex-1 flex flex-col relative z-20 ${
               viewMode === 'list' ? 'justify-between' : ''
             }`}>
-              {/* Meta information */}
+              {/* Badges section - moved from image overlay */}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex items-center justify-between flex-wrap gap-2 mb-4"
+              >
+                <div className="flex items-center gap-2">
+                  {/* Price badge */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="backdrop-blur-md bg-teal-500/90 text-white 
+                               px-3 py-2 rounded-full border border-white/20 shadow-lg
+                               flex items-center gap-1.5 text-xs font-semibold"
+                  >
+                    <DollarSign className="w-3 h-3" />
+                    {formatPrice(farm.price)}
+                  </motion.div>
+                  
+                  {/* Featured badge */}
+                  {farm.featured && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="backdrop-blur-md bg-gradient-to-r from-yellow-400 to-orange-500 
+                                 text-white text-xs font-bold px-3 py-2 rounded-full 
+                                 border border-white/30 shadow-lg flex items-center gap-1"
+                    >
+                      <Crown className="w-3 h-3" />
+                      Featured
+                    </motion.span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Location badge */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="backdrop-blur-md bg-white/20 border border-white/30 
+                               rounded-xl px-3 py-2 text-gray-700 text-xs font-medium shadow-lg
+                               flex items-center gap-1.5"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    {farm.location}
+                  </motion.div>
+                  
+                  {/* Size badge - only show if size exists */}
+                  {farm.size && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="backdrop-blur-md bg-white/20 border border-white/30 
+                                 rounded-xl px-3 py-1.5 text-gray-700 text-xs font-medium shadow-lg
+                                 flex items-center gap-1.5"
+                    >
+                      <Tractor className="w-3 h-3" />
+                      {farm.size}
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Meta information with tags */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -464,12 +479,21 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
                   {formatDate(farm.createdAt)}
                 </div>
                 
-                {farm.type && (
-                  <span className="backdrop-blur-sm bg-green-50/50 px-3 py-1.5 rounded-full border border-green-200/30 
-                                   text-green-600/80 font-medium">
-                    {farm.type}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {farm.farmType && (
+                    <span className="backdrop-blur-sm bg-gradient-to-r from-green-500/10 to-emerald-600/10 border border-green-200/30 
+                                     px-3 py-1.5 rounded-full text-green-600/80 font-medium flex items-center gap-1.5">
+                      <Tag className="w-3 h-3" />
+                      {farm.farmType}
+                    </span>
+                  )}
+                  {farm.type && (
+                    <span className="backdrop-blur-sm bg-green-50/50 px-3 py-1.5 rounded-full border border-green-200/30 
+                                     text-green-600/80 font-medium">
+                      {farm.type}
+                    </span>
+                  )}
+                </div>
               </motion.div>
               
               {/* Enhanced title */}
@@ -496,6 +520,32 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
                 {truncateDescription(farm.description)}
               </motion.p>
               
+              {/* Facilities tags */}
+              {farm.facilities && farm.facilities.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="flex flex-wrap gap-2 mb-4"
+                >
+                  {farm.facilities.slice(0, 3).map((facility, index) => (
+                    <span
+                      key={index}
+                      className="text-xs bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 
+                                 text-blue-600/80 px-2 py-1 rounded-full font-medium flex items-center gap-1"
+                    >
+                      <TreePine className="w-3 h-3" />
+                      {facility}
+                    </span>
+                  ))}
+                  {farm.facilities.length > 3 && (
+                    <span className="text-xs text-gray-500/80 px-2 py-1">
+                      +{farm.facilities.length - 3} more
+                    </span>
+                  )}
+                </motion.div>
+              )}
+              
               {/* Enhanced stats and interaction section */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
@@ -504,10 +554,12 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
                 className="flex justify-between items-center pt-4 border-t border-teal-100/50"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-teal-600/70 text-sm">
-                    <Tractor className="w-4 h-4" />
-                    <span className="font-medium">{farm.size || 'N/A'}</span>
-                  </div>
+                  {farm.size && (
+                    <div className="flex items-center gap-1.5 text-teal-600/70 text-sm">
+                      <Tractor className="w-4 h-4" />
+                      <span className="font-medium">{farm.size}</span>
+                    </div>
+                  )}
                   {farm.views > 500 && (
                     <div className="flex items-center gap-1 text-teal-500 text-xs">
                       <TrendingUp className="w-3 h-3" />

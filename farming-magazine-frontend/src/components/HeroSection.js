@@ -4,7 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowRight, TrendingUp, Users, BookOpen } from 'lucide-react';
 import DynamicAdComponent from './DynamicAdComponent';
-import { SponsoredContent } from './AdPlacement';
+
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -182,22 +182,6 @@ const HeroSection = () => {
         </div>
       </motion.div>
 
-      {/* Sponsored Content Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.8, duration: 0.8 }}
-        className="max-w-6xl mx-auto mt-16"
-      >
-        <SponsoredContent
-          title="Boost Your Farm Productivity with Smart Technology"
-          description="Discover how modern IoT sensors and data analytics can significantly increase your crop yields while reducing water usage and operational costs."
-          sponsorName="AgriTech Solutions"
-          clickUrl="https://example-agritech.com"
-          imageUrl="/images/smart-farming.jpg"
-          className="mb-8"
-        />
-      </motion.div>
     </section>
   );
 };

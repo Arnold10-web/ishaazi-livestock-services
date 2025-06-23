@@ -202,19 +202,24 @@ export const optimizeImage = async (req, res, next) => {
 };
 
 // Secure file size limits based on file type
-const limits = {
-  fileSize: 10 * 1024 * 1024, // 10MB max file size (reduced for security)
-  files: 1, // Only allow one file per request
-  fields: 10, // Limit number of fields
-  fieldNameSize: 100, // Limit field name size
-  fieldSize: 1024 * 1024 // 1MB limit for field values
+const createUploadWithLimits = (maxFileSize) => {
+  return multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: maxFileSize,
+      files: 5, // Allow up to 5 files per request (needed for magazines with both image and PDF)
+      fields: 20, // Limit number of fields (increased to accommodate form fields)
+      fieldNameSize: 100, // Limit field name size
+      fieldSize: 1024 * 1024 // 1MB limit for field values
+    },
+  });
 };
 
-// Multer configuration with added error handling
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: limits,
-});
+// Default upload configuration (10MB for most files)
+const upload = createUploadWithLimits(10 * 1024 * 1024); // 10MB
+
+// Media upload configuration (100MB for video/audio files)
+export const uploadMedia = createUploadWithLimits(100 * 1024 * 1024); // 100MB for media files
 
 export default upload;

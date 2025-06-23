@@ -149,15 +149,29 @@ export const blogSchemas = {
  */
 export const newsSchemas = {
   create: Joi.object({
-    title: Joi.string().min(3).max(200).required(),
-    content: Joi.string().min(10).required(),
-    author: Joi.string().min(2).max(100).required(),
-    category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').required(),
-    tags: Joi.alternatives().try(
-      Joi.array().items(Joi.string().max(50)).max(10),
-      Joi.string().allow('')
-    ).default([]),
-    metadata: Joi.object().optional(),
+    title: Joi.string().min(3).max(200).required().messages({
+      'string.min': 'Title must be at least 3 characters long',
+      'string.max': 'Title cannot exceed 200 characters',
+      'any.required': 'Title is required'
+    }),
+    content: Joi.string().min(10).required().messages({
+      'string.min': 'Content must be at least 10 characters long',
+      'any.required': 'Content is required'
+    }),
+    // Make author optional like blogs
+    author: Joi.string().min(2).max(100).optional(),
+    // Allow metadata to contain any structure like blogs
+    metadata: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        keywords: Joi.array().items(Joi.string()).optional(),
+        summary: Joi.string().optional(),
+        location: Joi.string().optional()
+      }).unknown(true)
+    ).optional(),
+    category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').default('General'),
+    // Accept any type for tags like blogs (we'll handle conversion in the controller)
+    tags: Joi.any().optional(),
     published: Joi.alternatives().try(
       Joi.boolean(),
       Joi.string().valid('true', 'false')
@@ -176,12 +190,12 @@ export const newsSchemas = {
     title: Joi.string().min(3).max(200).optional(),
     content: Joi.string().min(10).optional(),
     author: Joi.string().min(2).max(100).optional(),
-    category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').optional(),
-    tags: Joi.alternatives().try(
-      Joi.array().items(Joi.string().max(50)).max(10),
-      Joi.string().allow('')
+    metadata: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object().unknown(true)
     ).optional(),
-    metadata: Joi.object().optional(),
+    category: Joi.string().valid('Breaking', 'Market', 'Weather', 'Policy', 'General').optional(),
+    tags: Joi.any().optional(),
     published: Joi.alternatives().try(
       Joi.boolean(),
       Joi.string().valid('true', 'false')
@@ -191,6 +205,77 @@ export const newsSchemas = {
       Joi.string().valid('true', 'false')
     ).optional(),
     isBreaking: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional()
+  })
+};
+
+/**
+ * Magazine validation schemas
+ */
+export const magazineSchemas = {
+  create: Joi.object({
+    title: Joi.string().min(1).max(500).required(),
+    description: Joi.string().min(1).required(),
+    issue: Joi.string().min(1).max(100).required(),
+    price: Joi.number().min(0).optional(),
+    discount: Joi.number().min(0).max(100).optional(),
+    imageUrl: Joi.string().uri().optional().allow(null, ''),
+    fileUrl: Joi.string().uri().optional().allow(null, ''), // Will be set by file upload middleware
+    author: Joi.string().max(200).optional().allow(''),
+    category: Joi.string().valid(
+      'General',
+      'Livestock',
+      'Crops',
+      'Technology',
+      'Sustainability',
+      'Business',
+      'Market',
+      'Equipment',
+      'Nutrition',
+      'Research'
+    ).optional(),
+    tags: Joi.any().optional(), // Flexible tags like news/blogs
+    metadata: Joi.any().optional(), // Flexible metadata storage
+    published: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional(),
+    featured: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional()
+  }),
+  
+  update: Joi.object({
+    title: Joi.string().min(1).max(500).optional(),
+    description: Joi.string().min(1).optional(),
+    issue: Joi.string().min(1).max(100).optional(),
+    price: Joi.number().min(0).optional(),
+    discount: Joi.number().min(0).max(100).optional(),
+    imageUrl: Joi.string().uri().optional().allow(null, ''),
+    fileUrl: Joi.string().uri().optional().allow(null, ''),
+    author: Joi.string().max(200).optional().allow(''),
+    category: Joi.string().valid(
+      'General',
+      'Livestock', 
+      'Crops',
+      'Technology',
+      'Sustainability',
+      'Business',
+      'Market',
+      'Equipment',
+      'Nutrition',
+      'Research'
+    ).optional(),
+    tags: Joi.any().optional(),
+    metadata: Joi.any().optional(),
+    published: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid('true', 'false')
+    ).optional(),
+    featured: Joi.alternatives().try(
       Joi.boolean(),
       Joi.string().valid('true', 'false')
     ).optional()
@@ -329,6 +414,7 @@ export default {
   validate,
   blogSchemas,
   newsSchemas,
+  magazineSchemas,
   userSchemas,
   commentSchema,
   querySchemas,

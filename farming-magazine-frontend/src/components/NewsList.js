@@ -11,7 +11,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, Newspaper, Clock
+  Calendar, Newspaper, Clock, Edit2, Trash2
 } from 'lucide-react';
 
 /**
@@ -21,9 +21,12 @@ import {
  * @param {Array} props.news - Array of news article objects to display
  * @param {string} props.apiBaseUrl - Base URL for API requests (used for image paths)
  * @param {boolean} props.isLoading - Whether data is currently loading
+ * @param {boolean} props.isAdmin - Whether the user has admin privileges
+ * @param {Function} props.onEdit - Function to handle editing a news article
+ * @param {Function} props.onDelete - Function to handle deleting a news article
  * @returns {JSX.Element} Rendered news list component
  */
-const NewsList = ({ news, apiBaseUrl, isLoading }) => {
+const NewsList = ({ news, apiBaseUrl, isLoading, isAdmin, onEdit, onDelete }) => {
   /**
    * Handles image loading errors by replacing with default placeholder
    * @param {Event} e - Image error event
@@ -185,13 +188,40 @@ const NewsList = ({ news, apiBaseUrl, isLoading }) => {
                 {truncateContent(article.summary)}
               </p>
 
-              {/* Clean elegant button */}
-              <Link
-                to={`/news/${article._id}`}
-                className="inline-block text-green-700 font-medium text-sm uppercase tracking-wide hover:text-green-800 transition-colors border-b border-green-700 hover:border-green-800 pb-1"
-              >
-                Read Article →
-              </Link>
+              {/* Action row */}
+              <div className="flex justify-between items-center">
+                {/* Read more link */}
+                <Link
+                  to={`/news/${article._id}`}
+                  className="inline-block text-green-700 font-medium text-sm uppercase tracking-wide hover:text-green-800 transition-colors border-b border-green-700 hover:border-green-800 pb-1"
+                >
+                  Read Article →
+                </Link>
+                
+                {/* Admin controls */}
+                {isAdmin && (
+                  <div className="flex space-x-2">
+                    <motion.button
+                      onClick={() => onEdit(article._id)}
+                      className="p-2 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-100 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      onClick={() => onDelete(article._id)}
+                      className="p-2 rounded-full text-gray-600 hover:text-red-600 hover:bg-red-100 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.article>
         ))}

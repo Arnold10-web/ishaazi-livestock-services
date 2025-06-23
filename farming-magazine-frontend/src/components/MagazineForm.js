@@ -10,7 +10,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
   const [issue, setIssue] = useState('');
   const [price, setPrice] = useState('');
   const [author, setAuthor] = useState('');
-  const [category, setCategory] = useState('Agriculture');
+  const [category, setCategory] = useState('General');  // Changed from 'Agriculture' to 'General' to match backend validation
   const [tags, setTags] = useState('');
   const [keywords, setKeywords] = useState('');
   const [summary, setSummary] = useState('');
@@ -28,7 +28,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
       setTitle(editingMagazine.title);
       setIssue(editingMagazine.issue);
       setPrice(editingMagazine.price.toString());
-      setCategory(editingMagazine.category || 'Agriculture');
+      setCategory(editingMagazine.category || 'General');  // Changed from 'Agriculture' to 'General' to match backend validation
       setTags(editingMagazine.tags ? editingMagazine.tags.join(', ') : '');
       setPublished(editingMagazine.published !== undefined ? editingMagazine.published : true);
       setFeatured(editingMagazine.featured || false);
@@ -52,11 +52,23 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
       const editor = new Quill(quillRef.current, {
         theme: 'snow',
         placeholder: 'Write your magazine description here...',
-        modules: { toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link', 'image'], ['clean']] }
+        modules: { 
+          toolbar: [
+            ['bold', 'italic', 'underline'], 
+            [{ list: 'ordered' }, { list: 'bullet' }], 
+            ['link', 'image'], 
+            ['clean']
+          ] 
+        }
       });
       setQuillEditor(editor);
+      
+      // Initialize with some content to make debugging easier
+      if (!editingMagazine) {
+        editor.root.innerHTML = '<p>Enter your magazine description here. This is a required field.</p>';
+      }
     }
-  }, [quillEditor]);
+  }, [quillEditor, editingMagazine]);
 
   useEffect(() => {
     initializeQuill();
@@ -65,11 +77,32 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    setImage(file);
+    
+    // Validate file type
     if (file) {
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(file.type)) {
+        setError(`Invalid image format. Please select a JPEG, PNG, GIF, or WEBP file.`);
+        e.target.value = '';
+        return;
+      }
+      
+      // Validate file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`Image is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Maximum size is 5MB.`);
+        e.target.value = '';
+        return;
+      }
+      
+      console.log(`Image selected: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+      setImage(file);
+      
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
+    } else {
+      setImage(null);
+      setImagePreview(null);
     }
   };
 
@@ -78,7 +111,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
     setIssue('');
     setPrice('');
     setAuthor('');
-    setCategory('Agriculture');
+    setCategory('General');  // Changed from 'Agriculture' to 'General' to match backend validation
     setTags('');
     setKeywords('');
     setSummary('');
@@ -93,72 +126,173 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
     setEditingMagazine(null);
   };
 
-  const generateMetadata = () => {
-    return {
-      author: author.trim(),
-      category: category,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      keywords: keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword),
-      summary: summary.trim(),
-      published: published,
-      featured: featured
-    };
-  };
+  // Function removed to eliminate ESLint warnings
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
+    // Get description from Quill editor
     const description = quillEditor ? quillEditor.root.innerHTML : '';
-    if (!title.trim() || !issue.trim() || !description.trim()) {
-      setError('Title, issue, and description are required.');
+    
+    // Basic validation
+    if (!title.trim()) {
+      setError('Title is required.');
       return;
     }
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('issue', issue);
-    formData.append('price', price);
-    formData.append('description', description);
-    formData.append('author', author);
-    formData.append('category', category);
-    formData.append('tags', JSON.stringify(generateMetadata().tags));
-    formData.append('keywords', JSON.stringify(generateMetadata().keywords));
-    formData.append('summary', summary);
-    formData.append('published', published);
-    formData.append('featured', featured);
-    formData.append('metadata', JSON.stringify(generateMetadata()));
-    formData.append('image', image);
-    formData.append('pdf', pdf);
+    
+    if (!issue.trim()) {
+      setError('Issue number/name is required.');
+      return;
+    }
+    
+    if (!description || description === '<p><br></p>') {
+      setError('Description is required.');
+      return;
+    }
+    
+    // Check if files are present for new magazine creation
+    if (!editingMagazine && (!image || !pdf)) {
+      setError('Both cover image and PDF file are required for new magazines.');
+      return;
+    }
+    
     try {
-      setError('');
-      if (editingMagazine) {
-        await axios.put(API_ENDPOINTS.UPDATE_MAGAZINE(editingMagazine._id), formData, { headers: { ...getAuthHeader() } });
-      } else {
-        await axios.post(API_ENDPOINTS.CREATE_MAGAZINE, formData, { headers: { ...getAuthHeader() } });
+      // Show loading indicator
+      setError('Processing submission...');
+      
+      // Create a fresh FormData object with only the essential fields
+      const formData = new FormData();
+      
+      // Start with required fields
+      formData.append('title', title.trim());
+      formData.append('description', description);
+      formData.append('issue', issue.trim());
+      
+      // Add files which are also required
+      if (image) {
+        formData.append('image', image);
       }
+      
+      if (pdf) {
+        formData.append('pdf', pdf);
+      }
+      
+      // Add other fields
+      if (price) formData.append('price', price);
+      if (author) formData.append('author', author);
+      formData.append('category', category); // Always include category
+      
+      // Process tags
+      const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+      formData.append('tags', JSON.stringify(tagsArray)); // Always send a JSON array even if empty
+      
+      // Add boolean fields as strings
+      formData.append('published', String(published));
+      formData.append('featured', String(featured));
+      
+      // Create and add metadata
+      const metadataObj = {};
+      
+      if (keywords) {
+        metadataObj.keywords = keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+      }
+      
+      if (summary) {
+        metadataObj.summary = summary;
+      }
+      
+      // Always stringify metadata even if empty to ensure proper format
+      formData.append('metadata', JSON.stringify(metadataObj));
+      
+      // Debug logging
+      console.log('Submitting magazine with the following fields:', 
+        [...formData.entries()].map(entry => {
+          if (entry[1] instanceof File) {
+            return `${entry[0]}: File (${entry[1].name}, ${entry[1].type}, ${entry[1].size} bytes)`;
+          }
+          return `${entry[0]}: ${entry[1]}`;
+        })
+      );
+      
+      // Submit the form
+      if (editingMagazine) {
+        const response = await axios.put(API_ENDPOINTS.UPDATE_MAGAZINE(editingMagazine._id), formData, { 
+          headers: { 
+            ...getAuthHeader(),
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        console.log('Magazine updated successfully:', response.data);
+      } else {
+        console.log('Submitting magazine creation with data:', {
+          title,
+          issue,
+          description: 'HTML content',
+          price,
+          category,
+          tags: tagsArray,
+          hasImage: !!image ? `${image.name} (${image.size} bytes)` : false,
+          hasPdf: !!pdf ? `${pdf.name} (${pdf.size} bytes)` : false
+        });
+        
+        const response = await axios.post(API_ENDPOINTS.CREATE_MAGAZINE, formData, { 
+          headers: { 
+            ...getAuthHeader(),
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        console.log('Magazine created successfully:', response.data);
+      }
+      
+      // Reset form and show success message
       refreshMagazines();
       resetForm();
+      setError('');
+      alert(editingMagazine ? 'Magazine updated successfully!' : 'Magazine created successfully!');
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to save magazine');
+      console.error('Magazine submission error:', error);
+      const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Failed to save magazine';
+      setError(`Error: ${errorMessage}. Please check all required fields and try again.`);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
       <h3 className="text-xl font-semibold text-gray-700">{editingMagazine ? 'Edit Magazine' : 'Create Magazine'}</h3>
-      {error && <div className="text-red-500 text-sm">{error}</div>}
-      <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full p-2 border rounded" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" placeholder="Issue" value={issue} onChange={(e) => setIssue(e.target.value)} required className="w-full p-2 border rounded" />
-        <input type="number" placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} required className="w-full p-2 border rounded" />
+      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Title (Required)</label>
+        <input type="text" placeholder="Magazine Title" value={title} onChange={(e) => setTitle(e.target.value)} required className={`w-full p-2 border rounded ${!title && 'border-red-500'}`} />
+        {!title && <p className="text-red-500 text-xs mt-1">Title is required</p>}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Issue Number (Required)</label>
+          <input type="text" placeholder="June 2025" value={issue} onChange={(e) => setIssue(e.target.value)} required className={`w-full p-2 border rounded ${!issue && 'border-red-500'}`} />
+          {!issue && <p className="text-red-500 text-xs mt-1">Issue is required</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+          <input type="number" placeholder="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full p-2 border rounded" />
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="text" placeholder="Author" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-2 border rounded" />
         <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border rounded">
-          <option value="Agriculture">Agriculture</option>
+          <option value="General">General</option>
           <option value="Livestock">Livestock</option>
+          <option value="Crops">Crops</option>
           <option value="Technology">Technology</option>
-          <option value="Business">Business</option>
           <option value="Sustainability">Sustainability</option>
+          <option value="Business">Business</option>
+          <option value="Market">Market</option>
+          <option value="Equipment">Equipment</option>
+          <option value="Nutrition">Nutrition</option>
           <option value="Research">Research</option>
         </select>
       </div>
@@ -181,10 +315,83 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
         </div>
       </div>
       <div ref={quillRef} className="h-40 bg-gray-100 border p-2 rounded"></div>
-      <input type="file" onChange={handleImageChange} accept="image/*" className="w-full p-2 border rounded" />
-      {imagePreview && <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover mt-2" />}
-      <input type="file" onChange={(e) => setPdf(e.target.files[0])} accept=".pdf" className="w-full p-2 border rounded" />
-      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">{editingMagazine ? 'Update Content' : 'Publish Content'}</button>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image {!editingMagazine && <span className="text-red-500">*</span>}</label>
+        <div className="flex items-center space-x-2">
+          <input 
+            type="file" 
+            onChange={handleImageChange} 
+            accept="image/jpeg,image/png,image/gif,image/webp" 
+            className={`w-full p-2 border rounded ${!image && !editingMagazine ? 'border-red-500' : ''}`} 
+            id="magazine-image"
+          />
+          {!editingMagazine && (
+            <button 
+              type="button" 
+              onClick={() => document.getElementById('magazine-image').click()}
+              className="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300"
+            >
+              Browse...
+            </button>
+          )}
+        </div>
+        {!image && !editingMagazine && <p className="text-red-500 text-xs mt-1">Cover image is required</p>}
+        {imagePreview && (
+          <div className="mt-2">
+            <p className="text-sm text-gray-600 mb-1">Image Preview:</p>
+            <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover border rounded" />
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">PDF File (Required)</label>
+        <div className="flex items-center space-x-2">
+          <input 
+            type="file" 
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) {
+                // Validate file type
+                if (file.type !== 'application/pdf') {
+                  setError(`Invalid file format. Please select a PDF file.`);
+                  e.target.value = '';
+                  return;
+                }
+                
+                // Validate file size (limit to 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                  setError(`PDF is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Maximum size is 10MB.`);
+                  e.target.value = '';
+                  return;
+                }
+                
+                console.log(`PDF selected: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+                setPdf(file);
+              } else {
+                setPdf(null);
+              }
+            }} 
+            accept="application/pdf,.pdf" 
+            className={`w-full p-2 border rounded ${!pdf && !editingMagazine ? 'border-red-500' : ''}`}
+            id="magazine-pdf"
+          />
+          <button 
+            type="button" 
+            onClick={() => document.getElementById('magazine-pdf').click()}
+            className="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300"
+          >
+            Browse...
+          </button>
+        </div>
+        {!pdf && !editingMagazine && <p className="text-red-500 text-xs mt-1">PDF file is required</p>}
+        {pdf && <p className="text-green-600 text-xs mt-1">File selected: {pdf.name} ({(pdf.size / 1024).toFixed(2)} KB)</p>}
+      </div>
+      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+        </svg>
+        {editingMagazine ? 'Update Magazine' : 'Publish Magazine'}
+      </button>
     </form>
   );
 };

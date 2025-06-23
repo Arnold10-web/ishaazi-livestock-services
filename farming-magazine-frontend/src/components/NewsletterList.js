@@ -6,10 +6,61 @@ import { getAuthHeader } from '../utils/auth';
 const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, onSend, darkMode }) => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  const [expandedNewsletters, setExpandedNewsletters] = useState(new Set());
+
+  // Add styles for newsletter content rendering
+  const newsletterContentStyles = `
+    .newsletter-content h1, .newsletter-content h2, .newsletter-content h3 {
+      font-weight: bold;
+      margin: 0.5em 0;
+    }
+    .newsletter-content h1 { font-size: 1.25em; }
+    .newsletter-content h2 { font-size: 1.125em; }
+    .newsletter-content h3 { font-size: 1em; }
+    .newsletter-content p {
+      margin: 0.5em 0;
+      line-height: 1.5;
+    }
+    .newsletter-content ul, .newsletter-content ol {
+      margin: 0.5em 0;
+      padding-left: 1.5em;
+    }
+    .newsletter-content li {
+      margin: 0.25em 0;
+    }
+    .newsletter-content strong, .newsletter-content b {
+      font-weight: bold;
+    }
+    .newsletter-content em, .newsletter-content i {
+      font-style: italic;
+    }
+    .newsletter-content a {
+      color: #3B82F6;
+      text-decoration: underline;
+    }
+    .newsletter-content blockquote {
+      border-left: 4px solid #E5E7EB;
+      padding-left: 1em;
+      margin: 1em 0;
+      font-style: italic;
+    }
+  `;
 
   const showNotification = (message, type = 'success') => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
+  };
+
+  const toggleExpanded = (newsletterId) => {
+    setExpandedNewsletters(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(newsletterId)) {
+        newSet.delete(newsletterId);
+      } else {
+        newSet.add(newsletterId);
+      }
+      return newSet;
+    });
   };
 
   const truncateContent = (content, maxLength = 150) => {
@@ -17,6 +68,39 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
     tempElement.innerHTML = content;
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  // For admin view, show more content with HTML formatting
+  const renderNewsletterContent = (content, isAdmin = false, isExpanded = false) => {
+    if (!content) return '';
+    
+    if (isAdmin) {
+      if (isExpanded) {
+        // Show full content when expanded
+        return content;
+      }
+      
+      // For admin, show more content with preserved HTML formatting
+      const maxLength = 800; // Much longer for admin
+      
+      // Create element to check text length
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = content;
+      const textLength = (tempElement.textContent || tempElement.innerText).length;
+      
+      // If content is very long, truncate the HTML smartly
+      if (textLength > maxLength) {
+        const textContent = tempElement.textContent || tempElement.innerText;
+        const truncatedText = textContent.substring(0, maxLength) + '...';
+        return truncatedText;
+      }
+      
+      // For reasonable length content, render the HTML safely
+      return content;
+    } else {
+      // For non-admin (public view), use the existing truncate method
+      return truncateContent(content, 150);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -111,6 +195,9 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
 
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm`}>
+      {/* Inject CSS for newsletter content styling */}
+      <style dangerouslySetInnerHTML={{ __html: newsletterContentStyles }} />
+      
       {/* Notification */}
       {notification.show && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
@@ -156,9 +243,40 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
                   </div>
 
                   {/* Content Preview */}
-                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 leading-relaxed`}>
-                    {truncateContent(newsletter.body)}
-                  </p>
+                  <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 leading-relaxed`}>
+                    {isAdmin ? (
+                      <>
+                        <div 
+                          className="newsletter-content prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ 
+                            __html: renderNewsletterContent(newsletter.body, isAdmin, expandedNewsletters.has(newsletter._id)) 
+                          }}
+                          style={{ 
+                            maxHeight: expandedNewsletters.has(newsletter._id) ? 'none' : '200px', 
+                            overflow: expandedNewsletters.has(newsletter._id) ? 'visible' : 'hidden',
+                            lineHeight: '1.6'
+                          }}
+                        />
+                        {/* Check if content is long enough to show expand button */}
+                        {(() => {
+                          const tempElement = document.createElement('div');
+                          tempElement.innerHTML = newsletter.body || '';
+                          const textLength = (tempElement.textContent || tempElement.innerText).length;
+                          return textLength > 800;
+                        })() && (
+                          <button
+                            onClick={() => toggleExpanded(newsletter._id)}
+                            className={`mt-2 text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'} font-medium flex items-center`}
+                          >
+                            <i className={`fas fa-${expandedNewsletters.has(newsletter._id) ? 'chevron-up' : 'chevron-down'} mr-1`}></i>
+                            {expandedNewsletters.has(newsletter._id) ? 'Show Less' : 'Read Full Content'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p>{renderNewsletterContent(newsletter.body, isAdmin)}</p>
+                    )}
+                  </div>
 
                   {/* Metadata */}
                   <div className={`flex flex-wrap items-center gap-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
@@ -216,7 +334,7 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
               {isAdmin && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-600">
                   <button
-                    onClick={() => onEdit(newsletter)}
+                    onClick={() => onEdit(newsletter._id)}
                     disabled={loading}
                     className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors disabled:opacity-50"
                   >

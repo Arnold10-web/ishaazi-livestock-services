@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -14,9 +14,271 @@ import {
   Crown,
   TrendingUp
 } from 'lucide-react';
+import { useEngagement } from '../hooks/useEngagement';
 
 const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, viewMode = 'grid' }) => {
-  const [hoveredCard, setHoveredCard] = useState(null);
+  // Removed hoveredCard state to prevent unnecessary re-renders on hover
+
+  // Memoized GoatItem subcomponent for cleaner code organization and performance
+  const GoatItem = React.memo(({ goat, index }) => {
+    // Don't track views in list view - only fetch stats for display
+    const { stats, toggleLike, loading: engagementLoading } = useEngagement('goats', goat._id);
+    const [isLiked, setIsLiked] = useState(stats.isLiked || false);
+
+    // Update isLiked state when stats change
+    useEffect(() => {
+      setIsLiked(stats.isLiked || false);
+    }, [stats.isLiked]);
+
+    const handleLike = useCallback(async () => {
+      if (isAdmin || engagementLoading) return;
+      
+      try {
+        const newLikedState = await toggleLike(isLiked);
+        setIsLiked(newLikedState);
+      } catch (error) {
+        console.error('Failed to toggle like:', error);
+      }
+    }, [engagementLoading, toggleLike, isLiked]);
+
+    return (
+      <motion.article
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, y: -20 }}
+      transition={{ 
+        delay: index * 0.1,
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }}
+      whileHover={{ 
+        y: viewMode === 'list' ? -4 : -8,
+        transition: { type: "spring", stiffness: 400, damping: 25 }
+      }}
+      className={`group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
+                 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden ${
+                   viewMode === 'list' 
+                     ? 'flex flex-row items-stretch' 
+                     : 'flex flex-col'
+                 }
+                 before:absolute before:inset-0 before:bg-gradient-to-br before:from-emerald-100/20 before:to-green-100/20 
+                 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500`}
+    >
+
+      {/* Image container */}
+      {goat.imageUrl && (
+        <div className={`relative overflow-hidden ${
+          viewMode === 'list' 
+            ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-l-3xl' 
+            : 'aspect-[16/10] rounded-t-3xl'
+        }`}>
+          <motion.img
+            src={`${apiBaseUrl}${goat.imageUrl}`}
+            alt={goat.title}
+            onError={handleImageError}
+            className="w-full h-full object-cover"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+          
+          {/* Enhanced overlay with gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent 
+                         opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Top badges container */}
+          <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+            {goat.breed && (
+              <motion.span 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="backdrop-blur-md bg-emerald-500/90 text-white text-xs font-semibold 
+                           px-3 py-2 rounded-full border border-white/20 shadow-lg
+                           flex items-center gap-1.5"
+              >
+                <Tag className="w-3 h-3" />
+                {goat.breed}
+              </motion.span>
+            )}
+            
+            {/* Premium/Featured badge */}
+            {goat.featured && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="backdrop-blur-md bg-gradient-to-r from-yellow-400 to-orange-500 
+                           text-white text-xs font-bold px-3 py-2 rounded-full 
+                           border border-white/30 shadow-lg flex items-center gap-1"
+              >
+                <Crown className="w-3 h-3" />
+                Featured
+              </motion.span>
+            )}
+          </div>
+
+          {/* Enhanced read time badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 
+                       rounded-xl px-3 py-1.5 text-white text-xs font-medium shadow-lg
+                       flex items-center gap-1.5"
+          >
+            <Clock className="w-3 h-3" />
+            {Math.ceil((goat.content?.length || 500) / 200)} min read
+          </motion.div>
+        </div>
+      )}
+      
+      {/* Enhanced content section */}
+      <div className={`p-6 flex-1 flex flex-col relative z-20 ${viewMode === 'list' ? 'justify-between' : ''}`}>
+        {/* Meta information */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center justify-between text-xs text-emerald-600/70 mb-3"
+        >
+          <div className="flex items-center gap-2 backdrop-blur-sm bg-emerald-50/50 px-3 py-1.5 rounded-full border border-emerald-200/30">
+            <Calendar className="w-3 h-3" />
+            {formatDate(goat.createdAt)}
+          </div>
+          
+          {goat.category && (
+            <span className="backdrop-blur-sm bg-green-50/50 px-3 py-1.5 rounded-full border border-green-200/30 
+                             text-green-600/80 font-medium">
+              {goat.category}
+            </span>
+          )}
+        </motion.div>
+        
+        {/* Enhanced title */}
+        <Link to={`/goat/${goat._id}`} className="group/title mb-3 block">
+          <motion.h2 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent
+                       group-hover/title:from-emerald-600 group-hover/title:to-green-600 transition-all duration-300
+                       leading-tight line-clamp-2"
+          >
+            {goat.title}
+          </motion.h2>
+        </Link>
+        
+        {/* Enhanced content preview */}
+        <motion.p 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-gray-600/80 text-sm leading-relaxed flex-grow line-clamp-3 mb-4"
+        >
+          {truncateContent(goat.content)}
+        </motion.p>
+        
+        {/* Enhanced stats and interaction section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="flex justify-between items-center pt-4 border-t border-emerald-100/50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-emerald-600/70 text-sm">
+              <Eye className="w-4 h-4" />
+              <span className="font-medium">{goat.views || 0}</span>
+            </div>
+            
+            {/* Like section - different behavior for admin vs public */}
+            {isAdmin ? (
+              // Admin view: display-only likes count
+              <div className="flex items-center gap-1.5 text-green-600/70 text-sm">
+                <Heart className="w-4 h-4" />
+                <span className="font-medium">{stats.likes || goat.likes || 0}</span>
+              </div>
+            ) : (
+              // Public view: interactive like button
+              <motion.button
+                onClick={handleLike}
+                disabled={engagementLoading}
+                className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
+                  isLiked 
+                    ? 'text-red-600' 
+                    : 'text-green-600/70 hover:text-green-600'
+                } ${engagementLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <motion.div
+                  animate={engagementLoading ? { scale: [1, 1.2, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                </motion.div>
+                <span className="font-medium">{stats.likes || goat.likes || 0}</span>
+              </motion.button>
+            )}
+            
+            {goat.views > 1000 && (
+              <div className="flex items-center gap-1 text-emerald-500 text-xs">
+                <TrendingUp className="w-3 h-3" />
+                <span className="font-semibold">Trending</span>
+              </div>
+            )}
+          </div>
+          
+          <Link
+            to={`/goat/${goat._id}`}
+            className="group/link inline-flex items-center gap-2 text-emerald-600 hover:text-green-600 
+                       font-semibold text-sm transition-all duration-300
+                       hover:gap-3 relative"
+          >
+            <span>Read More</span>
+            <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-300" />
+            <motion.div
+              className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-emerald-600 to-green-600 
+                         w-0 group-hover/link:w-full transition-all duration-300"
+            />
+          </Link>
+        </motion.div>
+        
+        {/* Enhanced admin controls */}
+        {isAdmin && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-4 flex gap-2 justify-end pt-3 border-t border-emerald-100/50"
+          >
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onEdit(goat._id)}
+              className="p-2.5 rounded-xl backdrop-blur-sm bg-blue-50/80 border border-blue-200/50
+                         text-blue-600 hover:bg-blue-100/80 hover:text-blue-700 
+                         transition-all duration-300 shadow-sm hover:shadow-md"
+            >
+              <Edit2 className="w-4 h-4" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onDelete(goat._id)}
+              className="p-2.5 rounded-xl backdrop-blur-sm bg-red-50/80 border border-red-200/50
+                         text-red-600 hover:bg-red-100/80 hover:text-red-700 
+                         transition-all duration-300 shadow-sm hover:shadow-md"
+            >
+              <Trash2 className="w-4 h-4" />
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+    </motion.article>
+    );
+  });
+
   // Utility function for image error handling
   const handleImageError = (e) => {
     e.target.src = '/placeholder-image.jpg';
@@ -228,247 +490,7 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
     <div className={viewMode === 'list' ? 'space-y-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'}>
       <AnimatePresence mode="popLayout">
         {goats.map((goat, index) => (
-          <motion.article
-            key={goat._id}
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, y: -20 }}
-            transition={{ 
-              delay: index * 0.1,
-              type: "spring",
-              stiffness: 300,
-              damping: 30
-            }}
-            whileHover={{ 
-              y: viewMode === 'list' ? -4 : -8,
-              transition: { type: "spring", stiffness: 400, damping: 25 }
-            }}
-            onMouseEnter={() => setHoveredCard(goat._id)}
-            onMouseLeave={() => setHoveredCard(null)}
-            className={`group relative backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl 
-                       shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden ${
-                         viewMode === 'list' 
-                           ? 'flex flex-row items-stretch' 
-                           : 'flex flex-col'
-                       }
-                       before:absolute before:inset-0 before:bg-gradient-to-br before:from-emerald-100/20 before:to-green-100/20 
-                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500`}
-          >
-            {/* Floating particles on hover */}
-            <AnimatePresence>
-              {hoveredCard === goat._id && (
-                <div className="absolute inset-0 pointer-events-none z-10">
-                  {[...Array(12)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ 
-                        opacity: [0, 1, 0],
-                        scale: [0, 1, 0],
-                        x: Math.random() * 100 - 50,
-                        y: Math.random() * 100 - 50,
-                      }}
-                      exit={{ opacity: 0, scale: 0 }}
-                      transition={{
-                        duration: 2,
-                        delay: i * 0.1,
-                        repeat: Infinity,
-                        repeatDelay: 1,
-                      }}
-                      className="absolute w-1.5 h-1.5 bg-emerald-400/60 rounded-full"
-                      style={{
-                        left: `${20 + Math.random() * 60}%`,
-                        top: `${20 + Math.random() * 60}%`,
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </AnimatePresence>
-
-            {/* Image container */}
-            {goat.imageUrl && (
-              <div className={`relative overflow-hidden ${
-                viewMode === 'list' 
-                  ? 'w-64 lg:w-80 flex-shrink-0 aspect-[4/3] rounded-l-3xl' 
-                  : 'aspect-[16/10] rounded-t-3xl'
-              }`}>
-                <motion.img
-                  src={`${apiBaseUrl}${goat.imageUrl}`}
-                  alt={goat.title}
-                  onError={handleImageError}
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-                
-                {/* Enhanced overlay with gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent 
-                               opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                {/* Top badges container */}
-                <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-                  {goat.breed && (
-                    <motion.span 
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="backdrop-blur-md bg-emerald-500/90 text-white text-xs font-semibold 
-                                 px-3 py-2 rounded-full border border-white/20 shadow-lg
-                                 flex items-center gap-1.5"
-                    >
-                      <Tag className="w-3 h-3" />
-                      {goat.breed}
-                    </motion.span>
-                  )}
-                  
-                  {/* Premium/Featured badge */}
-                  {goat.featured && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="backdrop-blur-md bg-gradient-to-r from-yellow-400 to-orange-500 
-                                 text-white text-xs font-bold px-3 py-2 rounded-full 
-                                 border border-white/30 shadow-lg flex items-center gap-1"
-                    >
-                      <Crown className="w-3 h-3" />
-                      Featured
-                    </motion.span>
-                  )}
-                </div>
-
-                {/* Enhanced read time badge */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 
-                             rounded-xl px-3 py-1.5 text-white text-xs font-medium shadow-lg
-                             flex items-center gap-1.5"
-                >
-                  <Clock className="w-3 h-3" />
-                  {Math.ceil((goat.content?.length || 500) / 200)} min read
-                </motion.div>
-              </div>
-            )}
-            
-            {/* Enhanced content section */}
-            <div className={`p-6 flex-1 flex flex-col relative z-20 ${viewMode === 'list' ? 'justify-between' : ''}`}>
-              {/* Meta information */}
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center justify-between text-xs text-emerald-600/70 mb-3"
-              >
-                <div className="flex items-center gap-2 backdrop-blur-sm bg-emerald-50/50 px-3 py-1.5 rounded-full border border-emerald-200/30">
-                  <Calendar className="w-3 h-3" />
-                  {formatDate(goat.createdAt)}
-                </div>
-                
-                {goat.category && (
-                  <span className="backdrop-blur-sm bg-green-50/50 px-3 py-1.5 rounded-full border border-green-200/30 
-                                   text-green-600/80 font-medium">
-                    {goat.category}
-                  </span>
-                )}
-              </motion.div>
-              
-              {/* Enhanced title */}
-              <Link to={`/goat/${goat._id}`} className="group/title mb-3 block">
-                <motion.h2 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent
-                             group-hover/title:from-emerald-600 group-hover/title:to-green-600 transition-all duration-300
-                             leading-tight line-clamp-2"
-                >
-                  {goat.title}
-                </motion.h2>
-              </Link>
-              
-              {/* Enhanced content preview */}
-              <motion.p 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-gray-600/80 text-sm leading-relaxed flex-grow line-clamp-3 mb-4"
-              >
-                {truncateContent(goat.content)}
-              </motion.p>
-              
-              {/* Enhanced stats and interaction section */}
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex justify-between items-center pt-4 border-t border-emerald-100/50"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-emerald-600/70 text-sm">
-                    <Eye className="w-4 h-4" />
-                    <span className="font-medium">{goat.views || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-green-600/70 text-sm">
-                    <Heart className="w-4 h-4" />
-                    <span className="font-medium">{goat.likes || 0}</span>
-                  </div>
-                  {goat.views > 1000 && (
-                    <div className="flex items-center gap-1 text-emerald-500 text-xs">
-                      <TrendingUp className="w-3 h-3" />
-                      <span className="font-semibold">Trending</span>
-                    </div>
-                  )}
-                </div>
-                
-                <Link
-                  to={`/goat/${goat._id}`}
-                  className="group/link inline-flex items-center gap-2 text-emerald-600 hover:text-green-600 
-                             font-semibold text-sm transition-all duration-300
-                             hover:gap-3 relative"
-                >
-                  <span>Read More</span>
-                  <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-300" />
-                  <motion.div
-                    className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-emerald-600 to-green-600 
-                               w-0 group-hover/link:w-full transition-all duration-300"
-                  />
-                </Link>
-              </motion.div>
-              
-              {/* Enhanced admin controls */}
-              {isAdmin && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="mt-4 flex gap-2 justify-end pt-3 border-t border-emerald-100/50"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onEdit(goat._id)}
-                    className="p-2.5 rounded-xl backdrop-blur-sm bg-blue-50/80 border border-blue-200/50
-                               text-blue-600 hover:bg-blue-100/80 hover:text-blue-700 
-                               transition-all duration-300 shadow-sm hover:shadow-md"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onDelete(goat._id)}
-                    className="p-2.5 rounded-xl backdrop-blur-sm bg-red-50/80 border border-red-200/50
-                               text-red-600 hover:bg-red-100/80 hover:text-red-700 
-                               transition-all duration-300 shadow-sm hover:shadow-md"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </motion.button>
-                </motion.div>
-              )}
-            </div>
-          </motion.article>
+          <GoatItem key={goat._id} goat={goat} index={index} />
         ))}
       </AnimatePresence>
     </div>

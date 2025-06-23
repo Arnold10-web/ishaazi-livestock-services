@@ -27,7 +27,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   // Form state management
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
-  const [category, setCategory] = useState('News');
+  const [category, setCategory] = useState('General');  // Changed from 'News' to 'General' to match backend validation
   const [tags, setTags] = useState('');
   const [keywords, setKeywords] = useState('');
   const [summary, setSummary] = useState('');
@@ -129,7 +129,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   const resetForm = () => {
     setTitle('');
     setAuthor('');
-    setCategory('News');
+    setCategory('General');  // Changed from 'News' to 'General' to match backend validation
     setTags('');
     setKeywords('');
     setSummary('');

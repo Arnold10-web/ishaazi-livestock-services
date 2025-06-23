@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_ENDPOINTS from '../config/apiConfig';
 import { 
   Search, Calendar, User, ArrowRight, TrendingUp, Clock, BookOpen, 
   Filter, AlertCircle, Zap, Eye, Share2, Bookmark, ChevronRight,
-  Globe, Leaf, Truck, DollarSign, Settings, ChevronLeft
+  Globe, Leaf, Truck, DollarSign, Settings, ChevronLeft, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -51,6 +52,24 @@ const NewsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [breakingNews, setBreakingNews] = useState([]);
   const newsPerPage = 12;
+
+  // Newsletter subscription state
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterMessage, setNewsletterMessage] = useState('');
+  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [showNewsletterNotification, setShowNewsletterNotification] = useState(false);
+  const [showNewsletterPreferences, setShowNewsletterPreferences] = useState(false);
+  const [newsletterSubscriptionType, setNewsletterSubscriptionType] = useState('all');
+
+  const subscriptionOptions = [
+    { value: 'all', label: 'All Updates', description: 'Get all our newsletters and updates' },
+    { value: 'newsletters', label: 'Newsletters Only', description: 'Weekly farming insights and tips' },
+    { value: 'events', label: 'Events', description: 'Upcoming farming events and workshops' },
+    { value: 'auctions', label: 'Livestock Auctions', description: 'Auction announcements and schedules' },
+    { value: 'farming-tips', label: 'Farming Tips', description: 'Expert advice and best practices' },
+    { value: 'livestock-updates', label: 'Livestock Updates', description: 'Animal care and management news' }
+  ];
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -118,6 +137,78 @@ const NewsPage = () => {
     tempElement.innerHTML = content;
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  // Newsletter subscription handler
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    setNewsletterMessage('');
+    setNewsletterSuccess(false);
+    setShowNewsletterNotification(false);
+
+    // Email validation
+    const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+    if (!isValidEmail(newsletterEmail)) {
+      setNewsletterMessage('Please enter a valid email address.');
+      setNewsletterSuccess(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide error message after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+      return;
+    }
+
+    // Show preferences popup
+    setShowNewsletterPreferences(true);
+  };
+
+  const handleNewsletterSubscription = async () => {
+    setNewsletterLoading(true);
+    setNewsletterMessage('');
+    setNewsletterSuccess(false);
+    setShowNewsletterNotification(false);
+
+    try {
+      const response = await axios.post(API_ENDPOINTS.CREATE_SUBSCRIBER, { 
+        email: newsletterEmail,
+        subscriptionType: newsletterSubscriptionType
+      });
+      
+      setNewsletterMessage(response.data.message || 'Thank you for subscribing! Welcome to our farming community.');
+      setNewsletterSuccess(true);
+      setNewsletterEmail('');
+      setNewsletterSubscriptionType('all');
+      setShowNewsletterPreferences(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide success notification after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      
+      let errorMessage = 'Subscription failed. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again in a moment.';
+      }
+      
+      setNewsletterMessage(errorMessage);
+      setNewsletterSuccess(false);
+      setShowNewsletterPreferences(false);
+      setShowNewsletterNotification(true);
+      
+      // Auto-hide error message after 10 seconds
+      setTimeout(() => {
+        setShowNewsletterNotification(false);
+      }, 10000);
+    } finally {
+      setNewsletterLoading(false);
+    }
   };
 
   if (loading) {
@@ -476,16 +567,89 @@ const NewsPage = () => {
                 <p className="text-blue-100 mb-4 text-sm">
                   Get the latest livestock news delivered to your inbox.
                 </p>
-                <div className="space-y-3">
+                <form onSubmit={handleNewsletterSubmit} className="space-y-3">
                   <input
                     type="email"
                     placeholder="Enter your email"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    required
+                    disabled={newsletterLoading}
                   />
-                  <button className="w-full bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    Subscribe Now
+                  <button 
+                    type="submit"
+                    disabled={newsletterLoading}
+                    className="w-full bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {newsletterLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Subscribing...
+                      </>
+                    ) : (
+                      'Subscribe Now'
+                    )}
                   </button>
-                </div>
+                </form>
+
+                {/* Preferences Popup */}
+                {showNewsletterPreferences && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Choose Your Preferences</h3>
+                        <button
+                          onClick={() => setShowNewsletterPreferences(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-4">
+                        What would you like to receive updates about?
+                      </p>
+                      
+                      <div className="space-y-3 mb-6">
+                        {subscriptionOptions.map((option) => (
+                          <label key={option.value} className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="newsletterSubscriptionType"
+                              value={option.value}
+                              checked={newsletterSubscriptionType === option.value}
+                              onChange={(e) => setNewsletterSubscriptionType(e.target.value)}
+                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                              <div className="text-xs text-gray-500">{option.description}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => setShowNewsletterPreferences(false)}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleNewsletterSubscription}
+                          disabled={newsletterLoading}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {newsletterLoading ? 'Subscribing...' : 'Subscribe'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* In-Content Advertisement */}
@@ -559,6 +723,39 @@ const NewsPage = () => {
           />
         </div>
       </div>
+
+      {/* Newsletter Notification Toast */}
+      <AnimatePresence>
+        {showNewsletterNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-4 right-4 max-w-sm w-full bg-white rounded-lg shadow-lg p-4 transition-all duration-300
+              ${newsletterSuccess ? 'bg-green-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'}
+            `}
+          >
+            <div className="flex items-center">
+              {newsletterSuccess ? (
+                <Zap className="w-6 h-6 text-green-500 mr-3" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-red-500 mr-3" />
+              )}
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${newsletterSuccess ? 'text-green-800' : 'text-red-800'}`}>
+                  {newsletterMessage}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowNewsletterNotification(false)}
+                className="ml-3 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

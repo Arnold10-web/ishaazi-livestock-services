@@ -19,7 +19,8 @@ function getIconForTab(tab) {
     piggeries: 'piggy-bank',
     newsletters: 'envelope',
     subscribers: 'users',
-    events: 'calendar-alt'
+    events: 'calendar-alt',
+    registrations: 'user-plus'
   };
   return icons[tab] || 'cog';
 }
@@ -77,6 +78,7 @@ const EditorDashboard = () => {
     { id: 'newsletters', label: 'Newsletters' },
     { id: 'subscribers', label: 'Subscribers' },
     { id: 'events', label: 'Events' },
+    { id: 'registrations', label: 'Event Registrations' },
   ];
 
   // Generate breadcrumb based on active tab

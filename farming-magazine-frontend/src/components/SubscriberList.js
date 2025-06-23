@@ -37,7 +37,7 @@ const SubscriberList = ({ subscribers, onDelete, darkMode }) => {
 
     setLoading(true);
     try {
-      const response = await axios.post(
+      const response = await axios.put(
         API_ENDPOINTS.BULK_UPDATE_SUBSCRIBERS,
         {
           action,

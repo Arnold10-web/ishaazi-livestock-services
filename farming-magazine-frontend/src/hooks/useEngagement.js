@@ -1,27 +1,36 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import API_ENDPOINTS from '../config/apiConfig';
 
-export const useEngagement = (contentType, id) => {
+export const useEngagement = (contentType, id, options = {}) => {
+  const { trackViewOnMount = false } = options; // Only track view if explicitly requested
   const [stats, setStats] = useState({
     views: 0,
     likes: 0,
-    shares: 0
+    shares: 0,
+    isLiked: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const hasTrackedView = useRef(false);
 
-  // Track a view
+  // Early return if no contentType or id to prevent unnecessary processing
+  const isEnabled = Boolean(contentType && id);
+
+  // Track a view (manually triggered)
   const trackView = useCallback(async () => {
+    if (!isEnabled || hasTrackedView.current) return;
     try {
       await axios.post(API_ENDPOINTS.TRACK_VIEW(contentType, id));
+      hasTrackedView.current = true;
     } catch (err) {
       console.error('Failed to track view:', err);
     }
-  }, [contentType, id]);
+  }, [contentType, id, isEnabled]);
 
   // Fetch current engagement stats
   const fetchStats = useCallback(async () => {
+    if (!isEnabled) return;
     try {
       const response = await axios.get(API_ENDPOINTS.GET_ENGAGEMENT_STATS(contentType, id));
       setStats(response.data.data);
@@ -29,18 +38,29 @@ export const useEngagement = (contentType, id) => {
       console.error('Failed to fetch engagement stats:', err);
       setError('Failed to fetch stats');
     }
-  }, [contentType, id]);
+  }, [contentType, id, isEnabled]);
 
-  // Track view when component mounts
+  // Only fetch stats on mount, don't auto-track views
   useEffect(() => {
-    if (contentType && id) {
-      trackView();
+    if (isEnabled) {
       fetchStats();
+      
+      // Only track view if explicitly requested (e.g., on detail pages)
+      if (trackViewOnMount && !hasTrackedView.current) {
+        const timeoutId = setTimeout(() => {
+          trackView();
+        }, 1000); // Delay to ensure it's a real view
+        
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [contentType, id, trackView, fetchStats]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentType, id, isEnabled, trackViewOnMount]); // Intentionally excluding fetchStats and trackView to prevent infinite loops
 
   // Toggle like
   const toggleLike = async (currentlyLiked = false) => {
+    if (!isEnabled) return currentlyLiked;
+    
     try {
       setLoading(true);
       const action = currentlyLiked ? 'unlike' : 'like';
@@ -48,7 +68,8 @@ export const useEngagement = (contentType, id) => {
       
       setStats(prev => ({
         ...prev,
-        likes: response.data.data.likes
+        likes: response.data.data.likes,
+        isLiked: !currentlyLiked
       }));
       
       return !currentlyLiked; // Return new liked state
@@ -124,12 +145,36 @@ export const useEngagement = (contentType, id) => {
     }
   };
 
+  // Backward compatible likeItem function for components that use the old API
+  const likeItem = useCallback(async (contentType, itemId) => {
+    if (!contentType || !itemId) return;
+    
+    try {
+      setLoading(true);
+      const response = await axios.post(API_ENDPOINTS.TRACK_LIKE(contentType, itemId), { action: 'like' });
+      // Note: This doesn't update local stats since it's meant for list views
+      return response.data;
+    } catch (err) {
+      console.error('Failed to like item:', err);
+      setError('Failed to like item');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Alias for backward compatibility
+  const isLiking = loading;
+
   return {
     stats,
     loading,
     error,
     toggleLike,
     trackShare,
+    trackView, // Export trackView for manual triggering
+    likeItem, // Backward compatible function
+    isLiking, // Backward compatible alias
     addComment,
     deleteComment,
     approveComment,
