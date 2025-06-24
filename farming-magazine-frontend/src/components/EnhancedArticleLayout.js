@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAlert } from '../hooks/useAlert';
 import {
   Clock, ArrowLeft, Share2, Facebook, Instagram, MessageCircle,
   Bookmark, Heart, Mail
@@ -78,6 +79,7 @@ const EnhancedArticleLayout = ({
 }) => {
   // Router hooks
   const navigate = useNavigate();
+  const alert = useAlert();
   
   // Reading and engagement state
   const [readingProgress, setReadingProgress] = useState(0);
@@ -151,7 +153,7 @@ const EnhancedArticleLayout = ({
     } else if (platform === 'instagram') {
       // Instagram doesn't support direct URL sharing, so we'll copy the link
       navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard! You can now paste it in Instagram.');
+      alert.success('Link copied to clipboard! You can now paste it in Instagram.');
     }
     setShowShareMenu(false);
   };

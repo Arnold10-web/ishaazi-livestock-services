@@ -2,8 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Edit2, Trash2, ArrowRight, Calendar, Tag, Eye, Scale, 
-  Clock, Award, Heart 
+  Edit2, Trash2, ArrowRight, Calendar, Eye, Scale, 
+  Clock, Heart 
 } from 'lucide-react';
 import { useEngagement } from '../hooks/useEngagement';
 
@@ -31,7 +31,7 @@ const BeefList = ({ beefs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, vie
       } catch (error) {
         console.error('Failed to toggle like:', error);
       }
-    }, [isAdmin, engagementLoading, toggleLike, isLiked]);
+    }, [engagementLoading, toggleLike, isLiked]);
 
     return (
       <motion.article

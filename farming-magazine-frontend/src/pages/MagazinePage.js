@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useAlert } from '../hooks/useAlert';
 import MagazineList from '../components/MagazineList';
 import DynamicAdComponent from '../components/DynamicAdComponent';
 
@@ -11,6 +12,7 @@ const MagazinePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingPurchase, setProcessingPurchase] = useState(false);
+  const alert = useAlert();
 
   // Persist purchased magazines in session storage
   const [purchasedMagazines, setPurchasedMagazines] = useState(() => {
@@ -68,14 +70,14 @@ const MagazinePage = () => {
     setProcessingPurchase(true);
     try {
       // TODO: Replace with actual payment gateway integration
-      alert('This is a dummy payment implementation. Replace with actual payment gateway integration.');
+      alert.warning('This is a demo payment implementation. In production, this would integrate with a real payment gateway.');
       
       // Simulate successful payment by storing the purchased magazine ID
       setPurchasedMagazines(prev => [...prev, magazineId]);
-      alert('Purchase successful! You can now download the magazine.');
+      alert.success('Purchase successful! You can now download the magazine.');
     } catch (err) {
       console.error('Purchase failed:', err);
-      alert(err.message || 'Failed to process purchase');
+      alert.error(err.message || 'Failed to process purchase');
     } finally {
       setProcessingPurchase(false);
     }
@@ -85,10 +87,10 @@ const MagazinePage = () => {
   const handleDownload = async (magazineId) => {
     try {
       // TODO: Replace with an actual secure download implementation
-      alert('Download started! (Demo implementation)');
+      alert.info('Download started! (Demo implementation)');
     } catch (err) {
       console.error('Download failed:', err);
-      alert('Failed to start download. Please try again.');
+      alert.error('Failed to start download. Please try again.');
     }
   };
 

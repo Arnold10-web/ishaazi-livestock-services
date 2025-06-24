@@ -14,6 +14,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 
 /**
@@ -37,6 +38,7 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
   
   // UI state
   const [error, setError] = useState('');
+  const alert = useAlert();
   
   // Rich text editor references
   const quillRef = useRef(null);
@@ -139,7 +141,7 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Farm updated successfully!');
+        alert.success('Farm updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_FARM, formData, {
           headers: {
@@ -147,7 +149,7 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Farm created successfully!');
+        alert.success('Farm created successfully!');
       }
       refreshFarms();
       resetForm();

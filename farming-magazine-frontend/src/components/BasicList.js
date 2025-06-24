@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   Download, Play, Pause, ChevronDown, ChevronUp, 
   Edit2, Trash2, Share2, Calendar, Headphones, 
-  Video, Clock, Eye
+  Video, Clock, Eye, Volume2, VolumeX, SkipBack, SkipForward
 } from 'lucide-react';
+import { useAlert } from '../hooks/useAlert';
 
 const BasicList = ({
   basics = [],
@@ -17,17 +18,42 @@ const BasicList = ({
   const [activeTab, setActiveTab] = useState('all');
   const [filteredBasics, setFilteredBasics] = useState([]);
   const [playingAudio, setPlayingAudio] = useState(null);
+  const [showControls, setShowControls] = useState({});
+  const [mediaProgress, setMediaProgress] = useState({});
+  const [mediaDuration, setMediaDuration] = useState({});
+  const [mediaVolume, setMediaVolume] = useState({});
+  const [isMuted, setIsMuted] = useState({});
+  
+  const audioRefs = useRef({});
+  const alert = useAlert();
   
   const PLACEHOLDER_IMAGE = '/images/placeholder-media.png';
   
-  // Handle audio/video play
-  const handleAudioPlay = (itemId) => {
+  // Handle audio/video play with real media elements
+  const handleAudioPlay = useCallback((itemId, item) => {
+    const mediaElement = audioRefs.current[itemId];
+    
     if (playingAudio === itemId) {
+      // Pause current media
+      if (mediaElement) {
+        mediaElement.pause();
+      }
       setPlayingAudio(null);
     } else {
+      // Pause any currently playing media
+      if (playingAudio && audioRefs.current[playingAudio]) {
+        audioRefs.current[playingAudio].pause();
+      }
+      
+      // Play new media
+      if (mediaElement) {
+        mediaElement.play().catch(error => {
+          console.error('Error playing media:', error);
+        });
+      }
       setPlayingAudio(itemId);
     }
-  };
+  }, [playingAudio]);
   
   // Filter basics by type
   useEffect(() => {
@@ -37,6 +63,77 @@ const BasicList = ({
       setFilteredBasics(basics.filter(item => item.fileType === activeTab));
     }
   }, [basics, activeTab]);
+
+  // Cleanup audio/video elements on unmount
+  useEffect(() => {
+    const currentRefs = audioRefs.current;
+    return () => {
+      Object.values(currentRefs).forEach(element => {
+        if (element && typeof element.pause === 'function') {
+          element.pause();
+        }
+      });
+    };
+  }, []);
+
+  // Update media progress
+  const updateMediaProgress = useCallback((itemId) => {
+    const mediaElement = audioRefs.current[itemId];
+    if (mediaElement && mediaElement.duration) {
+      const progress = (mediaElement.currentTime / mediaElement.duration) * 100;
+      setMediaProgress(prev => ({ ...prev, [itemId]: progress }));
+    }
+  }, []);
+
+  // Format time for display
+  const formatTime = useCallback((seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Handle seek in media
+  const handleSeek = useCallback((itemId, percentage) => {
+    const mediaElement = audioRefs.current[itemId];
+    if (mediaElement && mediaElement.duration) {
+      const newTime = (percentage / 100) * mediaElement.duration;
+      mediaElement.currentTime = newTime;
+      setMediaProgress(prev => ({ ...prev, [itemId]: percentage }));
+    }
+  }, []);
+
+  // Handle skip forward/backward
+  const handleSkip = useCallback((itemId, seconds) => {
+    const mediaElement = audioRefs.current[itemId];
+    if (mediaElement) {
+      const newTime = Math.max(0, Math.min(mediaElement.duration || 0, mediaElement.currentTime + seconds));
+      mediaElement.currentTime = newTime;
+      updateMediaProgress(itemId);
+    }
+  }, [updateMediaProgress]);
+
+  // Handle mute toggle
+  const handleMuteToggle = useCallback((itemId) => {
+    const mediaElement = audioRefs.current[itemId];
+    if (mediaElement) {
+      mediaElement.muted = !mediaElement.muted;
+      setIsMuted(prev => ({ ...prev, [itemId]: mediaElement.muted }));
+    }
+  }, []);
+
+  // Handle volume change
+  const handleVolumeChange = useCallback((itemId, volume) => {
+    const mediaElement = audioRefs.current[itemId];
+    if (mediaElement) {
+      mediaElement.volume = volume;
+      setMediaVolume(prev => ({ ...prev, [itemId]: volume }));
+      if (volume > 0 && mediaElement.muted) {
+        mediaElement.muted = false;
+        setIsMuted(prev => ({ ...prev, [itemId]: false }));
+      }
+    }
+  }, []);
 
   // Strip HTML tags helper
   const stripHtmlTags = useCallback((html) => {
@@ -56,20 +153,51 @@ const BasicList = ({
     }
   }, [apiBaseUrl]);
 
-  // Download handler
-  const handleDownload = useCallback((item) => {
+  // Download handler - fixed to prevent media playback conflicts
+  const handleDownload = useCallback(async (item, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     const url = item.fileUrl || item.imageUrl;
+    if (!url) {
+      alert.warning('No file available for download');
+      return;
+    }
+    
+    const fullUrl = getMediaUrl(url);
     const ext = item.fileType === 'video' ? 'mp4' : 
                item.fileType === 'audio' ? 'mp3' : 'jpg';
-    const filename = `${item.title || 'download'}.${ext}`;
+    const filename = `${item.title?.replace(/[^a-z0-9]/gi, '_') || 'download'}.${ext}`;
     
-    const link = document.createElement('a');
-    link.href = getMediaUrl(url);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [getMediaUrl]);
+    try {
+      if (url.startsWith('http')) {
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.target = '_blank';
+        link.download = filename;
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const response = await fetch(fullUrl);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      window.open(fullUrl, '_blank');
+    }
+  }, [getMediaUrl, alert]);
 
   // Share handler
   const handleShare = useCallback((item) => {
@@ -81,10 +209,10 @@ const BasicList = ({
       }).catch(err => console.error('Error sharing:', err));
     } else {
       navigator.clipboard.writeText(window.location.href)
-        .then(() => alert('Link copied to clipboard!'))
+        .then(() => alert.success('Link copied to clipboard!'))
         .catch(err => console.error('Error copying link:', err));
     }
-  }, [stripHtmlTags]);
+  }, [stripHtmlTags, alert]);
 
   const toggleDescription = useCallback((itemId) => {
     setExpandedDescriptions(prev => ({
@@ -203,17 +331,231 @@ const BasicList = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBasics.map((item) => (
           <div key={item._id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-            {/* Media Thumbnail */}
-            <div className="relative aspect-video bg-gray-100 dark:bg-gray-700">
-              <img
-                src={getMediaUrl(item.imageUrl) || PLACEHOLDER_IMAGE}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = PLACEHOLDER_IMAGE;
-                }}
-              />
+            {/* Enhanced Media Container */}
+            <div 
+              className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg overflow-hidden"
+              onMouseEnter={() => setShowControls(prev => ({ ...prev, [item._id]: true }))}
+              onMouseLeave={() => setShowControls(prev => ({ ...prev, [item._id]: playingAudio === item._id }))}
+            >
+              
+              {item.fileType === 'video' && item.fileUrl ? (
+                <>
+                  {/* Video Element */}
+                  <video
+                    className="w-full h-full object-cover"
+                    poster={getMediaUrl(item.imageUrl) || PLACEHOLDER_IMAGE}
+                    preload="metadata"
+                    controls={false}
+                    ref={(el) => {
+                      if (el && !audioRefs.current[item._id]) {
+                        audioRefs.current[item._id] = el;
+                        el.onloadedmetadata = () => {
+                          setMediaDuration(prev => ({ ...prev, [item._id]: el.duration }));
+                          setMediaVolume(prev => ({ ...prev, [item._id]: el.volume }));
+                        };
+                        el.ontimeupdate = () => updateMediaProgress(item._id);
+                        el.onended = () => setPlayingAudio(null);
+                        el.onpause = () => setPlayingAudio(null);
+                        el.onplay = () => setPlayingAudio(item._id);
+                      }
+                    }}
+                  >
+                    <source src={getMediaUrl(item.fileUrl)} type="video/mp4" />
+                    <source src={getMediaUrl(item.fileUrl)} type="video/webm" />
+                    Your browser does not support the video tag.
+                  </video>
+
+                  {/* Central Play Button */}
+                  {playingAudio !== item._id && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAudioPlay(item._id, item);
+                        }}
+                        className="w-16 h-16 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300"
+                      >
+                        <Play className="w-6 h-6 ml-1" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : item.fileType === 'audio' && item.fileUrl ? (
+                <>
+                  {/* Audio Poster */}
+                  <div className="relative w-full h-full">
+                    <img
+                      src={getMediaUrl(item.imageUrl) || PLACEHOLDER_IMAGE}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = PLACEHOLDER_IMAGE;
+                      }}
+                    />
+                    
+                    {/* Audio Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20">
+                      {/* Audio Icon */}
+                      <div className="absolute top-4 left-4">
+                        <div className="bg-blue-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
+                          <Headphones className="w-4 h-4" />
+                          Audio
+                        </div>
+                      </div>
+                      
+                      {/* Central Play Button */}
+                      {playingAudio !== item._id && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAudioPlay(item._id, item);
+                            }}
+                            className="w-16 h-16 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300"
+                          >
+                            <Play className="w-6 h-6 ml-1" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Hidden Audio Element */}
+                  <audio
+                    ref={(el) => {
+                      if (el && !audioRefs.current[item._id]) {
+                        audioRefs.current[item._id] = el;
+                        el.onloadedmetadata = () => {
+                          setMediaDuration(prev => ({ ...prev, [item._id]: el.duration }));
+                          setMediaVolume(prev => ({ ...prev, [item._id]: el.volume }));
+                        };
+                        el.ontimeupdate = () => updateMediaProgress(item._id);
+                        el.onended = () => setPlayingAudio(null);
+                        el.onpause = () => setPlayingAudio(null);
+                        el.onplay = () => setPlayingAudio(item._id);
+                      }
+                    }}
+                    preload="metadata"
+                    style={{ display: 'none' }}
+                  >
+                    <source src={getMediaUrl(item.fileUrl)} type="audio/mpeg" />
+                    <source src={getMediaUrl(item.fileUrl)} type="audio/wav" />
+                    <source src={getMediaUrl(item.fileUrl)} type="audio/ogg" />
+                    Your browser does not support the audio element.
+                  </audio>
+                </>
+              ) : (
+                <img
+                  src={getMediaUrl(item.imageUrl) || PLACEHOLDER_IMAGE}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = PLACEHOLDER_IMAGE;
+                  }}
+                />
+              )}
+
+              {/* Enhanced Media Controls */}
+              {(showControls[item._id] || playingAudio === item._id) && (item.fileType === 'video' || item.fileType === 'audio') && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-3 backdrop-blur-sm">
+                  {/* Progress Bar */}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 text-white text-xs mb-1">
+                      <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-xs">
+                        {formatTime(audioRefs.current[item._id]?.currentTime)}
+                      </span>
+                      <div className="flex-1 relative">
+                        <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-150"
+                            style={{ width: `${mediaProgress[item._id] || 0}%` }}
+                          />
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={mediaProgress[item._id] || 0}
+                          onChange={(e) => handleSeek(item._id, parseFloat(e.target.value))}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                      <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-xs">
+                        {formatTime(mediaDuration[item._id])}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Control Buttons */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleSkip(item._id, -10)}
+                        className="p-1.5 hover:bg-white/20 rounded-full transition-all duration-200 bg-black/20"
+                      >
+                        <SkipBack className="w-3 h-3 text-white" />
+                      </button>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAudioPlay(item._id, item);
+                        }}
+                        className="p-2 hover:bg-white/20 rounded-full transition-all duration-200 bg-blue-600 hover:bg-blue-500"
+                      >
+                        {playingAudio === item._id ? (
+                          <Pause className="w-4 h-4 text-white" />
+                        ) : (
+                          <Play className="w-4 h-4 text-white ml-0.5" />
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleSkip(item._id, 10)}
+                        className="p-1.5 hover:bg-white/20 rounded-full transition-all duration-200 bg-black/20"
+                      >
+                        <SkipForward className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      {/* Volume Control */}
+                      <button
+                        onClick={() => handleMuteToggle(item._id)}
+                        className="p-1.5 hover:bg-white/20 rounded-full transition-all duration-200 bg-black/20"
+                      >
+                        {isMuted[item._id] ? (
+                          <VolumeX className="w-3 h-3 text-white" />
+                        ) : (
+                          <Volume2 className="w-3 h-3 text-white" />
+                        )}
+                      </button>
+                      <div className="relative w-12">
+                        <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-green-400 to-green-600"
+                            style={{ width: `${(mediaVolume[item._id] || 1) * 100}%` }}
+                          />
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={mediaVolume[item._id] || 1}
+                          onChange={(e) => handleVolumeChange(item._id, parseFloat(e.target.value))}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Media Type Badge */}
               <div className="absolute top-3 left-3">
@@ -222,22 +564,6 @@ const BasicList = ({
                   <span className="ml-1 capitalize">{item.fileType || 'Media'}</span>
                 </div>
               </div>
-
-              {/* Play Button for Audio/Video */}
-              {(item.fileType === 'audio' || item.fileType === 'video') && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button
-                    onClick={() => handleAudioPlay(item._id)}
-                    className="w-12 h-12 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
-                  >
-                    {playingAudio === item._id ? (
-                      <Pause className="w-6 h-6 text-emerald-600" />
-                    ) : (
-                      <Play className="w-6 h-6 text-emerald-600 ml-0.5" />
-                    )}
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Content */}
@@ -289,7 +615,7 @@ const BasicList = ({
               <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => handleDownload(item)}
+                    onClick={(e) => handleDownload(item, e)}
                     className="flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
                   >
                     <Download className="w-4 h-4 mr-1" />

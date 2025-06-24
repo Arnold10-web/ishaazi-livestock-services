@@ -4,6 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine }) => {
   const [title, setTitle] = useState('');
@@ -20,6 +21,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
   const [pdf, setPdf] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
+  const alert = useAlert();
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
@@ -249,7 +251,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
       refreshMagazines();
       resetForm();
       setError('');
-      alert(editingMagazine ? 'Magazine updated successfully!' : 'Magazine created successfully!');
+      alert.success(editingMagazine ? 'Magazine updated successfully!' : 'Magazine created successfully!');
     } catch (error) {
       console.error('Magazine submission error:', error);
       const errorMessage = error.response?.data?.message || 

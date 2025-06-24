@@ -4,6 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) => {
   const [title, setTitle] = useState('');
@@ -18,6 +19,7 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
+  const alert = useAlert();
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
@@ -141,7 +143,7 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Piggery updated successfully!');
+        alert.success('Piggery updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_PIGGERY, formData, {
           headers: {
@@ -149,7 +151,7 @@ const PiggeryForm = ({ refreshPiggeries, editingPiggery, setEditingPiggery }) =>
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Piggery created successfully!');
+        alert.success('Piggery created successfully!');
       }
       refreshPiggeries();
       resetForm();

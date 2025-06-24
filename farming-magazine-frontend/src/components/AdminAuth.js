@@ -7,7 +7,7 @@
  * 
  * @module components/AdminAuth
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../config/apiConfig';
@@ -31,18 +31,35 @@ const AdminAuth = ({ type }) => {
   // Navigation hook
   const navigate = useNavigate();
 
+  // Create stable input handlers to prevent re-renders
+  const handleIdentifierChange = useCallback((e) => {
+    setIdentifier(e.target.value);
+  }, []);
+
+  const handlePasswordChange = useCallback((e) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleConfirmPasswordChange = useCallback((e) => {
+    setConfirmPassword(e.target.value);
+  }, []);
+
+  const handleRoleChange = useCallback((e) => {
+    setRole(e.target.value);
+  }, []);
+
   // Detect if identifier is email or username
-  const isEmail = (str) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
+  const isEmail = useCallback((str) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str), []);
   
   // Validate company email for editors
-  const isCompanyEmail = (email) => {
+  const isCompanyEmail = useCallback((email) => {
     const companyDomains = ['farmingmagazine.com', 'onlinefarming.com'];
     return companyDomains.some(domain => email.endsWith(`@${domain}`));
-  };
+  }, []);
 
-  // Real-time validation feedback
-  const getIdentifierValidation = () => {
-    if (!identifier) return '';
+  // Real-time validation feedback - memoized to prevent re-renders
+  const validation = useMemo(() => {
+    if (!identifier) return null;
     
     if (isEmail(identifier)) {
       if (isCompanyEmail(identifier)) {
@@ -53,9 +70,7 @@ const AdminAuth = ({ type }) => {
     } else {
       return { type: 'info', message: 'ℹ Username format (System Admin access)' };
     }
-  };
-
-  const validation = getIdentifierValidation();
+  }, [identifier, isEmail, isCompanyEmail]);
 
   /**
    * Handle form submission for login or registration
@@ -63,7 +78,7 @@ const AdminAuth = ({ type }) => {
    *
    * @param {Event} e - Form submission event
    */
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage('');
@@ -148,7 +163,7 @@ const AdminAuth = ({ type }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [type, identifier, password, confirmPassword, role, isEmail, isCompanyEmail, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -182,7 +197,7 @@ const AdminAuth = ({ type }) => {
                 type="text"
                 required
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={handleIdentifierChange}
                 className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder={type === 'login' ? 'Enter username or email' : 'admin@farmingmagazine.com or AdminUser'}
               />
@@ -206,7 +221,7 @@ const AdminAuth = ({ type }) => {
                   id="role"
                   name="role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={handleRoleChange}
                   className="relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 >
                   <option value="editor">Editor (Company Email Required)</option>
@@ -225,7 +240,7 @@ const AdminAuth = ({ type }) => {
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Enter password"
               />
@@ -242,7 +257,7 @@ const AdminAuth = ({ type }) => {
                   type="password"
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={handleConfirmPasswordChange}
                   className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                   placeholder="Confirm password"
                 />

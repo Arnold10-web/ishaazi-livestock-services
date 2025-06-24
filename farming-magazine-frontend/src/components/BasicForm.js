@@ -4,6 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 import { calculateMediaDuration, formatDuration } from '../utils/contentUtils';
 
 const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
@@ -20,6 +21,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [calculatedDuration, setCalculatedDuration] = useState(0); // Auto-calculated duration
   const [error, setError] = useState('');
+  const alert = useAlert();
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
 
@@ -164,7 +166,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Basic component updated successfully!');
+        alert.success('Basic component updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_BASIC, formData, {
           headers: {
@@ -172,7 +174,7 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Basic component created successfully!');
+        alert.success('Basic component created successfully!');
       }
       refreshBasics();
       resetForm();

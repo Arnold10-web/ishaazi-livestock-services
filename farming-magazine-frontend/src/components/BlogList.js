@@ -11,8 +11,7 @@ import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar, Tag, Eye, Heart, ArrowRight, Edit2, Trash2, BookOpen, 
-  Clock, Star
+  Calendar, Eye, Heart, ArrowRight, Edit2, Trash2, BookOpen
 } from 'lucide-react';
 import { useEngagement } from '../hooks/useEngagement';
 
@@ -52,7 +51,7 @@ const BlogList = ({ blogs, apiBaseUrl, isAdmin, onDelete, onEdit, isLoading, vie
       } catch (error) {
         console.error('Failed to toggle like:', error);
       }
-    }, [isAdmin, engagementLoading, toggleLike, isLiked]);
+    }, [engagementLoading, toggleLike, isLiked]);
 
     return (
       <motion.article

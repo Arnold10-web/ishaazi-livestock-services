@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 /**
  * Form component for creating and editing agricultural events
@@ -29,6 +30,7 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
+  const alert = useAlert();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [location, setLocation] = useState('');
@@ -170,12 +172,12 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
         await axios.put(API_ENDPOINTS.UPDATE_EVENT(editingEvent._id), formData, {
           headers: { ...getAuthHeader() },
         });
-        alert('Event updated successfully!');
+        alert.success('Event updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_EVENT, formData, {
           headers: { ...getAuthHeader() },
         });
-        alert('Event created successfully!');
+        alert.success('Event created successfully!');
       }
       refreshEvents();
       resetForm();

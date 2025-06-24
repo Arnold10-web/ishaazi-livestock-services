@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 /**
  * Form component for creating and editing farming news articles
@@ -44,6 +45,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
   
   // UI state
   const [error, setError] = useState('');
+  const alert = useAlert();
   
   // Rich text editor references
   const quillRef = useRef(null);
@@ -181,7 +183,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('News updated successfully!');
+        alert.success('News updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_NEWS, formData, {
           headers: {
@@ -189,7 +191,7 @@ const NewsForm = ({ refreshNews, editingNews, setEditingNews }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('News created successfully!');
+        alert.success('News created successfully!');
       }
       refreshNews();
       resetForm();

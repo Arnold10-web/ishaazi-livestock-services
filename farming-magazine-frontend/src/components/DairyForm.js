@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 import { calculateReadTime } from '../utils/contentUtils';
 
 /**
@@ -42,6 +43,7 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
   
   // UI state
   const [error, setError] = useState('');
+  const alert = useAlert();
   
   // Rich text editor references
   const quillRef = useRef(null);
@@ -232,7 +234,7 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Dairy farming content updated successfully!');
+        alert.success('Dairy farming content updated successfully!');
       } 
       // Handle creating new dairy content
       else {
@@ -242,7 +244,7 @@ const DairyForm = ({ refreshDairies, editingDairy, setEditingDairy }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Dairy farming content created successfully!');
+        alert.success('Dairy farming content created successfully!');
       }
       
       // Refresh list and reset form on success

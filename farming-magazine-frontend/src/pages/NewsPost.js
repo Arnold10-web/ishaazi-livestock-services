@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { useAlert } from '../hooks/useAlert';
 import API_ENDPOINTS from '../config/apiConfig';
 import { 
   Calendar, Clock, User, Share2, Bookmark, Eye, ArrowLeft,
@@ -28,6 +29,7 @@ const NewsPost = () => {
   // Router hooks for navigation and parameters
   const { id } = useParams();
   const navigate = useNavigate();
+  const alert = useAlert();
 
   // State management
   const [news, setNews] = useState(null);
@@ -213,7 +215,7 @@ const NewsPost = () => {
       case 'instagram':
         // Instagram doesn't support direct URL sharing, so we'll copy the link
         navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard! You can now paste it in Instagram.');
+        alert.success('Link copied to clipboard! You can now paste it in Instagram.');
         break;
       case 'whatsapp':
         window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');

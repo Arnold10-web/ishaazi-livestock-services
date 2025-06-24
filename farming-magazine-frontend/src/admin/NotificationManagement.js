@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAlert } from '../hooks/useAlert';
 import { FaBell, FaEnvelope, FaEye, FaMousePointer, FaUsers, FaCalendar, FaNewspaper, FaGlobe, FaSync, FaCheck, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
 
 const NotificationManagement = ({ theme }) => {
@@ -7,6 +8,7 @@ const NotificationManagement = ({ theme }) => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
   const [activeTab, setActiveTab] = useState('overview');
+  const alert = useAlert();
 
   const fetchNotificationData = useCallback(async () => {
     setLoading(true);
@@ -50,11 +52,11 @@ const NotificationManagement = ({ theme }) => {
 
       if (response.ok) {
         fetchNotificationData(); // Refresh data
-        alert('Failed notifications have been queued for resending');
+        alert.success('Failed notifications have been queued for resending');
       }
     } catch (error) {
       console.error('Error resending notifications:', error);
-      alert('Failed to resend notifications');
+      alert.error('Failed to resend notifications');
     }
   };
 
@@ -71,11 +73,11 @@ const NotificationManagement = ({ theme }) => {
 
       if (response.ok) {
         fetchNotificationData(); // Refresh data
-        alert('Manual notification sent successfully');
+        alert.success('Manual notification sent successfully');
       }
     } catch (error) {
       console.error('Error sending manual notification:', error);
-      alert('Failed to send manual notification');
+      alert.error('Failed to send manual notification');
     }
   };
 

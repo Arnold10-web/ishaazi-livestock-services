@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 /**
  * Form component for creating and editing goat farming articles
@@ -41,6 +42,7 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
   
   // UI state
   const [error, setError] = useState('');
+  const alert = useAlert();
   
   // Rich text editor references
   const quillRef = useRef(null);
@@ -168,7 +170,7 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Goat farming content updated successfully!');
+        alert.success('Goat farming content updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_GOAT, formData, {
           headers: {
@@ -176,7 +178,7 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Goat farming content created successfully!');
+        alert.success('Goat farming content created successfully!');
       }
       refreshGoats();
       resetForm();

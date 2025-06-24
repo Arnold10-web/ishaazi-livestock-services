@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Clock, Calendar, Phone, Eye } from 'lucide-react';
 import axios from 'axios';
+import { useAlert } from '../hooks/useAlert';
 import API_ENDPOINTS from '../config/apiConfig';
 import DynamicAdComponent from '../components/DynamicAdComponent';
 
@@ -13,6 +14,7 @@ const Auctions = () => {
     const [selectedLocation, setSelectedLocation] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('upcoming');
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+    const alert = useAlert();
     const [selectedAuction, setSelectedAuction] = useState(null);
 
     useEffect(() => {
@@ -60,7 +62,7 @@ const Auctions = () => {
             );
             
             if (response.data && response.data.success) {
-                alert('Interest registered successfully!');
+                alert.success('Interest registered successfully!');
                 setShowRegistrationModal(false);
                 setSelectedAuction(null);
             } else {
@@ -68,7 +70,7 @@ const Auctions = () => {
             }
         } catch (error) {
             console.error('Error registering interest:', error);
-            alert(error.response?.data?.message || 'Failed to register interest. Please try again.');
+            alert.error(error.response?.data?.message || 'Failed to register interest. Please try again.');
         }
     };
 

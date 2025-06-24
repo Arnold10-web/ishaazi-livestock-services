@@ -190,7 +190,12 @@ async function initializeServer() {
  * maintaining development flexibility.
  */
 const corsOrigin = process.env.NODE_ENV === 'production' 
-  ? process.env.FRONTEND_URL // Single trusted domain in production
+  ? [
+      'https://ishaazilivestockservices.com',
+      'https://www.ishaazilivestockservices.com', 
+      'https://ishaazi-livestock-services-production.up.railway.app',
+      process.env.FRONTEND_URL
+    ] // Production domains
   : ['http://localhost:3000', 'http://127.0.0.1:3000']; // Multiple local origins in development
 
 // Apply CORS middleware with comprehensive configuration
@@ -325,24 +330,28 @@ connectDB()
     process.exit(1);
   });
 
-// Ensure uploads directories exist
-const uploadsDir = path.join(__dirname, 'uploads', 'images');
-const mediaDir = path.join(__dirname, 'uploads', 'media');
-const pdfsDir = path.join(__dirname, 'uploads', 'pdfs');
+// Ensure uploads directories exist (only in development - Railway handles this in production)
+if (process.env.NODE_ENV !== 'production') {
+  const uploadsDir = path.join(__dirname, 'uploads', 'images');
+  const mediaDir = path.join(__dirname, 'uploads', 'media');
+  const pdfsDir = path.join(__dirname, 'uploads', 'pdfs');
 
-[uploadsDir, mediaDir, pdfsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log(`${dir} directory created.`);
-  }
-});
+  [uploadsDir, mediaDir, pdfsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`${dir} directory created.`);
+    }
+  });
+}
 
 // Middleware for handling video streaming with range requests
 app.get('/uploads/media/:filename', (req, res) => {
-  const videoPath = path.join(__dirname, 'uploads', 'media', req.params.filename);
+  const mediaPath = process.env.NODE_ENV === 'production' 
+    ? path.join('/uploads', 'media', req.params.filename)
+    : path.join(__dirname, 'uploads', 'media', req.params.filename);
   
   // Check if file exists
-  fs.stat(videoPath, (err, stats) => {
+  fs.stat(mediaPath, (err, stats) => {
     if (err) {
       console.error(`Error accessing file: ${err.message}`);
       return res.status(404).send('File not found');
@@ -353,7 +362,7 @@ app.get('/uploads/media/:filename', (req, res) => {
     const range = req.headers.range;
     
     // Get file extension for content type
-    const ext = path.extname(videoPath).toLowerCase();
+    const ext = path.extname(mediaPath).toLowerCase();
     const contentTypeMap = {
       '.mp4': 'video/mp4',
       '.webm': 'video/webm',
@@ -382,7 +391,7 @@ app.get('/uploads/media/:filename', (req, res) => {
       });
       
       // Create read stream for the specified range
-      const fileStream = fs.createReadStream(videoPath, { start, end });
+      const fileStream = fs.createReadStream(mediaPath, { start, end });
       
       // Pipe the file stream to the response
       fileStream.pipe(res);
@@ -395,7 +404,7 @@ app.get('/uploads/media/:filename', (req, res) => {
       });
       
       // Create read stream for the entire file
-      const fileStream = fs.createReadStream(videoPath);
+      const fileStream = fs.createReadStream(mediaPath);
       
       // Pipe the file stream to the response
       fileStream.pipe(res);
@@ -403,10 +412,11 @@ app.get('/uploads/media/:filename', (req, res) => {
   });
 });
 
-// Serve static files with proper headers
+// Serve static files with proper headers - supports both Railway volumes and local development
+const uploadsPath = process.env.NODE_ENV === 'production' ? '/uploads' : path.join(__dirname, 'uploads');
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'), {
+  express.static(uploadsPath, {
     setHeaders: (res, filePath) => {
       const ext = path.extname(filePath).toLowerCase();
       const mimeTypes = {

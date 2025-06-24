@@ -13,6 +13,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 import { calculateReadTime } from '../utils/contentUtils';
 
 /**
@@ -42,6 +43,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
   
   // UI state
   const [error, setError] = useState('');
+  const alert = useAlert();
   
   // Rich text editor references
   const quillRef = useRef(null);
@@ -217,7 +219,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Beef farming content updated successfully!');
+        alert.success('Beef farming content updated successfully!');
       } else {
         await axios.post(API_ENDPOINTS.CREATE_BEEF, formData, {
           headers: {
@@ -225,7 +227,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
             'Content-Type': 'multipart/form-data',
           },
         });
-        alert('Beef farming content created successfully!');
+        alert.success('Beef farming content created successfully!');
       }
       refreshBeefs();
       resetForm();

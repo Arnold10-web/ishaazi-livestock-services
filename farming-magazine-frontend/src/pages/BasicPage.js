@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Loader2, AlertCircle } from 'lucide-react';
 import BasicList from '../components/BasicList';
+import { useAlert } from '../hooks/useAlert';
 
 const BasicPage = () => {
   const [basics, setBasics] = useState([]);
@@ -10,6 +11,7 @@ const BasicPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hasData, setHasData] = useState(false);
+  const alert = useAlert();
   
   const isMountedRef = useRef(true);
   const isLoadingRef = useRef(false);

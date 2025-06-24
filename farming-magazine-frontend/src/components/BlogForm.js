@@ -4,6 +4,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
+import { useAlert } from '../hooks/useAlert';
 
 const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
   const [title, setTitle] = useState('');
@@ -18,6 +19,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
   const [error, setError] = useState('');
   const quillRef = useRef(null);
   const [quillEditor, setQuillEditor] = useState(null);
+  const alert = useAlert();
 
   // Helper function to convert simple inputs to metadata JSON
   const generateMetadata = () => {
@@ -138,13 +140,13 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
         await axios.put(API_ENDPOINTS.UPDATE_BLOG(editingBlog._id), formData, {
           headers: { ...getAuthHeader() },
         });
-        alert('Blog updated successfully!');
+        alert.success('Blog updated successfully!');
       } else {
         // Remove Content-Type header - let axios set it automatically for FormData
         await axios.post(API_ENDPOINTS.CREATE_BLOG, formData, {
           headers: { ...getAuthHeader() },
         });
-        alert('Blog created successfully!');
+        alert.success('Blog created successfully!');
       }
       refreshBlogs();
       resetForm();

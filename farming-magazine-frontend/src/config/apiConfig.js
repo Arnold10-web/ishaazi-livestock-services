@@ -148,10 +148,6 @@ DELETE_BEEF: (id) => `${BASE_URL}/api/content/beefs/${id}`,
   DELETE_SUBSCRIBER: (id) => `${BASE_URL}/api/content/subscribers/${id}`,
   BULK_UPDATE_SUBSCRIBERS: `${BASE_URL}/api/content/subscribers/bulk`,
 
-  // Event Registration Management
-  GET_ADMIN_REGISTRATIONS: `${BASE_URL}/api/content/event-registrations/admin`,
-  DELETE_EVENT_REGISTRATION: (id) => `${BASE_URL}/api/content/event-registrations/${id}`,
-
   // NEWSLETTER ENDPOINTS
   CREATE_NEWSLETTER: `${BASE_URL}/api/content/newsletters`,
   GET_NEWSLETTERS: `${BASE_URL}/api/content/newsletters`,

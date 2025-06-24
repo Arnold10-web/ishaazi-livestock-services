@@ -9,6 +9,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAlert } from '../hooks/useAlert';
 import { 
   Clock, 
   Star, 
@@ -34,6 +35,7 @@ const SearchHistory = ({ onSearchClick, isVisible, onClose }) => {
   const [searchHistory, setSearchHistory] = useState([]);
   const [savedSearches, setSavedSearches] = useState([]);
   const [activeTab, setActiveTab] = useState('history');
+  const alert = useAlert();
 
   /**
    * Load search history and saved searches from localStorage on mount
@@ -137,11 +139,11 @@ const SearchHistory = ({ onSearchClick, isVisible, onClose }) => {
       } catch (error) {
         // Fallback to clipboard
         await navigator.clipboard.writeText(url);
-        alert('Search URL copied to clipboard!');
+        alert.success('Search URL copied to clipboard!');
       }
     } else {
       await navigator.clipboard.writeText(url);
-      alert('Search URL copied to clipboard!');
+      alert.success('Search URL copied to clipboard!');
     }
   };
 

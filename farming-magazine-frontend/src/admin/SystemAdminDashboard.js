@@ -4,18 +4,120 @@
  * Specialized dashboard for System Admin role with advanced system management features.
  * Includes security monitoring, user management, system health, and performance analytics.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
+import { useAlert } from '../hooks/useAlert';
 import { getAuthHeader } from '../utils/auth';
 import API_ENDPOINTS from '../config/apiConfig';
+
+// Add User Modal Component (extracted and memoized to prevent re-rendering issues)
+const AddUserModal = memo(({ 
+  showAddUserModal, 
+  setShowAddUserModal, 
+  newUserData, 
+  setNewUserData, 
+  createUser 
+}) => {
+  // Create stable onChange handlers to prevent input focus loss
+  const handleEmailChange = useCallback((e) => {
+    setNewUserData(prev => ({ ...prev, companyEmail: e.target.value }));
+  }, [setNewUserData]);
+
+  const handleUsernameChange = useCallback((e) => {
+    setNewUserData(prev => ({ ...prev, username: e.target.value }));
+  }, [setNewUserData]);
+
+  const handleRoleChange = useCallback((e) => {
+    setNewUserData(prev => ({ ...prev, role: e.target.value }));
+  }, [setNewUserData]);
+
+  const handleCancel = useCallback(() => {
+    setShowAddUserModal(false);
+    setNewUserData({ companyEmail: '', username: '', role: 'editor' });
+  }, [setShowAddUserModal, setNewUserData]);
+
+  if (!showAddUserModal) return null;
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="mt-3">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Company Email</label>
+              <input
+                type="email"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="user@yourcompany.com"
+                value={newUserData.companyEmail}
+                onChange={handleEmailChange}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Username (Optional)</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="username"
+                value={newUserData.username}
+                onChange={handleUsernameChange}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Role</label>
+              <select
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                value={newUserData.role}
+                onChange={handleRoleChange}
+              >
+                <option value="editor">Editor</option>
+                <option value="system_admin">System Admin</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              onClick={createUser}
+              disabled={!newUserData.companyEmail.trim()}
+            >
+              Create User
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 const SystemAdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [activeTab, setActiveTab] = useState('security');
   const [loading, setLoading] = useState(true);
+  const alert = useAlert();
   const [error, setError] = useState('');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserData, setNewUserData] = useState({ companyEmail: '', username: '', role: 'editor' });
+
+  // Create stable callbacks to prevent modal re-renders
+  const stableSetNewUserData = useCallback((data) => {
+    setNewUserData(data);
+  }, []);
+
+  const stableSetShowAddUserModal = useCallback((show) => {
+    setShowAddUserModal(show);
+  }, []);
 
   // Dashboard tabs for System Admin
   const tabs = [
@@ -64,7 +166,7 @@ const SystemAdminDashboard = () => {
     }
   };
 
-  const createUser = async () => {
+  const createUser = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -75,21 +177,21 @@ const SystemAdminDashboard = () => {
       );
       
       if (response.data.success) {
-        setShowAddUserModal(false);
-        setNewUserData({ companyEmail: '', username: '', role: 'editor' });
+        stableSetShowAddUserModal(false);
+        stableSetNewUserData({ companyEmail: '', username: '', role: 'editor' });
         // Refresh user management data
         if (activeTab === 'users') {
           fetchDashboardData('users');
         }
-        alert('User created successfully! Temporary password sent to company email.');
+        alert.success('User created successfully! Temporary password sent to company email.');
       }
     } catch (err) {
       console.error('Error creating user:', err);
-      alert(`Failed to create user: ${err.response?.data?.message || err.message}`);
+      alert.error(`Failed to create user: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [newUserData, activeTab, alert, stableSetShowAddUserModal, stableSetNewUserData]);
 
   const SecurityDashboard = () => (
     <div className="space-y-6">
@@ -393,76 +495,6 @@ const SystemAdminDashboard = () => {
     }
   };
 
-  // Add User Modal Component
-  const AddUserModal = () => {
-    if (!showAddUserModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-          <div className="mt-3">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Company Email</label>
-                <input
-                  type="email"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="user@yourcompany.com"
-                  value={newUserData.companyEmail}
-                  onChange={(e) => setNewUserData({...newUserData, companyEmail: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username (Optional)</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="username"
-                  value={newUserData.username}
-                  onChange={(e) => setNewUserData({...newUserData, username: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Role</label>
-                <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  value={newUserData.role}
-                  onChange={(e) => setNewUserData({...newUserData, role: e.target.value})}
-                >
-                  <option value="editor">Editor</option>
-                  <option value="system_admin">System Admin</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                onClick={() => {
-                  setShowAddUserModal(false);
-                  setNewUserData({ companyEmail: '', username: '', role: 'editor' });
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={createUser}
-                disabled={!newUserData.companyEmail.trim()}
-              >
-                Create User
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -507,7 +539,13 @@ const SystemAdminDashboard = () => {
       </div>
       
       {/* Add User Modal */}
-      <AddUserModal />
+      <AddUserModal
+        showAddUserModal={showAddUserModal}
+        setShowAddUserModal={stableSetShowAddUserModal}
+        newUserData={newUserData}
+        setNewUserData={stableSetNewUserData}
+        createUser={createUser}
+      />
     </div>
   );
 };

@@ -9,10 +9,12 @@
  */
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Outlet, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 
 // Eager load components for critical paths that should be available immediately
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // Import utilities for analytics and performance monitoring
 import { analytics } from './utils/analytics';
@@ -194,9 +196,22 @@ const App = () => {
   }, []);
 
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col">
-        <Routes>
+    <NotificationProvider>
+      <Router>
+        <div className="min-h-screen flex flex-col">
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'white',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              },
+            }}
+            richColors
+          />
+          <Routes>
           {/* Admin Routes without Header/Footer */}
           <Route element={<AdminLayout />}>
             <Route path="/login" element={
@@ -354,6 +369,7 @@ const App = () => {
         </Routes>
       </div>
     </Router>
+    </NotificationProvider>
   );
 };
 
