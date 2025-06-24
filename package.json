@@ -10,8 +10,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm install --legacy-peer-deps && npm run frontend:build",
+    "build": "npm run frontend:install && npm run frontend:build",
     "postinstall": "npm run frontend:install",
+    "heroku-postbuild": "npm run frontend:install && npm run frontend:build",
     "lint": "eslint .",
     "frontend:build": "cd farming-magazine-frontend && npm run build",
     "frontend:install": "cd farming-magazine-frontend && npm install --legacy-peer-deps",
