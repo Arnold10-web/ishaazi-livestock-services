@@ -1,0 +1,8 @@
+{
+  "build": {
+    "command": "npm install --legacy-peer-deps && npm run frontend:install && npm run frontend:build"
+  },
+  "deploy": {
+    "startCommand": "npm start"
+  }
+}
