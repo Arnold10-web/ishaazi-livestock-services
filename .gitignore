@@ -3,6 +3,9 @@ node_modules/
 /.pnp
 .pnp.js
 
+# Frontend directory (deployed separately)
+farming-magazine-frontend/
+
 # Environment files & sensitive information
 .env
 .env.local

@@ -10,12 +10,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm run frontend:install && npm run frontend:build",
-    "postinstall": "npm run frontend:install",
-    "heroku-postbuild": "npm run frontend:install && npm run frontend:build",
+    "build": "echo 'Backend only - no build step needed'",
     "lint": "eslint .",
-    "frontend:build": "cd farming-magazine-frontend && npm run build",
-    "frontend:install": "cd farming-magazine-frontend && npm install --legacy-peer-deps",
     "migrate:user-system": "node scripts/migrateToNewUserSystem.js",
     "setup:admin-system": "npm run migrate:user-system"
   },
@@ -44,7 +40,6 @@
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
     "lighthouse": "^12.6.1",
-    "lucide-react": "^0.474.0",
     "mongodb": "^6.16.0",
     "mongoose": "^8.14.3",
     "morgan": "^1.10.0",
