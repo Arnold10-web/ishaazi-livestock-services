@@ -85,7 +85,18 @@ class EmailService {
 
   async initializeService() {
     try {
-      this.transporter = nodemailer.createTransport(this.config);
+      // Check if email credentials are properly configured
+      const hasValidCredentials = this.validateCredentials();
+      
+      if (!hasValidCredentials) {
+        console.log('📧 Email credentials not configured. Running without email service...');
+        this.transporter = {
+          sendMail: this.mockSendMail.bind(this)
+        };
+        return;
+      }
+
+      this.transporter = nodemailer.createTransporter(this.config);
       
       // Verify the connection in production
       if (process.env.NODE_ENV === 'production') {
@@ -100,13 +111,36 @@ class EmailService {
     } catch (error) {
       console.error('❌ Email service initialization failed:', error.message);
       // Fall back to console logging in development
-      if (process.env.NODE_ENV !== 'production') {
-        this.transporter = {
-          sendMail: this.mockSendMail.bind(this)
-        };
-        console.log('📧 Using mock email service for development');
-      }
+      this.transporter = {
+        sendMail: this.mockSendMail.bind(this)
+      };
+      console.log('📧 Using mock email service for development');
     }
+  }
+
+  validateCredentials() {
+    const user = this.config.auth?.user;
+    const pass = this.config.auth?.pass;
+    
+    // Check for placeholder values or missing credentials
+    const placeholderValues = [
+      'your_email_username',
+      'your_email_password', 
+      'info@companyemail.com',
+      'your_smtp_host',
+      'provided by namecheap'
+    ];
+    
+    if (!user || !pass) {
+      return false;
+    }
+    
+    // Check if any credentials contain placeholder text
+    const hasPlaceholders = placeholderValues.some(placeholder => 
+      user.includes(placeholder) || pass.includes(placeholder)
+    );
+    
+    return !hasPlaceholders;
   }
 
   async loadTemplates() {
