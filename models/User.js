@@ -22,7 +22,6 @@ const UserSchema = new mongoose.Schema({
     username: { 
         type: String, 
         sparse: true, // Allows null/undefined, but enforces uniqueness when present
-        unique: true,
         required: function() { return this.role === 'system_admin'; },
         trim: true,
         minlength: 3,
@@ -35,7 +34,6 @@ const UserSchema = new mongoose.Schema({
     email: { 
         type: String, 
         sparse: true,
-        unique: true,
         trim: true,
         lowercase: true,
         required: false, // Optional for all users, especially system_admin
@@ -53,7 +51,6 @@ const UserSchema = new mongoose.Schema({
     companyEmail: {
         type: String,
         required: function() { return this.role === 'editor'; },
-        unique: true,
         sparse: true,
         trim: true,
         lowercase: true,

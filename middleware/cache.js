@@ -38,9 +38,16 @@ class CacheService {
    */
   async initializeClient() {
     try {
+      // Only initialize Redis if REDIS_URL is provided
+      if (!process.env.REDIS_URL) {
+        console.log('🔄 Redis URL not provided. Running without cache...');
+        this.isConnected = false;
+        return;
+      }
+
       // Create Redis client with fallback configuration
       this.client = redis.createClient({
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        url: process.env.REDIS_URL,
         retry_strategy: (options) => {
           if (options.error && options.error.code === 'ECONNREFUSED') {
             console.log('Redis server connection refused.');
