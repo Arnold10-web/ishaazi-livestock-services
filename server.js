@@ -466,6 +466,8 @@ import contentRoutes from './routes/contentRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
 import emailTestRoutes from './routes/emailTestRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import syndicationRoutes from './routes/syndicationRoutes.js';
 
 // Mount routes
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
@@ -473,6 +475,8 @@ app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/email', emailTestRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 
 // File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {
@@ -561,6 +565,28 @@ app.get('/api/websocket/stats', (req, res) => {
   } catch (error) {
     errorTracker.trackError(error);
     res.status(500).json({ error: 'Failed to get WebSocket stats' });
+  }
+});
+
+// Metrics endpoint
+app.get('/api/metrics', (req, res) => {
+  try {
+    const metrics = performanceMonitor.getMetrics();
+    res.json({
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+        external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+      },
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV,
+      ...metrics
+    });
+  } catch (error) {
+    errorTracker.trackError(error);
+    res.status(500).json({ error: 'Failed to get metrics' });
   }
 });
 

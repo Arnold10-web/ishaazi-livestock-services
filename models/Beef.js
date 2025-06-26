@@ -73,35 +73,7 @@ const beefSchema = new mongoose.Schema(
     featured: { 
       type: Boolean, 
       default: false 
-    },
-    
-    // Comments system
-    comments: [{
-      author: { 
-        type: String, 
-        required: true,
-        trim: true
-      },
-      email: { 
-        type: String, 
-        required: true,
-        trim: true,
-        match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      },
-      content: { 
-        type: String, 
-        required: true,
-        trim: true
-      },
-      createdAt: { 
-        type: Date, 
-        default: Date.now 
-      },
-      approved: { 
-        type: Boolean, 
-        default: false 
-      }
-    }]
+    }
   },
   { timestamps: true }
 );

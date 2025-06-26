@@ -4,34 +4,11 @@
  * 
  * This model represents basic media content (videos and audio files) within the platform.
  * It stores information about media files including title, description, file paths,
- * metadata, and user engagement. The model also supports embedded comments
- * for user feedback and discussion.
+ * metadata, and user engagement.
  * 
  * @module models/Basic
  */
 import mongoose from 'mongoose';
-
-/**
- * Schema for comments on media content
- * @type {mongoose.Schema}
- */
-const commentSchema = new mongoose.Schema(
-  {
-    content: { 
-      type: String, 
-      required: true,
-      trim: true
-    }, // Comment text
-    isOffensive: { 
-      type: Boolean, 
-      default: false 
-    }, // Flag for offensive content (admin use)
-    createdAt: { 
-      type: Date, 
-      default: Date.now 
-    } // Timestamp for the comment
-  }
-);
 
 /**
  * Schema for basic media content (videos/audio)
@@ -89,9 +66,7 @@ const basicSchema = new mongoose.Schema(
     published: { 
       type: Boolean, 
       default: true 
-    }, // Publish status
-    
-    comments: [commentSchema] // Embedded comments
+    } // Publish status
   },
   { timestamps: true } // Auto-manages createdAt and updatedAt
 );

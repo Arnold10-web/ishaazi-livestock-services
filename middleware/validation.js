@@ -320,18 +320,6 @@ export const userSchemas = {
 };
 
 /**
- * Comment validation schema
- */
-export const commentSchema = Joi.object({
-  author: Joi.string().min(2).max(100).required(),
-  email: Joi.string().email().required(),
-  content: Joi.string().min(5).max(1000).required().messages({
-    'string.min': 'Comment must be at least 5 characters long',
-    'string.max': 'Comment cannot exceed 1000 characters'
-  })
-});
-
-/**
  * Search and query validation
  */
 export const querySchemas = {
@@ -416,7 +404,6 @@ export default {
   newsSchemas,
   magazineSchemas,
   userSchemas,
-  commentSchema,
   querySchemas,
   validateObjectId,
   validateFileUpload

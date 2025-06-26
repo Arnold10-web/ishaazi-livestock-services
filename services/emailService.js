@@ -20,6 +20,7 @@ import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import emailErrorHandler from './emailErrorHandler.js';
 
 // Create __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -182,6 +183,66 @@ class EmailService {
           </body>
         </html>
       `,
+      'welcome-subscriber': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center;">
+              <div style="font-size: 36px; margin-bottom: 15px;">🌾</div>
+              <h1 style="font-size: 28px; margin-bottom: 10px;">Welcome to {{companyName}}!</h1>
+              <p>Your gateway to modern farming knowledge</p>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <div style="background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0;">
+                <h2 style="color: #2d5a27; margin-bottom: 15px;">Thank you for subscribing!</h2>
+                <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
+              </div>
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #2d5a27;">Your Subscription Details</h3>
+                <p><strong>Email:</strong> {{subscriberEmail}}</p>
+                <p><strong>Subscription Type:</strong> {{subscriptionType}}</p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{websiteUrl}}" style="display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visit Our Website</a>
+              </div>
+            </div>
+            <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
+              <p><strong>{{companyName}}</strong></p>
+              <p>{{contactEmail}}</p>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                <a href="{{unsubscribeUrl}}" style="color: #999; text-decoration: none; font-size: 12px;">Unsubscribe</a>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
+      'subscription-confirmation': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+              <h1>Confirm Your Subscription</h1>
+              <p>One more step to complete your subscription</p>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <div style="background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #e67e22; margin: 20px 0; text-align: center;">
+                <h2 style="color: #e67e22; margin-bottom: 15px;">🎉 Thanks for subscribing!</h2>
+                <p>Please confirm your email address to complete your subscription.</p>
+              </div>
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                <p><strong>Please confirm this email address:</strong></p>
+                <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">{{subscriberEmail}}</div>
+              </div>
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="{{confirmationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px;">✓ Confirm My Subscription</a>
+              </div>
+            </div>
+            <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
+              <p><strong>{{companyName}}</strong></p>
+              <p>If you didn't request this subscription, you can safely ignore this email.</p>
+            </div>
+          </body>
+        </html>
+      `,
       welcome: `
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -228,9 +289,31 @@ class EmailService {
     try {
       const result = await this.transporter.sendMail(mailOptions);
       console.log('✅ Email sent successfully:', result.messageId);
+      
+      // Update subscriber success info if email is provided
+      if (options.to && typeof options.to === 'string') {
+        await emailErrorHandler.updateSubscriberSuccess(options.to);
+      }
+      
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('❌ Email sending failed:', error.message);
+      
+      // Handle email failure if subscriber email is provided
+      if (options.to && typeof options.to === 'string') {
+        await emailErrorHandler.handleEmailFailure(
+          {
+            subject: options.subject,
+            html: options.html,
+            text: options.text,
+            type: options.emailType || 'unknown',
+            error: error
+          },
+          error,
+          options.to
+        );
+      }
+      
       return { success: false, error: error.message };
     }
   }
@@ -296,18 +379,64 @@ class EmailService {
     return results;
   }
 
-  async sendWelcomeEmail(userEmail, userData = {}) {
-    const template = this.renderTemplate('welcome', {
-      username: userData.username || userEmail.split('@')[0],
-      year: new Date().getFullYear(),
-      ...userData
-    });
+  /**
+   * Send welcome email to new subscriber
+   * @param {string} subscriberEmail - Subscriber's email address
+   * @param {Object} subscriberData - Subscriber information
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendWelcomeEmail(subscriberEmail, subscriberData = {}) {
+    try {
+      const subject = `Welcome to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} - You're All Set!`;
+      
+      // Get template data
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Farming Magazine',
+        subscriberEmail,
+        subscriptionType: subscriberData.subscriptionType || 'all',
+        frequency: this.getSubscriptionFrequency(subscriberData.subscriptionType),
+        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        companyAddress: process.env.COMPANY_ADDRESS || '123 Farm Street, Agriculture City, AC 12345',
+        unsubscribeUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
+        preferencesUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/preferences?email=${encodeURIComponent(subscriberEmail)}`,
+        facebookUrl: process.env.FACEBOOK_URL || '#',
+        twitterUrl: process.env.TWITTER_URL || '#',
+        linkedinUrl: process.env.LINKEDIN_URL || '#',
+        instagramUrl: process.env.INSTAGRAM_URL || '#',
+        year: new Date().getFullYear()
+      };
 
-    return await this.sendEmail({
-      to: userEmail,
-      subject: 'Welcome to Farming Magazine!',
-      html: template
-    });
+      // Use welcome-subscriber template
+      const template = this.templates.get('welcome-subscriber');
+      const html = template ? this.renderTemplate('welcome-subscriber', templateData) : this.getDefaultWelcomeSubscriberTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: subscriberEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`✅ Welcome email sent to new subscriber: ${subscriberEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: subscriberEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send welcome email to subscriber:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: subscriberEmail
+      };
+    }
   }
 
   /**
@@ -452,34 +581,79 @@ class EmailService {
   }
 
   /**
-   * Validate company email format
-   * @param {string} email - Email to validate
-   * @returns {boolean} True if valid company email
+   * Send subscription confirmation email (double opt-in)
+   * @param {string} subscriberEmail - Subscriber's email address  
+   * @param {string} confirmationToken - Unique confirmation token
+   * @param {Object} subscriberData - Subscriber information
+   * @returns {Promise<Object>} Email send result
    */
-  validateCompanyEmail(email) {
-    if (!email || typeof email !== 'string') {
-      return false;
+  async sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData = {}) {
+    try {
+      const subject = `Please Confirm Your Subscription to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'}`;
+      
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Farming Magazine',
+        subscriberEmail,
+        subscriptionType: subscriberData.subscriptionType || 'all',
+        confirmationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-subscription?token=${confirmationToken}&email=${encodeURIComponent(subscriberEmail)}`,
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
+        companyAddress: process.env.COMPANY_ADDRESS || '123 Farm Street, Agriculture City, AC 12345',
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        year: new Date().getFullYear()
+      };
+
+      const template = this.templates.get('subscription-confirmation');
+      const html = template ? this.renderTemplate('subscription-confirmation', templateData) : this.getDefaultConfirmationTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: subscriberEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`✅ Confirmation email sent to: ${subscriberEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: subscriberEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send confirmation email:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: subscriberEmail
+      };
     }
-
-    const companyDomains = [
-      'yourcompany.com',
-      'farmingmagazine.com'
-    ];
-
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
-    if (!emailRegex.test(email)) {
-      return false;
-    }
-
-    const domain = email.split('@')[1].toLowerCase();
-    return companyDomains.includes(domain);
   }
 
   /**
-   * Default welcome email template
+   * Get subscription frequency text based on type
+   * @param {string} subscriptionType - Type of subscription
+   * @returns {string} Frequency description
    */
-  getDefaultWelcomeTemplate(data) {
+  getSubscriptionFrequency(subscriptionType) {
+    const frequencies = {
+      'all': 'weekly',
+      'newsletters': 'weekly', 
+      'events': 'as announced',
+      'auctions': 'as scheduled',
+      'farming-tips': 'twice weekly',
+      'livestock-updates': 'weekly'
+    };
+    return frequencies[subscriptionType] || 'regular';
+  }
+
+  /**
+   * Default welcome subscriber template
+   */
+  getDefaultWelcomeSubscriberTemplate(data) {
     return `
       <!DOCTYPE html>
       <html>
@@ -487,43 +661,44 @@ class EmailService {
         <meta charset="utf-8">
         <title>Welcome to ${data.companyName}</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; background: #f9f9f9; }
-          .credentials { background: white; padding: 15px; border-left: 4px solid #2c5530; margin: 20px 0; }
-          .button { display: inline-block; padding: 12px 24px; background: #2c5530; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .welcome-box { background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0; }
+          .details-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to ${data.companyName}</h1>
-            <p>Admin Portal Access</p>
+            <div style="font-size: 36px; margin-bottom: 15px;">🌾</div>
+            <h1>Welcome to ${data.companyName}!</h1>
+            <p>Your gateway to modern farming knowledge</p>
           </div>
           <div class="content">
-            <h2>Your admin account has been created!</h2>
-            <p>Hello,</p>
-            <p>Your admin account for ${data.companyName} has been created by <strong>${data.createdBy}</strong>.</p>
-            
-            <div class="credentials">
-              <h3>Login Credentials:</h3>
-              <p><strong>Email:</strong> ${data.companyEmail}</p>
-              <p><strong>Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+            <div class="welcome-box">
+              <h2 style="color: #2d5a27; margin-bottom: 15px;">Thank you for subscribing!</h2>
+              <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
             </div>
-            
-            <p>Please log in and change your password immediately for security.</p>
-            
-            <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>
-            
-            <p><strong>Important:</strong> This is a temporary password that must be changed on your first login.</p>
-            
-            <p>If you have any questions, please contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
+            <div class="details-box">
+              <h3 style="color: #2d5a27;">📧 Your Subscription Details</h3>
+              <p><strong>Email:</strong> ${data.subscriberEmail}</p>
+              <p><strong>Subscription Type:</strong> ${data.subscriptionType}</p>
+              <p><strong>Frequency:</strong> ${data.frequency} updates</p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.websiteUrl}" class="button">Visit Our Website</a>
+            </div>
           </div>
           <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
+            <p><strong>${data.companyName}</strong></p>
+            <p>${data.contactEmail}</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+              <a href="${data.unsubscribeUrl}" style="color: #999; text-decoration: none; font-size: 12px;">Unsubscribe</a>
+            </div>
           </div>
         </div>
       </body>
@@ -532,108 +707,49 @@ class EmailService {
   }
 
   /**
-   * Default password reset email template
+   * Default confirmation email template
    */
-  getDefaultPasswordResetTemplate(data) {
+  getDefaultConfirmationTemplate(data) {
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Password Reset - ${data.companyName}</title>
+        <title>Confirm Your Subscription</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #d9534f; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; background: #f9f9f9; }
-          .credentials { background: white; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0; }
-          .button { display: inline-block; padding: 12px 24px; background: #d9534f; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .confirmation-box { background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #e67e22; margin: 20px 0; text-align: center; }
+          .email-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+          .button { display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Password Reset</h1>
-            <p>${data.companyName} Admin Portal</p>
+            <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+            <h1>Confirm Your Subscription</h1>
+            <p>One more step to complete your subscription</p>
           </div>
           <div class="content">
-            <h2>Your password has been reset</h2>
-            <p>Hello,</p>
-            <p>Your admin account password has been reset by <strong>${data.resetBy}</strong> on ${data.resetDate}.</p>
-            
-            <div class="credentials">
-              <h3>New Login Credentials:</h3>
-              <p><strong>Email:</strong> ${data.companyEmail}</p>
-              <p><strong>New Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+            <div class="confirmation-box">
+              <h2 style="color: #e67e22; margin-bottom: 15px;">🎉 Thanks for subscribing!</h2>
+              <p>Please confirm your email address to complete your subscription.</p>
             </div>
-            
-            <p>Please log in and change your password immediately for security.</p>
-            
-            <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>
-            
-            <p><strong>Security Notice:</strong> If you did not request this password reset, please contact support immediately.</p>
-            
-            <p>For security questions, contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
+            <div class="email-box">
+              <p><strong>Please confirm this email address:</strong></p>
+              <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">${data.subscriberEmail}</div>
+            </div>
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${data.confirmationUrl}" class="button">✓ Confirm My Subscription</a>
+            </div>
           </div>
           <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  /**
-   * Default account status email template
-   */
-  getDefaultAccountStatusTemplate(data) {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Account ${data.isActive ? 'Activated' : 'Deactivated'} - ${data.companyName}</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${data.isActive ? '#5cb85c' : '#d9534f'}; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; background: #f9f9f9; }
-          .status { background: white; padding: 15px; border-left: 4px solid ${data.isActive ? '#5cb85c' : '#d9534f'}; margin: 20px 0; }
-          .button { display: inline-block; padding: 12px 24px; background: ${data.isActive ? '#5cb85c' : '#d9534f'}; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Account ${data.isActive ? 'Activated' : 'Deactivated'}</h1>
-            <p>${data.companyName} Admin Portal</p>
-          </div>
-          <div class="content">
-            <h2>Your account status has been updated</h2>
-            <p>Hello,</p>
-            <p>Your admin account status has been changed by <strong>${data.changedBy}</strong> on ${data.changeDate}.</p>
-            
-            <div class="status">
-              <h3>Account Status:</h3>
-              <p><strong>Email:</strong> ${data.companyEmail}</p>
-              <p><strong>Status:</strong> ${data.isActive ? 'Active' : 'Deactivated'}</p>
-            </div>
-            
-            ${data.isActive ? 
-              `<p>Your account has been activated. You can now log in to the admin portal.</p>
-               <a href="${data.loginUrl}" class="button">Login to Admin Portal</a>` :
-              `<p>Your account has been deactivated. You will no longer be able to access the admin portal.</p>`
-            }
-            
-            <p>If you have questions about this change, please contact support at <a href="mailto:${data.supportEmail}">${data.supportEmail}</a>.</p>
-          </div>
-          <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} ${data.companyName}. All rights reserved.</p>
+            <p><strong>${data.companyName}</strong></p>
+            <p>If you didn't request this subscription, you can safely ignore this email.</p>
           </div>
         </div>
       </body>
@@ -683,6 +799,10 @@ export const sendNewsletter = (subscribers, newsletterData) => {
 
 export const sendWelcomeEmail = (userEmail, userData = {}) => {
   return emailService.sendWelcomeEmail(userEmail, userData);
+};
+
+export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken, subscriberData = {}) => {
+  return emailService.sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData);
 };
 
 // Export new company email functions

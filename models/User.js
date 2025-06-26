@@ -163,7 +163,46 @@ const UserSchema = new mongoose.Schema({
         timezone: { type: String, default: 'UTC' },
         language: { type: String, default: 'en' },
         emailNotifications: { type: Boolean, default: true },
-        dashboardLayout: { type: String, default: 'default' }
+        dashboardLayout: { type: String, default: 'default' },
+        theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' },
+        pageSize: { type: Number, default: 10, min: 5, max: 100 }
+    },
+    
+    /**
+     * @property {Array} permissions - Specific permissions for fine-grained access control
+     */
+    permissions: [{
+        type: String,
+        enum: [
+            'manage_users', 'manage_content', 'manage_subscribers', 'manage_newsletters',
+            'manage_events', 'manage_auctions', 'view_analytics', 'manage_system_settings'
+        ]
+    }],
+    
+    /**
+     * @property {String} profileImage - URL to user's profile image
+     */
+    profileImage: {
+        type: String,
+        default: null
+    },
+    
+    /**
+     * @property {String} firstName - User's first name
+     */
+    firstName: {
+        type: String,
+        trim: true,
+        maxlength: 50
+    },
+    
+    /**
+     * @property {String} lastName - User's last name
+     */
+    lastName: {
+        type: String,
+        trim: true,
+        maxlength: 50
     }
 }, { 
     timestamps: true,
@@ -184,6 +223,23 @@ UserSchema.virtual('isLocked').get(function() {
  */
 UserSchema.virtual('loginEmail').get(function() {
     return this.role === 'editor' ? this.companyEmail : this.email;
+});
+
+/**
+ * Virtual for getting full name
+ */
+UserSchema.virtual('fullName').get(function() {
+    if (this.firstName && this.lastName) {
+        return `${this.firstName} ${this.lastName}`;
+    }
+    return this.firstName || this.lastName || this.username || this.loginEmail;
+});
+
+/**
+ * Virtual for getting display name (for UI)
+ */
+UserSchema.virtual('displayName').get(function() {
+    return this.fullName || this.username || this.loginEmail || 'Unknown User';
 });
 
 /**

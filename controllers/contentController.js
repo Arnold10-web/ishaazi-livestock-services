@@ -28,7 +28,7 @@ import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail } from '../services/emailService.js';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
 
 /**
  * Define __dirname manually for ES modules
@@ -276,92 +276,12 @@ export const getEngagementStats = async (req, res) => {
   }
 };
 
-// Comment management for all content types
-export const addContentComment = async (req, res) => {
-  try {
-    const { contentType, id } = req.params;
-    const { author, email, content } = req.body;
+// Comment management system has been removed to improve dashboard accuracy
+// and remove unused functionality. This eliminates comment-related statistics
+// that were skewing engagement metrics.
 
-    if (!author || !email || !content) {
-      return sendResponse(res, false, 'Author, email, and content are required');
-    }
-
-    const modelMap = {
-      blogs: Blog,
-      news: News,
-      dairies: Dairy,
-      beefs: Beef,
-      farms: Farm,
-      piggeries: Piggery,
-      goats: Goat,
-      basics: Basic,
-      magazines: Magazine
-    };
-
-    const Model = modelMap[contentType];
-    if (!Model) {
-      return sendResponse(res, false, 'Invalid content type');
-    }
-
-    const item = await Model.findById(id);
-    if (!item) {
-      return sendResponse(res, false, 'Content not found', null, null, 404);
-    }
-
-    const newComment = {
-      author,
-      email,
-      content,
-      approved: false // Comments require approval by default
-    };
-
-    item.comments = item.comments || [];
-    item.comments.push(newComment);
-    await item.save();
-
-    sendResponse(res, true, 'Comment added successfully (pending approval)', item);
-  } catch (error) {
-    sendResponse(res, false, 'Failed to add comment', null, error.message);
-  }
-};
-
-// Delete comment from any content type
-export const deleteContentComment = async (req, res) => {
-  try {
-    const { contentType, id, commentId } = req.params;
-
-    const modelMap = {
-      blogs: Blog,
-      news: News,
-      dairies: Dairy,
-      beefs: Beef,
-      farms: Farm,
-      piggeries: Piggery,
-      goats: Goat,
-      basics: Basic,
-      magazines: Magazine
-    };
-
-    const Model = modelMap[contentType];
-    if (!Model) {
-      return sendResponse(res, false, 'Invalid content type');
-    }
-
-    const item = await Model.findById(id);
-    if (!item) {
-      return sendResponse(res, false, 'Content not found', null, null, 404);
-    }
-
-    item.comments = item.comments.filter(comment => comment._id.toString() !== commentId);
-    await item.save();
-
-    sendResponse(res, true, 'Comment deleted successfully', item);
-  } catch (error) {
-    sendResponse(res, false, 'Failed to delete comment', null, error.message);
-  }
-};
-
-// Approve comment for any content type
+// Note: Comment-related routes and models should also be cleaned up
+// to completely remove this functionality from the system.
 export const approveContentComment = async (req, res) => {
   try {
     const { contentType, id, commentId } = req.params;
@@ -3414,10 +3334,10 @@ export const getAdminNewsletters = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching admin newsletters:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error fetching admin newsletters',
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -3437,7 +3357,6 @@ export const getAllEventRegistrations = async (req, res) => {
     }
 
     const skip = (page - 1) * limit;
-    
     const [registrations, total] = await Promise.all([
       EventRegistration.find(query)
         .populate('eventId', 'title startDate location maxAttendees')
@@ -3482,32 +3401,290 @@ export const getAllEventRegistrations = async (req, res) => {
   }
 };
 
-// Admin function to delete an event registration
+// Admin function specifically for admin panel - get all event registrations with proper formatting
+export const getAdminRegistrations = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, status, search, sortBy = 'registrationDate', sortOrder = 'desc' } = req.query;
+
+    // Build query filters
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    // Get registrations with event details populated
+    const [registrations, total] = await Promise.all([
+      EventRegistration.find(query)
+        .populate('eventId', 'title date location')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      EventRegistration.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    // Format registrations for admin display
+    const formattedRegistrations = registrations.map(registration => ({
+      _id: registration._id,
+      name: registration.name,
+      email: registration.email,
+      phone: registration.phone || 'Not provided',
+      status: registration.status,
+      eventTitle: registration.eventId?.title || 'Unknown Event',
+      eventDate: registration.eventId?.date,
+      eventLocation: registration.eventId?.location || 'TBD',
+      registrationDate: registration.registrationDate,
+      createdAt: registration.createdAt,
+      updatedAt: registration.updatedAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        registrations: formattedRegistrations,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        analytics: {
+          totalRegistrations: await EventRegistration.countDocuments(),
+          confirmedRegistrations: await EventRegistration.countDocuments({ status: 'confirmed' }),
+          pendingRegistrations: await EventRegistration.countDocuments({ status: 'pending' }),
+          cancelledRegistrations: await EventRegistration.countDocuments({ status: 'cancelled' }),
+          recentRegistrations: await EventRegistration.countDocuments({
+            registrationDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+          })
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin registrations:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to retrieve admin registrations',
+      error: error.message 
+    });
+  }
+};
+
+// Delete event registration (admin function)
 export const deleteEventRegistration = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const registration = await EventRegistration.findById(id);
+    // Find and delete the registration
+    const registration = await EventRegistration.findByIdAndDelete(id);
+
     if (!registration) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Event registration not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Event registration not found'
       });
     }
 
-    await EventRegistration.findByIdAndDelete(id);
-
     res.status(200).json({
       success: true,
-      message: 'Event registration deleted successfully'
+      message: 'Event registration deleted successfully',
+      data: { deletedRegistration: registration }
     });
 
   } catch (error) {
     console.error('Error deleting event registration:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to delete event registration',
-      error: error.message 
+      error: error.message
+    });
+  }
+};
+
+// ----- EMAIL AUTOMATION FUNCTIONS -----
+
+/**
+ * Handle email subscription confirmation
+ */
+export const confirmSubscription = async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Confirmation token is required'
+      });
+    }
+
+    // Find subscriber by confirmation token
+    const subscriber = await Subscriber.findOne({ confirmationToken: token });
+    
+    if (!subscriber) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired confirmation token'
+      });
+    }
+
+    if (subscriber.isConfirmed) {
+      return res.status(200).json({
+        success: true,
+        message: 'Email address already confirmed'
+      });
+    }
+
+    // Confirm the subscription
+    subscriber.isConfirmed = true;
+    subscriber.confirmedAt = new Date();
+    subscriber.confirmationToken = undefined; // Remove the token
+    await subscriber.save();
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(subscriber.email, { subscriptionType: subscriber.subscriptionType });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Email confirmed successfully! Welcome to our newsletter.'
+    });
+
+  } catch (error) {
+    console.error('Error confirming subscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm subscription',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Handle unsubscribe requests
+ */
+export const unsubscribeHandler = async (req, res) => {
+  try {
+    const { token, email } = req.body;
+    
+    if (!token && !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsubscribe token or email is required'
+      });
+    }
+
+    let subscriber;
+    
+    if (token) {
+      // Find by unsubscribe token
+      subscriber = await Subscriber.findOne({ unsubscribeToken: token });
+    } else if (email) {
+      // Find by email
+      subscriber = await Subscriber.findOne({ email: email.toLowerCase() });
+    }
+
+    if (!subscriber) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscriber not found'
+      });
+    }
+
+    if (!subscriber.isActive) {
+      return res.status(200).json({
+        success: true,
+        message: 'You are already unsubscribed'
+      });
+    }
+
+    // Unsubscribe the user
+    subscriber.isActive = false;
+    subscriber.unsubscribedAt = new Date();
+    await subscriber.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'You have been successfully unsubscribed from our newsletter'
+    });
+
+  } catch (error) {
+    console.error('Error processing unsubscribe:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process unsubscribe request',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update email preferences
+ */
+export const updateEmailPreferences = async (req, res) => {
+  try {
+    const { email, subscriptionType, frequency } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const subscriber = await Subscriber.findOne({ email: email.toLowerCase() });
+    
+    if (!subscriber) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscriber not found'
+      });
+    }
+
+    // Update preferences
+    if (subscriptionType) {
+      subscriber.subscriptionType = subscriptionType;
+    }
+    
+    if (frequency) {
+      if (!subscriber.preferences) {
+        subscriber.preferences = {};
+      }
+      subscriber.preferences.frequency = frequency;
+    }
+
+    await subscriber.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Email preferences updated successfully',
+      data: {
+        email: subscriber.email,
+        subscriptionType: subscriber.subscriptionType,
+        preferences: subscriber.preferences
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating email preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update email preferences',
+      error: error.message
     });
   }
 };

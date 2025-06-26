@@ -104,4 +104,28 @@ router.post('/test/welcome', testWelcomeEmailEndpoint);
  */
 router.post('/test/health', emailHealthCheckEndpoint);
 
+/**
+ * @route   GET /api/email/health
+ * @desc    Get email system health statistics
+ * @access  Admin only
+ */
+router.get('/health', async (req, res) => {
+  try {
+    const { default: emailErrorHandler } = await import('../services/emailErrorHandler.js');
+    const healthStats = await emailErrorHandler.getEmailHealthStats();
+    
+    res.status(200).json({
+      success: true,
+      data: healthStats
+    });
+  } catch (error) {
+    console.error('Error getting email health stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get email health statistics',
+      error: error.message
+    });
+  }
+});
+
 export default router;

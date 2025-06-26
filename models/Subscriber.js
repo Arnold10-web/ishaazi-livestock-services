@@ -68,7 +68,58 @@ const subscriberSchema = new mongoose.Schema({
   /**
    * @property {Number} openCount - Total count of email opens
    */
-  openCount: { type: Number, default: 0 }
+  openCount: { type: Number, default: 0 },
+  
+  /**
+   * @property {String} confirmationToken - Token for email confirmation (double opt-in)
+   */
+  confirmationToken: { type: String, default: null },
+  
+  /**
+   * @property {Boolean} isConfirmed - Whether email has been confirmed
+   */
+  isConfirmed: { type: Boolean, default: false },
+  
+  /**
+   * @property {Date} confirmedAt - Timestamp when email was confirmed
+   */
+  confirmedAt: { type: Date, default: null },
+
+  /**
+   * @property {String} unsubscribeToken - Unique token for unsubscribe links
+   */
+  unsubscribeToken: { type: String, default: () => require('crypto').randomBytes(32).toString('hex') },
+
+  /**
+   * @property {Date} unsubscribedAt - Timestamp when user unsubscribed
+   */
+  unsubscribedAt: { type: Date, default: null },
+
+  // Email delivery failure tracking
+  /**
+   * @property {Number} failureCount - Count of consecutive email delivery failures
+   */
+  failureCount: { type: Number, default: 0 },
+
+  /**
+   * @property {Date} lastFailureAt - Timestamp of most recent delivery failure
+   */
+  lastFailureAt: { type: Date, default: null },
+
+  /**
+   * @property {String} lastFailureType - Type of most recent delivery failure
+   */
+  lastFailureType: { type: String, default: null },
+
+  /**
+   * @property {String} failureReason - Human-readable reason for permanent failure
+   */
+  failureReason: { type: String, default: null },
+
+  /**
+   * @property {Boolean} permanentFailure - Whether this email has permanent delivery issues
+   */
+  permanentFailure: { type: Boolean, default: false },
 }, {
   timestamps: true
 });

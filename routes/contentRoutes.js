@@ -24,8 +24,7 @@ import {
   getAdminBasics,
   updateBasic,
   deleteBasic,
-  addComment,
-  deleteComment,
+
   createFarm,
   getFarms,
   getFarmById,
@@ -62,10 +61,13 @@ import {
   getAdminGoats,
   updateGoat,
   deleteGoat, 
-    createSubscriber,
+  createSubscriber,
   getSubscribers,
   deleteSubscriber,
   bulkUpdateSubscribers,
+  confirmSubscription,
+  unsubscribeHandler,
+  updateEmailPreferences,
   createNewsletter,
   getNewsletters,
   getAdminNewsletters,
@@ -78,13 +80,10 @@ import {
   getAdminEvents,
   updateEvent,
   deleteEvent,
-  registerForEvent,
-  getEventRegistrations,
+  // Event Registration functions
+  getAdminRegistrations,
   getAllEventRegistrations,
   deleteEventRegistration,
-  getRegistrationByEmail,
-  cancelEventRegistration,
-  getEventRegistrationStats,
   createAuction,
   getAuctions,
   getAuctionById,
@@ -98,9 +97,7 @@ import {
   trackLike,
   trackShare,
   getEngagementStats,
-  addContentComment,
-  deleteContentComment,
-  approveContentComment
+
 } from '../controllers/contentController.js';
 
 const router = express.Router();
@@ -220,12 +217,6 @@ router.put(
 
 // Delete a Basic media by ID
 router.delete('/basics/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['basics']), deleteBasic);
-
-// Add a comment to a Basic media
-router.post('/basics/:id/comments', invalidateCache(['basics']), addComment);
-
-// Delete a comment from a Basic media
-router.delete('/basics/:id/comments/:commentId', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['basics']), deleteComment);
 // Farms Routes
 router.post('/farms', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), validateFileUpload, optimizeImage, invalidateCache(['farms']), createFarm);
 router.get('/farms', cacheMiddleware(300), getFarms);
@@ -325,6 +316,11 @@ router.post('/subscribers', createSubscriber);
 router.delete('/subscribers/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteSubscriber);
 router.put('/subscribers/bulk', authenticateToken, requireRole(['system_admin', 'editor']), bulkUpdateSubscribers);
 
+// Email Automation Routes
+router.get('/confirm-subscription', confirmSubscription);
+router.post('/unsubscribe', unsubscribeHandler);
+router.put('/email-preferences', updateEmailPreferences);
+
 // Newsletter Routes
 router.get('/newsletters', getNewsletters);
 router.get('/newsletters/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminNewsletters);
@@ -341,16 +337,10 @@ router.get('/events/:id', getEventById);
 router.put('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), updateEvent);
 router.delete('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEvent);
 
-// Event Registration Routes (Public)
-router.post('/events/:eventId/register', registerForEvent);
-router.get('/events/:eventId/register', getRegistrationByEmail);
-router.get('/events/:eventId/registrations', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrations);
+// Event Registration Routes
+router.get('/event-registrations/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminRegistrations);
 router.get('/event-registrations', authenticateToken, requireRole(['system_admin', 'editor']), getAllEventRegistrations);
-router.get('/event-registrations/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAllEventRegistrations);
 router.delete('/event-registrations/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEventRegistration);
-router.get('/events/:eventId/registration', getRegistrationByEmail);
-router.post('/events/:eventId/cancel', cancelEventRegistration);
-router.get('/events/:eventId/stats', authenticateToken, requireRole(['system_admin', 'editor']), getEventRegistrationStats);
 
 // Auction Routes
 router.post('/auctions', authenticateToken, requireRole(['system_admin', 'editor']), upload.single('image'), createAuction);
@@ -374,15 +364,5 @@ router.post('/:contentType/:id/share', trackShare);
 
 // Get engagement stats for any content
 router.get('/:contentType/:id/stats', getEngagementStats);
-
-// COMMENT MANAGEMENT ROUTES
-// Add comment to any content type
-router.post('/:contentType/:id/comments', addContentComment);
-
-// Delete comment from any content type (admin only)
-router.delete('/:contentType/:id/comments/:commentId', authenticateToken, requireRole(['system_admin', 'editor']), deleteContentComment);
-
-// Approve comment for any content type (admin only)
-router.patch('/:contentType/:id/comments/:commentId/approve', authenticateToken, requireRole(['system_admin', 'editor']), approveContentComment);
 
 export default router;
