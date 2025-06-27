@@ -30,33 +30,7 @@ export const loginAdmin = async (req, res) => {
             // Try new User model first
             user = await User.findByLoginCredentials(identifier, password);
         } catch (error) {
-            // If not found in User model, try Admin model for backward compatibility
-            if (error.message === 'Invalid login credentials') {
-                try {
-                    const admin = await Admin.findOne({ username: identifier });
-                    if (admin && await admin.comparePassword(password)) {
-                        // Convert Admin to User-like object
-                        user = {
-                            _id: admin._id,
-                            username: admin.username,
-                            email: admin.email,
-                            role: admin.role === 'superadmin' ? 'system_admin' : 'editor',
-                            isActive: true,
-                            loginCount: admin.loginCount || 0,
-                            lastLogin: admin.lastLogin,
-                            isTemporaryPassword: false,
-                            recordLogin: async function(ip, ua, success) {
-                                admin.lastLogin = new Date();
-                                admin.loginCount = (admin.loginCount || 0) + 1;
-                                return admin.save();
-                            }
-                        };
-                    }
-                } catch (adminError) {
-                    console.error('Admin login error:', adminError);
-                }
-            }
-            
+            // If not found, user doesn't exist or credentials are invalid
             if (!user) {
                 await ActivityLog.logActivity({
                     userId: null,
@@ -182,8 +156,7 @@ export const registerAdmin = async (req, res) => {
         
         // Check if this is the first user (allow first system admin creation)
         const userCount = await User.countDocuments();
-        const adminCount = await Admin.countDocuments();
-        const isFirstUser = userCount === 0 && adminCount === 0;
+        const isFirstUser = userCount === 0;
         
         if (!isFirstUser) {
             return res.status(403).json({
@@ -194,9 +167,8 @@ export const registerAdmin = async (req, res) => {
         
         // Check if username already exists
         const existingUser = await User.findOne({ username });
-        const existingAdmin = await Admin.findOne({ username });
         
-        if (existingUser || existingAdmin) {
+        if (existingUser) {
             return res.status(400).json({
                 success: false,
                 message: 'Username already exists'
