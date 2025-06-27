@@ -58,9 +58,9 @@ const UserSchema = new mongoose.Schema({
             validator: function(email) {
                 if (!email && this.role !== 'editor') return true;
                 // Update with your actual company domain
-                return /^[a-zA-Z0-9._%+-]+@(yourcompany\.com|farmingmagazine\.com)$/.test(email);
+                return /^[a-zA-Z0-9._%+-]+@(ishaazilivestockservices\.com|farmingmagazine\.com)$/.test(email);
             },
-            message: 'Must be a valid company email address (@yourcompany.com or @farmingmagazine.com)'
+            message: 'Must be a valid company email address (@ishaazilivestockservices.com or @farmingmagazine.com)'
         }
     },
     

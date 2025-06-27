@@ -26,11 +26,11 @@ export const createEditor = async (req, res) => {
         }
         
         // Validate company email format
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@(yourcompany\.com|farmingmagazine\.com)$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(ishaazilivestockservices\.com|farmingmagazine\.com)$/;
         if (!emailRegex.test(companyEmail)) {
             return res.status(400).json({
                 success: false,
-                message: 'Must be a valid company email address'
+                message: 'Must be a valid company email address from ishaazilivestockservices.com or farmingmagazine.com'
             });
         }
         
