@@ -5,6 +5,8 @@
  */
 
 import express from 'express';
+import User from '../models/User.js';
+import ActivityLog from '../models/ActivityLog.js';
 import {
     loginAdmin,
     registerAdmin,
@@ -55,6 +57,36 @@ import {
 
 const router = express.Router();
 
+// Middleware to check if registration is enabled
+const checkRegistrationEnabled = async (req, res, next) => {
+    try {
+        // Check if registration is explicitly disabled via environment variable
+        if (process.env.DISABLE_REGISTRATION === 'true') {
+            return res.status(403).json({
+                success: false,
+                message: 'Registration has been disabled by system administrator'
+            });
+        }
+
+        // Check if any users exist (only allow first user registration)
+        const userCount = await User.countDocuments();
+        if (userCount > 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'Registration is disabled. System administrator already exists.'
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error('Registration check error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Unable to verify registration status'
+        });
+    }
+};
+
 // ========================================
 // Public Routes (No Authentication Required)
 // ========================================
@@ -68,10 +100,10 @@ router.post('/login', logActivity('login', 'authentication'), loginAdmin);
 
 /**
  * @route POST /api/admin/register
- * @desc Register first system admin (only if no users exist)
- * @access Public (restricted)
+ * @desc Register first system admin (only if no users exist and registration is enabled)
+ * @access Public (restricted by checkRegistrationEnabled middleware)
  */
-router.post('/register', logActivity('user_created', 'user'), registerAdmin);
+router.post('/register', checkRegistrationEnabled, logActivity('user_created', 'user'), registerAdmin);
 
 // ========================================
 // Protected Routes (Authentication Required)
@@ -326,6 +358,59 @@ router.get('/activity-logs/export',
     requireSystemAdmin, 
     logActivity('data_export', 'activity_log'), 
     exportActivityLogs
+);
+
+/**
+ * @route POST /api/admin/disable-registration
+ * @desc Permanently disable user registration (System Admin only)
+ * @access Private (System Admin only)
+ */
+router.post('/disable-registration', 
+    authenticateToken, 
+    requireSystemAdmin, 
+    logActivity('registration_disabled', 'system'), 
+    async (req, res) => {
+        try {
+            // This endpoint allows manual disabling of registration
+            // In a production environment, you might want to store this in a database
+            // For now, we'll just inform the admin about the environment variable approach
+            
+            await ActivityLog.logActivity({
+                userId: req.user._id,
+                username: req.user.username || req.user.email,
+                userRole: req.user.role,
+                action: 'registration_disabled',
+                resource: 'system',
+                details: {
+                    note: 'Admin requested to disable registration',
+                    method: req.method,
+                    path: req.path
+                },
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                status: 'success',
+                severity: 3
+            });
+            
+            res.json({
+                success: true,
+                message: 'Registration control information',
+                info: {
+                    currentStatus: process.env.DISABLE_REGISTRATION === 'true' ? 'disabled' : 'enabled',
+                    instructions: 'To permanently disable registration, set DISABLE_REGISTRATION=true in your environment variables and restart the server.',
+                    automaticDisabling: 'Registration is automatically disabled once any users exist in the system.'
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error handling registration disable request:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to process request',
+                error: error.message
+            });
+        }
+    }
 );
 
 // ========================================

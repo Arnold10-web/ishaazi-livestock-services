@@ -13,7 +13,9 @@
     "build": "echo 'Backend only - no build step needed'",
     "lint": "eslint .",
     "migrate:user-system": "node scripts/migrateToNewUserSystem.js",
-    "setup:admin-system": "npm run migrate:user-system"
+    "setup:admin-system": "npm run migrate:user-system",
+    "disable-registration": "node scripts/disable-registration.js",
+    "enable-registration": "node scripts/disable-registration.js enable"
   },
   "keywords": [],
   "author": "",
