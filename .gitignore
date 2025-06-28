@@ -55,7 +55,8 @@ frontend/build/
 /.nuxt/
 .cache/
 coverage/
-
+scripts
+load-test.yml
 # Local development files
 .DS_Store
 .qodo

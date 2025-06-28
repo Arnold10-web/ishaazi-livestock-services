@@ -15,19 +15,17 @@
     "migrate:user-system": "node scripts/migrateToNewUserSystem.js",
     "setup:admin-system": "npm run migrate:user-system",
     "disable-registration": "node scripts/disable-registration.js",
-    "enable-registration": "node scripts/disable-registration.js enable"
+    "enable-registration": "node scripts/disable-registration.js enable",
+    "test:redis": "node scripts/test-redis.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.9.0",
-    "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
-    "chrome-launcher": "^1.2.0",
     "cors": "^2.8.5",
-    "csurf": "^1.11.0",
     "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
@@ -41,20 +39,17 @@
     "joi": "^17.13.3",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
-    "lighthouse": "^12.6.1",
     "mongodb": "^6.16.0",
     "mongoose": "^8.14.3",
     "morgan": "^1.10.0",
-    "multer": "^1.4.4",
+    "multer": "^2.0.1",
     "multer-gridfs-storage": "^5.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.10.1",
-    "puppeteer": "^24.10.0",
     "redis": "^5.5.5",
     "sharp": "^0.34.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "web-push": "^3.6.7",
     "winston": "^3.17.0",
     "ws": "^8.18.2"
   },
@@ -68,6 +63,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "globals": "^15.15.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "web-push": "^3.6.7"
   }
 }
