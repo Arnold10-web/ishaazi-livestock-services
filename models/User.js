@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema({
      */
     username: { 
         type: String, 
+        unique: true,
         sparse: true, // Allows null/undefined, but enforces uniqueness when present
         required: function() { return this.role === 'system_admin'; },
         trim: true,
@@ -33,6 +34,7 @@ const UserSchema = new mongoose.Schema({
      */
     email: { 
         type: String, 
+        unique: true,
         sparse: true,
         trim: true,
         lowercase: true,
@@ -51,6 +53,7 @@ const UserSchema = new mongoose.Schema({
     companyEmail: {
         type: String,
         required: function() { return this.role === 'editor'; },
+        unique: true,
         sparse: true,
         trim: true,
         lowercase: true,
@@ -385,14 +388,14 @@ UserSchema.statics.findByLoginCredentials = async function(identifier, password)
 };
 
 /**
- * Create indexes for performance
+ * Create indexes for performance - Note: Only define explicit indexes here
+ * Mongoose automatically creates indexes for fields with unique: true in schema
  */
-UserSchema.index({ username: 1 }, { sparse: true, unique: true });
-UserSchema.index({ email: 1 }, { sparse: true, unique: true });
-UserSchema.index({ companyEmail: 1 }, { sparse: true, unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ isActive: 1 });
 UserSchema.index({ createdAt: 1 });
+UserSchema.index({ 'loginHistory.timestamp': -1 });
+UserSchema.index({ lastLogin: -1 });
 
 const User = mongoose.model('User', UserSchema);
 

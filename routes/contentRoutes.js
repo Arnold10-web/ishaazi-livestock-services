@@ -2,6 +2,7 @@ import express from 'express';
 import upload, { optimizeImage, uploadMedia } from '../middleware/fileUpload.js';
 import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
+import { cacheProfiles } from '../middleware/enhancedCache.js';
 import { validate, blogSchemas, newsSchemas, magazineSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import processFormData from '../middleware/formDataCompatibility.js';
@@ -129,7 +130,7 @@ router.post('/blogs',
   invalidateCache(['blogs']),
   createBlog
 );
-router.get('/blogs', cacheMiddleware(300), getBlogs);
+router.get('/blogs', cacheProfiles.blog, getBlogs);
 router.get('/blogs/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminBlogs);
 router.get('/blogs/:id', validateObjectId('id'), cacheMiddleware(600), getBlogById);
 router.put('/blogs/:id',
@@ -163,9 +164,9 @@ router.post('/news',
   invalidateCache(['news']),
   createNews
 );
-router.get('/news', cacheMiddleware(300), getNews);
+router.get('/news', cacheProfiles.news, getNews);
 router.get('/news/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminNews);
-router.get('/news/:id', cacheMiddleware(600), getNewsById);
+router.get('/news/:id', cacheProfiles.news, getNewsById);
 router.put('/news/:id', 
   authenticateToken, requireRole(['system_admin', 'editor']), 
   upload.single('image'), 
