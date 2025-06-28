@@ -137,6 +137,9 @@ async function initializeServer() {
     // This provides logging, performance tracking, and health monitoring
     ({ logger, performanceMonitor, healthChecker, errorTracker } = setupMonitoring(app));
     
+    // Performance monitoring is already applied in setupMonitoring
+    // No need to apply it again here
+    
     // Initialize WebSocket service for real-time communication
     notificationService.initialize(server);
     notificationService.startHeartbeat(); // Ensures connection stability
@@ -322,6 +325,12 @@ app.use(sanitizeInput);
 // Request logging
 app.use(requestLogger);
 
+// Static cache headers (performance monitor will be added after initialization)
+import { staticCacheHeaders } from './middleware/performanceMetrics.js';
+import { httpCacheHeaders } from './middleware/enhancedCache.js';
+app.use(staticCacheHeaders);
+app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
+
 // Database connection
 connectDB()
   .then(() => console.log("Connected to MongoDB"))
@@ -468,8 +477,13 @@ import emailTestRoutes from './routes/emailTestRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import syndicationRoutes from './routes/syndicationRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 // Mount routes
+app.use('/health', healthRoutes); // Health checks (no /api prefix for direct access)
+app.use('/api/health', healthRoutes); // Health checks with /api prefix
+app.use('/ready', healthRoutes); // Kubernetes readiness probe
+app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
