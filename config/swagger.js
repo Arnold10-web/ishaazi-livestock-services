@@ -106,14 +106,217 @@ const swaggerOptions = {
               }
             }
           ]
+        },
+        HealthStatus: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['OK', 'healthy', 'unhealthy'] },
+            timestamp: { type: 'string', format: 'date-time' },
+            uptime: { type: 'number', description: 'Server uptime in seconds' },
+            version: { type: 'string' },
+            environment: { type: 'string' }
+          }
+        },
+        DetailedHealthStatus: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['healthy', 'unhealthy'] },
+            timestamp: { type: 'string', format: 'date-time' },
+            responseTime: { type: 'string', description: 'Response time in milliseconds' },
+            system: {
+              type: 'object',
+              properties: {
+                uptime: { type: 'number' },
+                version: { type: 'string' },
+                environment: { type: 'string' },
+                nodeVersion: { type: 'string' },
+                platform: { type: 'string' },
+                arch: { type: 'string' }
+              }
+            },
+            dependencies: {
+              type: 'object',
+              properties: {
+                database: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string' },
+                    responseTime: { type: 'number' },
+                    details: { type: 'object' }
+                  }
+                },
+                memory: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string' },
+                    details: { type: 'object' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        MetricsResponse: {
+          type: 'object',
+          properties: {
+            timestamp: { type: 'string', format: 'date-time' },
+            uptime: { type: 'number' },
+            memory: {
+              type: 'object',
+              properties: {
+                heapUsed: { type: 'string' },
+                heapTotal: { type: 'string' },
+                external: { type: 'string' }
+              }
+            },
+            nodeVersion: { type: 'string' },
+            environment: { type: 'string' },
+            requests: { type: 'number' },
+            errors: { type: 'number' },
+            errorRate: { type: 'string' },
+            averageResponseTime: { type: 'number' },
+            activeConnections: { type: 'number' }
+          }
+        },
+        Error: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+            statusCode: { type: 'number' }
+          }
+        }
+      },
+      responses: {
+        UnauthorizedError: {
+          description: 'Authentication information is missing or invalid',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' }
+            }
+          }
+        },
+        ValidationError: {
+          description: 'Validation error',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' }
+            }
+          }
         }
       }
     },
-    security: [
+    tags: [
       {
-        bearerAuth: []
+        name: 'Health',
+        description: 'System health monitoring endpoints'
+      },
+      {
+        name: 'Metrics',
+        description: 'Performance and monitoring metrics'
+      },
+      {
+        name: 'Content',
+        description: 'Blog, news, and content management'
+      },
+      {
+        name: 'Authentication',
+        description: 'User authentication and authorization'
       }
-    ]
+    ],
+    paths: {
+      '/health': {
+        get: {
+          tags: ['Health'],
+          summary: 'Basic health check',
+          description: 'Returns basic server health status for load balancers',
+          responses: {
+            '200': {
+              description: 'Server is healthy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/HealthStatus' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/health/detailed': {
+        get: {
+          tags: ['Health'],
+          summary: 'Detailed health check',
+          description: 'Returns comprehensive system health including database and memory status',
+          responses: {
+            '200': {
+              description: 'Detailed health information',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/DetailedHealthStatus' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/health/ready': {
+        get: {
+          tags: ['Health'],
+          summary: 'Readiness probe',
+          description: 'Kubernetes readiness probe endpoint',
+          responses: {
+            '200': {
+              description: 'Service is ready to receive traffic',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/HealthStatus' }
+                }
+              }
+            },
+            '503': {
+              description: 'Service is not ready'
+            }
+          }
+        }
+      },
+      '/health/live': {
+        get: {
+          tags: ['Health'],
+          summary: 'Liveness probe',
+          description: 'Kubernetes liveness probe endpoint',
+          responses: {
+            '200': {
+              description: 'Service is alive',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/HealthStatus' }
+                }
+              }
+            },
+            '503': {
+              description: 'Service is not responding'
+            }
+          }
+        }
+      },
+      '/metrics': {
+        get: {
+          tags: ['Metrics'],
+          summary: 'Performance metrics',
+          description: 'Returns real-time performance metrics and system statistics',
+          responses: {
+            '200': {
+              description: 'Performance metrics data',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/MetricsResponse' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   apis: ['./routes/*.js', './controllers/*.js']
 };
@@ -190,3 +393,20 @@ const swaggerOptions_UI = {
  */
 
 export { specs, swaggerOptions_UI };
+
+/**
+ * Setup Swagger UI for API documentation
+ * @param {Object} app - Express app instance
+ */
+export const setupSwagger = (app) => {
+  // Swagger documentation endpoint
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions_UI));
+  
+  // JSON specification endpoint
+  app.get('/api-docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(specs);
+  });
+  
+  console.log('📚 API Documentation available at /api-docs');
+};

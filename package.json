@@ -52,6 +52,8 @@
     "puppeteer": "^24.10.0",
     "redis": "^5.5.5",
     "sharp": "^0.34.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "web-push": "^3.6.7",
     "winston": "^3.17.0",
     "ws": "^8.18.2"

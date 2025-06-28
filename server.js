@@ -30,6 +30,7 @@ import connectDB from './config/db.js';
 import upload from './middleware/fileUpload.js';
 import { sanitizeInput, securityHeaders } from './middleware/sanitization.js';
 import { requestLogger, errorLogger, logSecurityEvent } from './utils/logger.js';
+// import { setupSwagger } from './config/swagger.js';
 
 /**
  * Service declarations - initialized later via dynamic imports
@@ -478,6 +479,9 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import syndicationRoutes from './routes/syndicationRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+
+// API Documentation with Swagger
+// setupSwagger(app);
 
 // Mount routes
 app.use('/health', healthRoutes); // Health checks (no /api prefix for direct access)
