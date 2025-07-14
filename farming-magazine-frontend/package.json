@@ -1,0 +1,124 @@
+{
+  "name": "farming-magazine-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/line-clamp": "^0.4.4",
+    "@tailwindcss/typography": "^0.5.16",
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "axios": "^1.9.0",
+    "axios-mock-adapter": "^2.1.0",
+    "dompurify": "^3.2.5",
+    "eslint": "^9.26.0",
+    "framer-motion": "^12.12.1",
+    "html-webpack-plugin": "^5.6.3",
+    "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.475.0",
+    "quill": "^2.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-helmet": "^6.1.0",
+    "react-icons": "^5.5.0",
+    "react-loadable": "^5.5.0",
+    "react-player": "^2.16.0",
+    "react-router-dom": "^7.6.3",
+    "react-scripts": "^5.0.1",
+    "recharts": "^2.15.3",
+    "schema-utils": "^4.3.2",
+    "sonner": "^2.0.3",
+    "styled-components": "^6.1.18",
+    "twin.macro": "^3.4.1",
+    "web-vitals": "^2.1.4",
+    "webpack-bundle-analyzer": "^4.10.2"
+  },
+  "scripts": {
+    "start": "PORT=3000 react-scripts start --openssl-legacy-provider",
+    "build": "react-scripts build",
+    "build:analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js",
+    "analyze": "npx webpack-bundle-analyzer build/static/js/*.js",
+    "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test:ci": "CI=true react-scripts test --coverage --watchAll=false",
+    "test:watch": "react-scripts test --watch",
+    "test:unit": "react-scripts test --testPathPattern=\"(unit|__tests__)\" --testPathIgnorePatterns=\"(integration|accessibility|visual)\" --watchAll=false",
+    "test:integration": "react-scripts test --testPathPattern=\"integration\" --watchAll=false",
+    "test:hooks": "react-scripts test --testPathPattern=\"hooks/__tests__\" --watchAll=false",
+    "test:components": "react-scripts test --testPathPattern=\"components/__tests__\" --watchAll=false",
+    "test:contexts": "react-scripts test --testPathPattern=\"contexts/__tests__\" --watchAll=false",
+    "test:accessibility": "react-scripts test --testPathPattern=\"accessibility\" --watchAll=false",
+    "test:visual": "node scripts/visual-regression.js",
+    "test:all": "node scripts/test-runner.js",
+    "test:all:parallel": "node scripts/test-runner.js --parallel",
+    "test:quick": "node scripts/test-runner.js --skip-visual --skip-coverage",
+    "test:components:watch": "react-scripts test --testPathPattern=\"components/__tests__\" --watch",
+    "test:hooks:watch": "react-scripts test --testPathPattern=\"hooks/__tests__\" --watch",
+    "test:debug": "react-scripts --inspect-brk test --runInBand --no-cache",
+    "test:update-snapshots": "react-scripts test --updateSnapshot --watchAll=false",
+    "test:clear-cache": "react-scripts test --clearCache",
+    "postinstall": "npm audit fix --legacy-peer-deps || true",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/user-event": "^14.6.1",
+    "autoprefixer": "^10.4.21",
+    "eslint-webpack-plugin": "^4.2.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest-axe": "^8.0.0",
+    "jest-environment-jsdom": "^30.0.2",
+    "jest-transform-stub": "^2.0.0",
+    "msw": "^2.0.11",
+    "postcss": "^8.5.3",
+    "puppeteer": "^21.6.1",
+    "tailwindcss": "^3.4.17",
+    "web-push": "^3.6.7"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx}",
+      "!src/index.js",
+      "!src/reportWebVitals.js",
+      "!src/serviceWorkerRegistration.js",
+      "!src/**/*.test.{js,jsx}",
+      "!src/**/__tests__/**",
+      "!src/setupTests.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 75,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  }
+}

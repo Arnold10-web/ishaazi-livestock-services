@@ -1,0 +1,65 @@
+{
+  "short_name": "Ishaazi Livestock",
+  "name": "Ishaazi Livestock Services - Online Farming Magazine",
+  "description": "Your comprehensive resource for livestock farming, news, events, and agricultural insights",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "theme_color": "#10b981",
+  "background_color": "#ffffff",
+  "categories": ["agriculture", "farming", "livestock", "news", "education"],
+  "lang": "en",
+  "scope": "/",
+  "screenshots": [
+    {
+      "src": "/images/ishaazi.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Ishaazi Livestock Services Homepage"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Latest News",
+      "short_name": "News",
+      "description": "View the latest livestock farming news",
+      "url": "/news",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Farm Blogs",
+      "short_name": "Blogs",
+      "description": "Read farming tips and insights",
+      "url": "/blogs",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Upcoming Events",
+      "short_name": "Events",
+      "description": "Find agricultural events near you",
+      "url": "/events",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ]
+}
