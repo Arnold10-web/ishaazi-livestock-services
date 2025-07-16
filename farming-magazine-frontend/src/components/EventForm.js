@@ -8,6 +8,7 @@
  * @module components/EventForm
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -109,7 +110,7 @@ const EventForm = ({ refreshEvents, editingEvent, setEditingEvent }) => {
       
       // Set rich text editor content if editor is initialized
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingEvent.description;
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingEvent.description || "");
       }
     }
   }, [editingEvent, quillEditor]);

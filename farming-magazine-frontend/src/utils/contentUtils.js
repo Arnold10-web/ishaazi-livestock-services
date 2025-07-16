@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 /**
  * Content Utilities
  * 
@@ -104,7 +106,7 @@ export const extractTextFromHTML = (html) => {
   
   // Create a temporary div to parse HTML safely
   const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
+  tempDiv.innerHTML = DOMPurify.sanitize(html);
   
   // Get text content and clean up extra whitespace
   return tempDiv.textContent || tempDiv.innerText || '';

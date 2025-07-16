@@ -8,6 +8,7 @@
  * @module components/FarmList
  */
 import React, { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -74,7 +75,7 @@ const FarmList = ({ farms = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
   const truncateDescription = (description, maxLength = 150) => {
     if (!description) return '';
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = description;
+    tempElement.innerHTML = DOMPurify.sanitize(description);
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };

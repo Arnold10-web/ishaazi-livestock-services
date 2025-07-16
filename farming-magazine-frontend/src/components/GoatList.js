@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -288,7 +289,7 @@ const GoatList = ({ goats = [], apiBaseUrl, isAdmin, onDelete, onEdit, isLoading
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
+    tempElement.innerHTML = DOMPurify.sanitize(content);
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };

@@ -9,6 +9,7 @@
  * @module components/FarmForm
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -77,7 +78,7 @@ const FarmForm = ({ refreshFarms, editingFarm, setEditingFarm }) => {
       setLocation(editingFarm.location);
       setImagePreview(editingFarm.imageUrl);
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingFarm.description;
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingFarm.description || "");
       }
     }
   }, [editingFarm, quillEditor]);

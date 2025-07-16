@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
@@ -65,7 +66,7 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
 
   const truncateContent = (content, maxLength = 150) => {
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
+    tempElement.innerHTML = DOMPurify.sanitize(content);
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
@@ -85,7 +86,7 @@ const NewsletterList = ({ newsletters, apiBaseUrl, isAdmin, onDelete, onEdit, on
       
       // Create element to check text length
       const tempElement = document.createElement('div');
-      tempElement.innerHTML = content;
+      tempElement.innerHTML = DOMPurify.sanitize(content);
       const textLength = (tempElement.textContent || tempElement.innerText).length;
       
       // If content is very long, truncate the HTML smartly

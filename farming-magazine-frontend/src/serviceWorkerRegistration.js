@@ -69,7 +69,13 @@ function registerValidSW(swUrl, config) {
                   'tabs for this page are closed. See https://cra.link/PWA.'
               );
 
-              // Execute callback
+              // Dispatch custom event instead of auto-reload
+              const event = new CustomEvent('swUpdateAvailable', {
+                detail: { registration, installingWorker }
+              });
+              window.dispatchEvent(event);
+
+              // Execute callback if provided
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
               }

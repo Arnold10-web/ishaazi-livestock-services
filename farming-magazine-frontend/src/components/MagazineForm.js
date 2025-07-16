@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -77,7 +78,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
       
       setImagePreview(editingMagazine.imageUrl);
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingMagazine.description;
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingMagazine.description || "");
       }
     }
   }, [editingMagazine, quillEditor]);
@@ -100,7 +101,7 @@ const MagazineForm = ({ refreshMagazines, editingMagazine, setEditingMagazine })
       
       // Initialize with some content to make debugging easier
       if (!editingMagazine) {
-        editor.root.innerHTML = '<p>Enter your magazine description here. This is a required field.</p>';
+        editor.root.innerHTML = DOMPurify.sanitize('<p>Enter your magazine description here. This is a required field.</p>' || "");
       }
     }
   }, [quillEditor, editingMagazine]);

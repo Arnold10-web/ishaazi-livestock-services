@@ -8,6 +8,7 @@
  * @module components/GoatForm
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -66,7 +67,7 @@ const GoatForm = ({ refreshGoats, editingGoat, setEditingGoat }) => {
       
       setImagePreview(editingGoat.imageUrl);
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingGoat.content;
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingGoat.content || "");
       }
     }
   }, [editingGoat, quillEditor]);

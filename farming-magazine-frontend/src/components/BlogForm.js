@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -79,7 +80,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
         setSummary(editingBlog.metadata.summary || '');
       }
       
-      const blogContent = editingBlog.content || '';
+      const blogContent = DOMPurify.sanitize(editingBlog.content || '');
       setContent(blogContent);
       
       if (quillEditor) {
@@ -102,7 +103,7 @@ const BlogForm = ({ refreshBlogs, editingBlog, setEditingBlog }) => {
           setSummary(savedDraft.summary || '');
           setPublished(savedDraft.published || false);
           
-          const draftContent = savedDraft.content || '';
+          const draftContent = DOMPurify.sanitize(savedDraft.content || '');
           setContent(draftContent);
           
           if (quillEditor) {

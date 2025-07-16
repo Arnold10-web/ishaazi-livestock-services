@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -65,7 +66,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
       
       // If we have editing data, populate it after editor is initialized
       if (editingNewsletter) {
-        editor.root.innerHTML = editingNewsletter.body || '';
+        editor.root.innerHTML = DOMPurify.sanitize(editingNewsletter.body || '' || "");
       }
     }
   }, [quillEditor, editingNewsletter]);
@@ -101,7 +102,7 @@ const NewsletterForm = ({ refreshNewsletters, editingNewsletter, setEditingNewsl
       // Set editor content if editor is already initialized
       if (quillEditor) {
         console.log('NewsletterForm: Setting Quill editor content');
-        quillEditor.root.innerHTML = editingNewsletter.body || '';
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingNewsletter.body || '' || "");
       } else {
         console.log('NewsletterForm: Quill editor not ready yet');
       }

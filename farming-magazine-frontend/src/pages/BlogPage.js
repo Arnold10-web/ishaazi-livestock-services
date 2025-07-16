@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Search, ArrowRight } from 'lucide-react';
@@ -102,7 +103,7 @@ const BlogPage = () => {
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
+    tempElement.innerHTML = DOMPurify.sanitize(content);
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };

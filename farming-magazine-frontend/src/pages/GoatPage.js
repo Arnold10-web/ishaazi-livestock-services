@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import { Search, Grid, List } from 'lucide-react';
 import GoatList from '../components/GoatList';
@@ -64,7 +65,7 @@ const GoatPage = () => {
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
+    tempElement.innerHTML = DOMPurify.sanitize(content);
     let text = tempElement.textContent || tempElement.innerText;
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };

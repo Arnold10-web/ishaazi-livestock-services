@@ -4,6 +4,7 @@ import {
   Edit2, Trash2, Share2, Calendar, Headphones, 
   Video, Clock, Eye, Volume2, VolumeX, SkipBack, SkipForward
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { useAlert } from '../hooks/useAlert';
 
 const BasicList = ({
@@ -135,11 +136,12 @@ const BasicList = ({
     }
   }, []);
 
-  // Strip HTML tags helper
+  // Strip HTML tags helper with sanitization
   const stripHtmlTags = useCallback((html) => {
     if (!html) return '';
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+    // Sanitize HTML content before setting innerHTML to prevent XSS
+    tempDiv.innerHTML = DOMPurify.sanitize(html);
     return tempDiv.textContent || tempDiv.innerText || '';
   }, []);
 

@@ -8,6 +8,7 @@
  * @module components/BeefForm
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -99,7 +100,7 @@ const BeefForm = ({ refreshBeefs, editingBeef, setEditingBeef }) => {
       
       // Set rich text editor content
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingBeef.content;
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingBeef.content || "");
       }
     }
   }, [editingBeef, quillEditor]);

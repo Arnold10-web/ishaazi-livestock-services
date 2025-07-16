@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 import API_ENDPOINTS from '../config/apiConfig';
 import { getAuthHeader } from '../utils/auth';
 import { useAlert } from '../hooks/useAlert';
@@ -73,7 +74,8 @@ const BasicForm = ({ refreshBasics, editingBasic, setEditingBasic }) => {
       
       setImagePreview(editingBasic.imageUrl);
       if (quillEditor) {
-        quillEditor.root.innerHTML = editingBasic.description;
+        // Sanitize content before setting innerHTML to prevent XSS
+        quillEditor.root.innerHTML = DOMPurify.sanitize(editingBasic.description || '');
       }
     }
   }, [editingBasic, quillEditor]);

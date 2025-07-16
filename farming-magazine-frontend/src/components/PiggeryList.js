@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -293,7 +294,7 @@ const PiggeryList = ({
   const truncateContent = (content, maxLength = 150) => {
     if (!content) return '';
     const tempElement = document.createElement('div');
-    tempElement.innerHTML = content;
+    tempElement.innerHTML = DOMPurify.sanitize(content);
     const textContent = tempElement.textContent || tempElement.innerText || '';
     return textContent.length > maxLength 
       ? textContent.substring(0, maxLength) + '...' 

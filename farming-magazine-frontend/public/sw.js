@@ -36,7 +36,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll(STATIC_RESOURCES);
       })
       .then(() => {
-        console.log('Service Worker: Skip waiting');
+        console.log('Service Worker: Skip waiting (auto-update)');
         return self.skipWaiting();
       })
       .catch((error) => {
