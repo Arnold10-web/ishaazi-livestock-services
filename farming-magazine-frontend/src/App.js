@@ -179,11 +179,8 @@ const App = () => {
               const newWorker = registration.installing;
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New content available, prompt user to refresh
-                  if (window.confirm('New content available! Refresh to update?')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
+                  // New content available, no prompt, no reload
+                  // Do nothing
                 }
               });
             });
@@ -194,6 +191,28 @@ const App = () => {
           });
       });
     }
+
+    // Listen for service worker update events
+    const handleServiceWorkerUpdate = (event) => {
+      const { toast } = require('sonner');
+      
+      toast('🔄 New version available!', {
+        description: 'An update is available. Refresh to get the latest version.',
+        action: {
+          label: 'Refresh',
+          onClick: () => window.location.reload()
+        },
+        duration: 10000, // Show for 10 seconds
+        position: 'top-right'
+      });
+    };
+
+    window.addEventListener('swUpdateAvailable', handleServiceWorkerUpdate);
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener('swUpdateAvailable', handleServiceWorkerUpdate);
+    };
 
     // Preload critical resources
     const criticalResources = [

@@ -31,6 +31,11 @@ export const useAlert = () => {
     // General purpose alert replacement
     show: (message, type = 'info', options = {}) => {
       showNotification(message, type, options);
+    },
+
+    // showAlert function for backward compatibility
+    showAlert: (message, type = 'info', options = {}) => {
+      showNotification(message, type, options);
     }
   };
 };

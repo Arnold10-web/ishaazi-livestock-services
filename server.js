@@ -479,6 +479,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import syndicationRoutes from './routes/syndicationRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+import pushSubscriptionRoutes from './routes/pushSubscriptionRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -495,6 +496,7 @@ app.use('/api/email', emailTestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
+app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
 
 // File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {
