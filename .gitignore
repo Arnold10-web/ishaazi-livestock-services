@@ -6,6 +6,9 @@ node_modules/
 # Frontend directory (deployed separately)
 farming-magazine-frontend/
 
+# Ignore all markdown files
+*.md
+
 # Environment files & sensitive information
 .env
 .env.local
