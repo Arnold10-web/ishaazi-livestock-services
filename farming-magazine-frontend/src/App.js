@@ -120,6 +120,7 @@ const AdminLayout = () => (
  * 
  * @returns {JSX.Element} Button component for subscribing to notifications
  */
+// eslint-disable-next-line no-unused-vars
 function PushSubscribeButton() {
   const [subscribed, setSubscribed] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -209,11 +210,6 @@ const App = () => {
 
     window.addEventListener('swUpdateAvailable', handleServiceWorkerUpdate);
 
-    // Cleanup event listener
-    return () => {
-      window.removeEventListener('swUpdateAvailable', handleServiceWorkerUpdate);
-    };
-
     // Preload critical resources
     const criticalResources = [
       '/static/css/main.css',
@@ -251,6 +247,11 @@ const App = () => {
         context: 'unhandled_promise_rejection'
       });
     });
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener('swUpdateAvailable', handleServiceWorkerUpdate);
+    };
   }, []);
 
   return (

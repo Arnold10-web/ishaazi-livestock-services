@@ -1,6 +1,6 @@
 // controllers/pushSubscriptionController.js
 import { subscribeToPush, unsubscribeFromPush } from '../services/pushNotificationService.js';
-import { logger } from '../utils/logger.js';
+import logger from '../utils/logger.js';
 
 /**
  * Subscribe to push notifications

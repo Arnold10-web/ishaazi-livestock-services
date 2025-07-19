@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to Ishaazi Livestock Services Admin Portal</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            background: #f5f5f5; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); 
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center; 
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .credentials-box { 
+            background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); 
+            padding: 25px; 
+            border-radius: 8px; 
+            border-left: 4px solid #2d5a27; 
+            margin: 20px 0; 
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+            margin: 20px 0;
+        }
+        .button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            margin: 10px 0;
+        }
+        .footer { 
+            background: #f8f9fa; 
+            padding: 30px; 
+            text-align: center; 
+            color: #666; 
+            border-top: 1px solid #e0e0e0;
+        }
+        .credentials-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        .credentials-label {
+            font-weight: bold;
+            color: #2d5a27;
+            margin-bottom: 5px;
+        }
+        .credentials-value {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="font-size: 36px; margin-bottom: 15px;">🔐</div>
+            <h1>Welcome to Admin Portal</h1>
+            <p>Your administrator account has been created</p>
+        </div>
+        <div class="content">
+            <div class="credentials-box">
+                <h2 style="color: #2d5a27; margin-bottom: 15px;">🎉 Account Created Successfully!</h2>
+                <p>Your administrator account for <strong>{{companyName}}</strong> has been created by <strong>{{createdBy}}</strong>.</p>
+                <p>You can now access the admin portal to manage content, newsletters, and system features.</p>
+            </div>
+            
+            <div class="credentials-item">
+                <div class="credentials-label">📧 Login Email:</div>
+                <div class="credentials-value">{{companyEmail}}</div>
+            </div>
+            
+            <div class="credentials-item">
+                <div class="credentials-label">🔑 Temporary Password:</div>
+                <div class="credentials-value">{{tempPassword}}</div>
+            </div>
+            
+            <div class="warning-box">
+                <h3 style="color: #f39c12; margin-bottom: 15px;">⚠️ Important Security Notice</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li><strong>Change your password immediately</strong> after first login</li>
+                    <li>This temporary password will expire in 24 hours</li>
+                    <li>Do not share these credentials with anyone</li>
+                    <li>Use a strong, unique password for your account</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{loginUrl}}" class="button">🚀 Access Admin Portal</a>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #2d5a27; margin-bottom: 15px;">📋 What You Can Do</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Create and manage newsletter content</li>
+                    <li>Send newsletters to subscribers</li>
+                    <li>Manage events and auctions</li>
+                    <li>View analytics and reports</li>
+                    <li>Update your profile and preferences</li>
+                </ul>
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #2d5a27; margin-bottom: 15px;">📞 Need Help?</h3>
+                <p>If you have any questions or need assistance:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Contact support: <a href="mailto:{{supportEmail}}" style="color: #2d5a27;">{{supportEmail}}</a></li>
+                    <li>Check the admin documentation</li>
+                    <li>Reach out to your system administrator</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <p><strong>{{companyName}}</strong></p>
+            <p>Admin Portal Access Notification</p>
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

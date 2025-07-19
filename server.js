@@ -1,3 +1,69 @@
+
+
+// Load environment variables before anything else
+import dotenv from 'dotenv';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ES modules
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = resolve(__dirname, '.env');
+
+// Load environment variables synchronously
+try {
+    const result = dotenv.config({ path: envPath });
+    if (result.error) {
+        throw result.error;
+    }
+    console.log('🔧 Environment Setup: Complete');
+} catch (error) {
+    console.error('❌ Error loading .env file:', error.message);
+    process.exit(1);
+}
+
+// Load environment variables
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+    console.error('\n❌ Error loading .env file:', result.error);
+    process.exit(1);
+}
+
+// Configure VAPID keys
+const vapidPublic = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC;
+const vapidPrivate = process.env.PUSH_NOTIFICATION_VAPID_PRIVATE;
+
+if (!vapidPublic || !vapidPrivate) {
+    // Generate and save new VAPID keys
+    const webpush = (await import('web-push')).default;
+    const vapidKeys = webpush.generateVAPIDKeys();
+    
+    // Append to .env file
+    const fs = await import('fs');
+    const newEnvContent = `\n# Push Notification VAPID Keys
+PUSH_NOTIFICATION_VAPID_PUBLIC=${vapidKeys.publicKey}
+PUSH_NOTIFICATION_VAPID_PRIVATE=${vapidKeys.privateKey}`;
+
+    fs.appendFileSync(envPath, newEnvContent);
+    
+    // Load the new environment variables
+    process.env.PUSH_NOTIFICATION_VAPID_PUBLIC = vapidKeys.publicKey;
+    process.env.PUSH_NOTIFICATION_VAPID_PRIVATE = vapidKeys.privateKey;
+    
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('ℹ️ New VAPID keys generated');
+    }
+}
+
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Environment check
+import fs from 'fs';
+if (process.env.NODE_ENV !== 'production') {
+  console.log('DEBUG: Environment setup completed');
+  console.log('DEBUG: NODE_ENV:', process.env.NODE_ENV);
+}
+
 /**
  * @file server.js
  * @description Main server entry point for the Online Farming Magazine backend.
@@ -17,14 +83,14 @@
  */
 
 import express from 'express';
-import dotenv from 'dotenv';
+
+
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+
 import { createServer } from 'http';
 import connectDB from './config/db.js';
 import upload from './middleware/fileUpload.js';
@@ -76,16 +142,7 @@ console.log('Node version:', process.version); // Log Node.js version for diagno
  * Creating __dirname equivalent for ES modules since it's not natively available
  * This enables path operations consistent with CommonJS patterns
  */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/**
- * Environment configuration
- * 
- * Loads variables from .env file into process.env
- * Critical for configuration management across environments
- */
-dotenv.config();
+// __dirname and envPath are already defined at the top of the file
 
 /**
  * Application initialization
@@ -390,7 +447,7 @@ app.get('/uploads/media/:filename', (req, res) => {
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
       const chunkSize = (end - start) + 1;
       
-      console.log(`Range request: ${start}-${end}/${fileSize}`);
+      // Range request is being processed
       
       // Set response headers for partial content
       res.writeHead(206, {
@@ -646,11 +703,7 @@ async function startServer() {
     
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://127.0.0.1:${PORT}`);
-      console.log(`📊 Health check available at http://127.0.0.1:${PORT}/api/health`);
-      console.log(`📈 Metrics available at http://127.0.0.1:${PORT}/api/metrics`);
-      console.log(`🔌 WebSocket notifications available at ws://127.0.0.1:${PORT}/ws/notifications`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
+      console.log(`🚀 Server started successfully in ${process.env.NODE_ENV} mode`);
       
       // Log startup performance
       logger.info('Server started successfully', {

@@ -56,7 +56,7 @@ export const NotificationProvider = ({ children }) => {
         // Subscribe to push notifications
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: process.env.REACT_APP_VAPID_PUBLIC_KEY
+          applicationServerKey: process.env.REACT_APP_PUSH_NOTIFICATION_VAPID_PUBLIC
         });
 
         // Send subscription to server

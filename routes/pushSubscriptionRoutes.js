@@ -5,7 +5,7 @@ import {
   unsubscribeFromPushNotifications, 
   getSubscriptionStatus 
 } from '../controllers/pushSubscriptionController.js';
-import { rateLimiter } from '../middleware/rateLimiter.js';
+import { subscriptionRateLimiter, unsubscribeRateLimiter, generalRateLimiter } from '../middleware/rateLimiter.js';
 import { validateSubscriptionData } from '../middleware/validateSubscriptionData.js';
 
 const router = express.Router();
@@ -15,21 +15,21 @@ const router = express.Router();
  * @desc    Subscribe to push notifications
  * @access  Public
  */
-router.post('/subscribe', rateLimiter, validateSubscriptionData, subscribeToPushNotifications);
+router.post('/subscribe', subscriptionRateLimiter, validateSubscriptionData, subscribeToPushNotifications);
 
 /**
  * @route   POST /api/push-notifications/unsubscribe
  * @desc    Unsubscribe from push notifications
  * @access  Public
  */
-router.post('/unsubscribe', rateLimiter, unsubscribeFromPushNotifications);
+router.post('/unsubscribe', unsubscribeRateLimiter, unsubscribeFromPushNotifications);
 
 /**
  * @route   GET /api/push-notifications/status
  * @desc    Check subscription status
  * @access  Public
  */
-router.get('/status', rateLimiter, getSubscriptionStatus);
+router.get('/status', generalRateLimiter, getSubscriptionStatus);
 
 /**
  * @route   GET /api/push-notifications/vapid-key
@@ -37,12 +37,12 @@ router.get('/status', rateLimiter, getSubscriptionStatus);
  * @access  Public
  */
 router.get('/vapid-key', (req, res) => {
-  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+  const vapidPublicKey = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC;
   
   if (!vapidPublicKey) {
     return res.status(500).json({
       success: false,
-      message: 'VAPID public key not configured'
+      message: 'PUSH_NOTIFICATION_VAPID_PUBLIC key not configured in environment'
     });
   }
   

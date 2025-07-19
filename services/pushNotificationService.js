@@ -12,17 +12,64 @@
  */
 import webpush from 'web-push';
 import Subscriber from '../models/Subscriber.js';
+import dotenv from 'dotenv';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = resolve(__dirname, '..', '.env');
+
+// Ensure environment variables are loaded
+dotenv.config({ path: envPath });
 
 /**
  * Configure web-push library with Voluntary Application Server Identification (VAPID) keys
  * VAPID keys provide a way to identify the application server to push services
  * and associate pushes with a specific application
  */
-webpush.setVapidDetails(
-  'mailto:' + (process.env.EMAIL_USER || 'your-email@example.com'),
-  process.env.PUSH_NOTIFICATION_VAPID_PUBLIC || '',
-  process.env.PUSH_NOTIFICATION_VAPID_PRIVATE || ''
-);
+
+// Load and validate VAPID keys with retries
+const getVapidKeys = (retryCount = 0) => {
+    const vapidPublic = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC?.trim();
+    const vapidPrivate = process.env.PUSH_NOTIFICATION_VAPID_PRIVATE?.trim();
+    const emailContact = process.env.EMAIL_USER?.trim() || 'your-email@example.com';
+
+    // Debug logging for VAPID configuration
+    console.log('\n📨 Push Notification Configuration:');
+    console.log('- EMAIL_USER:', emailContact ? '[SET]' : '[NOT SET]');
+    console.log('- PUSH_NOTIFICATION_VAPID_PUBLIC:', vapidPublic ? '[SET]' : '[NOT SET]');
+    console.log('- PUSH_NOTIFICATION_VAPID_PRIVATE:', vapidPrivate ? '[SET]' : '[NOT SET]');
+
+    return { vapidPublic, vapidPrivate, emailContact };
+};
+
+// Get initial VAPID configuration
+const { vapidPublic, vapidPrivate, emailContact } = getVapidKeys();
+
+// Enhanced validation
+const missingKeys = [];
+if (!vapidPublic) missingKeys.push('PUSH_NOTIFICATION_VAPID_PUBLIC');
+if (!vapidPrivate) missingKeys.push('PUSH_NOTIFICATION_VAPID_PRIVATE');
+
+if (missingKeys.length > 0) {
+  const errorMsg = `Missing required VAPID keys: ${missingKeys.join(', ')}.\n` +
+    'Please ensure these are set in your .env file and the environment is properly loaded.\n' +
+    'You may need to restart your server after updating the .env file.';
+  console.error('\x1b[31m%s\x1b[0m', errorMsg); // Red error text
+  throw new Error(errorMsg);
+}
+
+try {
+  webpush.setVapidDetails(
+    `mailto:${emailContact}`,
+    vapidPublic,
+    vapidPrivate
+  );
+  console.log('\x1b[32m%s\x1b[0m', 'VAPID configuration successful!'); // Green success text
+} catch (error) {
+  console.error('\x1b[31m%s\x1b[0m', 'Failed to configure VAPID:', error.message);
+  throw error;
+}
 
 /**
  * Send a push notification to a single subscriber

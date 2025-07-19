@@ -1,6 +1,6 @@
 // Utility for subscribing to web push notifications
-// Replace with your actual VAPID public key (from your backend or push service)
-const VAPID_PUBLIC_KEY = 'YOUR_PUBLIC_VAPID_KEY_HERE';
+// Get VAPID public key from environment variable
+const VAPID_PUBLIC_KEY = process.env.REACT_APP_PUSH_NOTIFICATION_VAPID_PUBLIC;
 
 // Convert base64 public key to Uint8Array
 function urlBase64ToUint8Array(base64String) {
