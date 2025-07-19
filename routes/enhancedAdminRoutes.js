@@ -15,7 +15,8 @@ import {
     getAdminProfile,
     updateAdminProfile,
     changePassword,
-    checkAuth
+    checkAuth,
+    createAdminUser
 } from '../controllers/enhancedAdminController.js';
 
 // Import the original dashboard controller for comprehensive stats
@@ -182,11 +183,9 @@ router.post('/dashboard/reset-dev-views', authenticateToken, requireSystemAdmin,
  * @access Private (System Admin Only)
  */
 router.post('/users/create-editor', 
-    authenticateToken, 
     requireSystemAdmin, 
-    logActivity('user_created', 'user'), 
-    createEditor
-);
+    logActivity('editor_created', 'user'), 
+    createAdminUser);
 
 /**
  * @route POST /api/admin/users

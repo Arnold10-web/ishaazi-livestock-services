@@ -21,14 +21,6 @@ try {
     process.exit(1);
 }
 
-// Load environment variables
-const result = dotenv.config({ path: envPath });
-
-if (result.error) {
-    console.error('\n❌ Error loading .env file:', result.error);
-    process.exit(1);
-}
-
 // Configure VAPID keys
 const vapidPublic = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC;
 const vapidPrivate = process.env.PUSH_NOTIFICATION_VAPID_PRIVATE;
@@ -537,6 +529,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import syndicationRoutes from './routes/syndicationRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import pushSubscriptionRoutes from './routes/pushSubscriptionRoutes.js';
+import passwordSetupRoutes from './routes/passwordSetupRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -554,6 +547,15 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
+// Password-specific rate limiter
+const passwordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // More restrictive for password operations
+  message: 'Too many password attempts, please try again later.',
+  skipSuccessfulRequests: true
+});
+
+app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
 
 // File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {

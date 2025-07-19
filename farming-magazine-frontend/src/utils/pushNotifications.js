@@ -2,6 +2,10 @@
 // Get VAPID public key from environment variable
 const VAPID_PUBLIC_KEY = process.env.REACT_APP_PUSH_NOTIFICATION_VAPID_PUBLIC;
 
+if (!VAPID_PUBLIC_KEY) {
+  throw new Error('REACT_APP_PUSH_NOTIFICATION_VAPID_PUBLIC environment variable is required');
+}
+
 // Convert base64 public key to Uint8Array
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);

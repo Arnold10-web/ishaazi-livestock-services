@@ -49,10 +49,54 @@ export const authenticateToken = async (req, res, next) => {
                 status: 'failure',
                 severity: 3
             });
-            
-            return res.status(401).json({
+            return res.status(401).json({ 
                 success: false,
-                message: 'Invalid token: User not found'
+                message: 'Invalid token - User not found' 
+            });
+        }
+
+        // Validate editor role requirements
+        if ((user.role === 'editor' || user.role === 'admin') && !user.companyEmail) {
+            await ActivityLog.logActivity({
+                userId: user._id,
+                username: getUserIdentifier(user),
+                userRole: user.role,
+                action: 'login_failed',
+                resource: 'authentication',
+                details: { 
+                    errorMessage: 'Editor account requires company email',
+                    method: req.method, 
+                    path: req.path 
+                },
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                status: 'failure',
+                severity: 3
+            });
+            return res.status(403).json({
+                success: false,
+                message: 'Editor account requires company email'
+            });
+        }
+
+        // Check if user needs to set up password (skip for password setup routes)
+        if (!user.hasSetPassword && !req.path.startsWith('/password/setup')) {
+            await ActivityLog.logActivity({
+                userId: user._id,
+                username: getUserIdentifier(user),
+                userRole: user.role,
+                action: 'password_setup_required',
+                resource: 'authentication',
+                details: { method: req.method, path: req.path },
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                status: 'warning',
+                severity: 2
+            });
+            return res.status(403).json({
+                success: false,
+                message: 'Password setup required',
+                requiresPasswordSetup: true
             });
         }
 
@@ -126,7 +170,7 @@ export const requireRole = (allowedRoles = []) => {
         if (!normalizedAllowedRoles.includes(userRole)) {
             await ActivityLog.logActivity({
                 userId: req.user._id,
-                username: req.user.username || req.user.email || req.user.companyEmail,
+                username: getUserIdentifier(req.user),
                 userRole: req.user.role,
                 action: 'api_access',
                 resource: 'authorization',
@@ -187,7 +231,7 @@ export const logActivity = (action, resource) => {
                 try {
                     await ActivityLog.logActivity({
                         userId: req.user?._id,
-                        username: req.user?.username || req.user?.email || req.user?.companyEmail || 'Anonymous',
+                        username: req.user ? getUserIdentifier(req.user) : 'Anonymous',
                         userRole: req.user?.role || 'unknown',
                         action,
                         resource,
@@ -242,6 +286,23 @@ function getSeverityFromStatusCode(statusCode) {
 }
 
 /**
+ * Helper function to get consistent user identifier based on role and available fields
+ */
+function getUserIdentifier(user) {
+    if (!user) return 'Unknown';
+    
+    if (user.role === 'system_admin' || user.role === 'superadmin') {
+        return user.username || 'System Admin';
+    }
+    
+    if (user.role === 'editor' || user.role === 'admin') {
+        return user.companyEmail || 'Editor (No Company Email)';
+    }
+    
+    return user.email || user.companyEmail || user.username || 'Unknown User';
+}
+
+/**
  * Helper function to sanitize objects for logging (remove sensitive data)
  */
 function sanitizeObject(obj) {
@@ -273,7 +334,7 @@ export const trackLogin = async (req, res, next) => {
             
             await ActivityLog.logActivity({
                 userId: req.user._id,
-                username: req.user.username || req.user.email || req.user.companyEmail,
+                username: getUserIdentifier(req.user),
                 userRole: req.user.role,
                 action: 'login',
                 resource: 'authentication',

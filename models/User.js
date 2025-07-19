@@ -16,6 +16,26 @@ import bcrypt from 'bcryptjs';
  * @description Enhanced schema for dual-role admin system
  */
 const UserSchema = new mongoose.Schema({
+    // Session Management
+    sessions: [{
+        token: String,
+        deviceInfo: Object,
+        createdAt: Date,
+        lastActivity: Date
+    }],
+
+    // Security Management
+    loginAttempts: [{
+        timestamp: Date,
+        success: Boolean,
+        ip: String,
+        userAgent: String
+    }],
+    accountLocked: { type: Boolean, default: false },
+    lockedUntil: Date,
+    passwordHistory: [String], // Store last 5 password hashes
+    knownIPs: [String],
+    lastLoginAt: Date,
     /**
      * @property {String} username - Unique username for system_admin role only
      */
@@ -26,11 +46,21 @@ const UserSchema = new mongoose.Schema({
         required: function() { return this.role === 'system_admin'; },
         trim: true,
         minlength: 3,
-        maxlength: 30
+        maxlength: 30,
+        validate: {
+            validator: function(v) {
+                // Username is only required for system_admin
+                if (this.role === 'system_admin' && !v) {
+                    return false;
+                }
+                return true;
+            },
+            message: 'System admin must have a username'
+        }
     },
     
     /**
-     * @property {String} email - General email field (optional for system_admin, for backward compatibility)
+     * @property {String} email - General email field (optional for system_admin)
      */
     email: { 
         type: String, 
@@ -38,13 +68,46 @@ const UserSchema = new mongoose.Schema({
         sparse: true,
         trim: true,
         lowercase: true,
-        required: false, // Optional for all users, especially system_admin
+        required: false,
         validate: {
             validator: function(v) {
                 return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
             },
             message: 'Please enter a valid email address'
         }
+    },
+
+    /**
+     * @property {String} companyEmail - Required for editor role
+     */
+    companyEmail: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+        lowercase: true,
+        required: function() {
+            return this.role === 'editor' || this.role === 'admin';
+        },
+        validate: {
+            validator: function(v) {
+                // Company email is required for editors and admins
+                if ((this.role === 'editor' || this.role === 'admin') && !v) {
+                    return false;
+                }
+                // If provided, must be a valid email
+                return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+            },
+            message: 'Editor/Admin must have a valid company email address'
+        }
+    },
+    
+    /**
+     * @property {Boolean} hasSetPassword - Indicates if the user has set their permanent password
+     */
+    hasSetPassword: {
+        type: Boolean,
+        default: false
     },
     
     /**
@@ -396,6 +459,66 @@ UserSchema.index({ isActive: 1 });
 UserSchema.index({ createdAt: 1 });
 UserSchema.index({ 'loginHistory.timestamp': -1 });
 UserSchema.index({ lastLogin: -1 });
+
+// Pre-save middleware to validate role-specific requirements
+UserSchema.pre('save', function(next) {
+    // System Admin validation
+    if (this.role === 'system_admin' || this.role === 'superadmin') {
+        if (!this.username) {
+            return next(new Error('System admin must have a username'));
+        }
+        // Company email is not required for system admin
+    }
+    
+    // Editor validation
+    if (this.role === 'editor' || this.role === 'admin') {
+        if (!this.companyEmail) {
+            return next(new Error('Editor/Admin must have a company email'));
+        }
+    }
+
+    next();
+});
+
+// Static method to create a system admin
+UserSchema.statics.createSystemAdmin = async function(userData) {
+    const user = new this({
+        ...userData,
+        role: 'system_admin'
+    });
+    await user.save();
+    return user;
+};
+
+// Static method to create an editor
+UserSchema.statics.createEditor = async function(userData) {
+    if (!userData.companyEmail) {
+        throw new Error('Company email is required for editor accounts');
+    }
+    const user = new this({
+        ...userData,
+        role: 'editor'
+    });
+    await user.save();
+    return user;
+};
+
+// Method to validate role-specific requirements
+UserSchema.methods.validateRoleRequirements = function() {
+    if (this.role === 'system_admin' || this.role === 'superadmin') {
+        if (!this.username) {
+            throw new Error('System admin must have a username');
+        }
+    }
+    
+    if (this.role === 'editor' || this.role === 'admin') {
+        if (!this.companyEmail) {
+            throw new Error('Editor/Admin must have a company email');
+        }
+    }
+    
+    return true;
+};
 
 const User = mongoose.model('User', UserSchema);
 

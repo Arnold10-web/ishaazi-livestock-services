@@ -6,7 +6,14 @@
 
 import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
+import { createPasswordSetupToken, generatePasswordSetupLink } from './passwordSetupController.js';
+import { sendEmail } from '../services/emailService.js';
 import jwt from 'jsonwebtoken';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Enhanced login supporting both username and email authentication
@@ -554,6 +561,158 @@ export const checkAuth = async (req, res) => {
 };
 
 // Legacy functions for backward compatibility
+
+/**
+ * Create a new admin user with enhanced validation and security
+ */
+export const createAdminUser = async (req, res) => {
+    const requestId = req.id;
+    logger.info(`Starting admin user creation process`, { requestId });
+    
+    try {
+        // Schema validation using Joi (handled by middleware)
+        await validateSchema(adminUserSchema)(req, res, () => {});
+        
+        // Validate and sanitize input
+        const validation = validateAndSanitizeAdminUser(req.body);
+        if (!validation.isValid) {
+            logger.warn('Validation failed for admin user creation', { 
+                requestId, 
+                errors: validation.errors 
+            });
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: validation.errors 
+            });
+        }
+        
+        const { email, firstName, lastName, companyName } = validation.sanitized;
+
+        // Check if user already exists
+        let user = await User.findOne({ email });
+        if (user) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+
+        // Create user without password
+        user = new User({
+            email,
+            firstName,
+            lastName,
+            companyName,
+            role: 'admin',
+            hasSetPassword: false
+        });
+        await user.save();
+
+        // Generate password setup token and link
+        const setupToken = await createPasswordSetupToken(user._id);
+        const passwordSetupLink = generatePasswordSetupLink(setupToken);
+
+        // Read email template
+        const templatePath = path.join(process.env.EMAIL_TEMPLATES_PATH || path.join(__dirname, '../templates/email'), 'welcome-admin.html');
+        
+        let emailTemplate;
+        try {
+            emailTemplate = await fs.readFile(templatePath, 'utf8');
+        } catch (error) {
+            console.error('Error reading email template:', error);
+            throw new Error('Failed to load email template');
+        }
+
+        // Sanitize and validate environment variables
+        if (!process.env.SUPPORT_EMAIL) {
+            throw new Error('SUPPORT_EMAIL environment variable is not configured');
+        }
+        if (!process.env.FRONTEND_URL) {
+            throw new Error('FRONTEND_URL environment variable is not configured');
+        }
+
+        // Replace template variables with sanitized values
+        emailTemplate = emailTemplate
+            .replace('{{companyName}}', (companyName || '').trim())
+            .replace('{{companyEmail}}', email.trim())
+            .replace(
+                '{{createdBy}}',
+                req.user ? `${req.user.firstName.trim()} ${req.user.lastName.trim()}` : 'System Admin'
+            )
+            .replace('{{passwordSetupLink}}', passwordSetupLink)
+            .replace('{{supportEmail}}', process.env.SUPPORT_EMAIL.trim())
+            .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/login`);
+
+        // Queue welcome email with high priority
+        await queueEmail({
+            to: email,
+            subject: 'Welcome to Ishaazi Livestock Services Admin Portal',
+            html: emailTemplate,
+            priority: 'high',
+            metadata: {
+                userId: user._id,
+                type: 'admin_welcome',
+                requestId
+            }
+        });
+
+        logger.info('Admin user created successfully', { 
+            requestId, 
+            userId: user._id 
+        });
+
+        // Cache the new user data
+        await cache.set(`user:${user._id}`, {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            companyName: user.companyName
+        }, 3600); // Cache for 1 hour
+
+        res.status(201).json({
+            message: 'Admin user created successfully',
+            user: {
+                id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                companyName: user.companyName
+            }
+        });
+    } catch (error) {
+        logger.error('Error creating admin user:', { 
+            requestId, 
+            error: error.message 
+        });
+        
+        // Handle specific error types
+        if (error.message === 'Failed to load email template') {
+            return res.status(500).json({ 
+                message: 'Server configuration error',
+                error: 'Email template not found'
+            });
+        }
+        
+        if (error.message.includes('environment variable')) {
+            return res.status(500).json({ 
+                message: 'Server configuration error',
+                error: error.message
+            });
+        }
+
+        // Handle database errors
+        if (error.name === 'MongoError' || error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                message: 'Invalid data provided',
+                error: error.message
+            });
+        }
+
+        // Generic error response
+        res.status(500).json({ 
+            message: 'Error creating admin user',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        });
+    }
+};
 export { loginAdmin as login };
 export { registerAdmin as register };
 export { logoutAdmin as logout };

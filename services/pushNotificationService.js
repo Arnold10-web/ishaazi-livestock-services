@@ -29,10 +29,10 @@ dotenv.config({ path: envPath });
  */
 
 // Load and validate VAPID keys with retries
-const getVapidKeys = (retryCount = 0) => {
+const getVapidKeys = () => {
     const vapidPublic = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC?.trim();
     const vapidPrivate = process.env.PUSH_NOTIFICATION_VAPID_PRIVATE?.trim();
-    const emailContact = process.env.EMAIL_USER?.trim() || 'your-email@example.com';
+    const emailContact = process.env.EMAIL_USER?.trim();
 
     // Debug logging for VAPID configuration
     console.log('\n📨 Push Notification Configuration:');
@@ -48,8 +48,9 @@ const { vapidPublic, vapidPrivate, emailContact } = getVapidKeys();
 
 // Enhanced validation
 const missingKeys = [];
-if (!vapidPublic) missingKeys.push('PUSH_NOTIFICATION_VAPID_PUBLIC');
-if (!vapidPrivate) missingKeys.push('PUSH_NOTIFICATION_VAPID_PRIVATE');
+if (!vapidPublic)   missingKeys.push('PUSH_NOTIFICATION_VAPID_PUBLIC');
+if (!vapidPrivate)  missingKeys.push('PUSH_NOTIFICATION_VAPID_PRIVATE');
+if (!emailContact)  missingKeys.push('EMAIL_USER');
 
 if (missingKeys.length > 0) {
   const errorMsg = `Missing required VAPID keys: ${missingKeys.join(', ')}.\n` +
