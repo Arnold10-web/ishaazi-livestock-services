@@ -6,9 +6,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure logs directory exists
+// Ensure logs directory exists (only for development)
 const logsDir = path.join(__dirname, '..', 'logs');
-if (!fs.existsSync(logsDir)) {
+if (process.env.NODE_ENV !== 'production' && !fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
@@ -33,37 +33,43 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
-  transports: [
-    // Error logs
-    new winston.transports.File({
-      filename: path.join(logsDir, 'error.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    
-    // Security logs
-    new winston.transports.File({
-      filename: path.join(logsDir, 'security.log'),
-      level: 'warn',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    
-    // Combined logs
-    new winston.transports.File({
-      filename: path.join(logsDir, 'combined.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    })
-  ]
+  transports: []
 });
 
-// Add console transport for development
-if (process.env.NODE_ENV !== 'production') {
+// In production (Railway), only use console logging
+// Railway captures console output for log viewing
+if (process.env.NODE_ENV === 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+} else {
+  // Development: use both file and console logging
+  logger.add(new winston.transports.File({
+    filename: path.join(logsDir, 'error.log'),
+    level: 'error',
+    maxsize: 5242880, // 5MB
+    maxFiles: 5,
+    tailable: true
+  }));
+  
+  logger.add(new winston.transports.File({
+    filename: path.join(logsDir, 'security.log'),
+    level: 'warn',
+    maxsize: 5242880, // 5MB
+    maxFiles: 5,
+    tailable: true
+  }));
+  
+  logger.add(new winston.transports.File({
+    filename: path.join(logsDir, 'combined.log'),
+    maxsize: 5242880, // 5MB
+    maxFiles: 5,
+    tailable: true
+  }));
+  
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
