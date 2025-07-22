@@ -105,8 +105,9 @@ const auctionSchema = new mongoose.Schema({
     enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
     default: 'upcoming'
   },
-  imageUrl: {
-    type: String,
+  image: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'fs.files',
     default: null
   },
   published: {

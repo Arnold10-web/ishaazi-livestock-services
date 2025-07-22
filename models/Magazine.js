@@ -25,6 +25,16 @@ const magazineSchema = new mongoose.Schema(
      * @property {String} description - Summary or table of contents for the issue
      */
     description: { type: String, required: true },
+
+    /**
+     * @property {mongoose.Types.ObjectId} coverImage - GridFS ID of the magazine cover image
+     */
+    coverImage: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', default: null },
+
+    /**
+     * @property {mongoose.Types.ObjectId} pdf - GridFS ID of the magazine PDF file
+     */
+    pdf: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', required: true },
     
     /**
      * @property {String} issue - Unique identifier for the issue (e.g., "June 2025")
@@ -42,14 +52,14 @@ const magazineSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     
     /**
-     * @property {String} imageUrl - URL to the magazine cover image
+     * @property {ObjectId} image - GridFS file ID for the magazine cover image
      */
-    imageUrl: { type: String, default: null },
+    image: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', default: null },
     
     /**
-     * @property {String} fileUrl - URL to the downloadable magazine PDF
+     * @property {ObjectId} file - GridFS file ID for the downloadable magazine PDF
      */
-    fileUrl: { type: String, required: true },
+    file: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', required: true },
     
     /**
      * @property {String} author - Author or editor of the magazine issue

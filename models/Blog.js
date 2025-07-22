@@ -14,7 +14,7 @@ import mongoose from 'mongoose';
  * @typedef {Object} BlogSchema
  * @property {string} title - Blog post title
  * @property {string} content - Blog post content, typically HTML from rich text editor
- * @property {string} [imageUrl] - URL to the featured image
+ * @property {mongoose.Types.ObjectId} [image] - GridFS ID of the featured image
  * @property {Object} [metadata] - Additional metadata like author, keywords, SEO content
  * @property {boolean} [published=true] - Whether the blog is publicly visible
  * @property {Date} [publishedAt] - Date when blog was first published
@@ -33,7 +33,7 @@ const blogSchema = new mongoose.Schema(
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, required: true },
-    imageUrl: { type: String, default: null },
+    image: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', default: null },
     metadata: { type: Object },
     published: { type: Boolean, default: true },
     publishedAt: { type: Date },

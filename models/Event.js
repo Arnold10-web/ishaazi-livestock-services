@@ -21,7 +21,7 @@ import mongoose from 'mongoose';
  * @property {Date} startDate - When the event begins (required)
  * @property {Date} endDate - When the event ends (optional)
  * @property {String} location - Physical or virtual location of the event
- * @property {String} imageUrl - Featured image for the event
+ * @property {ObjectId} image - GridFS file ID for the event's featured image
  * @property {Object} metadata - Additional structured event data (speakers, agenda, etc.)
  * @property {Boolean} published - Whether the event is visible to users (default: true)
  * @property {Date} publishedAt - When the event was first published
@@ -34,7 +34,7 @@ const eventSchema = new mongoose.Schema(
     startDate: { type: Date, required: true },
     endDate: { type: Date },
     location: { type: String },
-    imageUrl: { type: String, default: null },
+    image: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', default: null },
     metadata: { type: Object },
     published: { type: Boolean, default: true },
     publishedAt: { type: Date },

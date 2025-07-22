@@ -46,6 +46,11 @@ const newsSchema = new mongoose.Schema(
      * @property {Array<String>} tags - Keywords for article searchability and filtering
      */
     tags: [{ type: String }],
+
+    /**
+     * @property {mongoose.Types.ObjectId} image - GridFS ID of the article's featured image
+     */
+    image: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files', default: null },
     
     /**
      * @property {String} imageUrl - URL to the article's primary image

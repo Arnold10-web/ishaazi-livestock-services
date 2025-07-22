@@ -11,8 +11,77 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import mongoose from 'mongoose';
 import Blog from '../models/Blog.js';
 import Event from '../models/Event.js';
+import EventRegistration from '../models/EventRegistration.js';
+import News from '../models/News.js';
+import Basic from '../models/Basic.js';
+import Farm from '../models/Farm.js';
+import Magazine from '../models/Magazine.js';
+import Dairy from '../models/Dairy.js';
+import Goat from '../models/Goat.js';
+import Piggery from '../models/Piggery.js';
+import Beef from '../models/Beef.js';
+import Auction from '../models/Auction.js';
+import Newsletter from '../models/Newsletter.js';
+import Subscriber from '../models/Subscriber.js';
+import User from '../models/User.js';
+import nodemailer from 'nodemailer';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
+
+/**
+ * Define __dirname manually for ES modules
+ * ES modules don't have access to __dirname, so we need to create it from import.meta.url
+ */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * Normalize file paths relative to the project root
+ * 
+ * @param {string} filePath - Path relative to project root (starting with /)
+ * @returns {string} Absolute normalized path
+ */
+const normalizePath = (filePath) => path.resolve(__dirname, `..${filePath}`);
+
+/**
+ * GridFS utility functions for file operations
+ */
+
+// Get or create GridFS bucket instance
+const getGridFSBucket = () => {
+    return new mongoose.mongo.GridFSBucket(mongoose.connection.db);
+};
+
+/**
+ * Clean up a file from GridFS
+ * @param {string} fileId - The ID of the file to delete
+ */
+const cleanupGridFSFile = async (fileId) => {
+    if (!fileId) return;
+    
+    try {
+        const bucket = getGridFSBucket();
+        await bucket.delete(new mongoose.Types.ObjectId(fileId));
+    } catch (error) {
+        console.error('Error cleaning up file from GridFS:', error);
+        // Don't throw error to prevent blocking operations
+    }
+};
+
+/**
+ * Update a file in GridFS - removes old file and returns new file ID
+ * @param {string} oldFileId - The ID of the existing file
+ * @param {string} newFileId - The ID of the new file
+ * @returns {string} The new file ID
+ */
+const updateGridFSFile = async (oldFileId, newFileId) => {
+    if (oldFileId && newFileId && oldFileId !== newFileId) {
+        await cleanupGridFSFile(oldFileId);
+    }
+    return newFileId || oldFileId;
+};
 import EventRegistration from '../models/EventRegistration.js';
 import News from '../models/News.js';
 import Basic from '../models/Basic.js';
@@ -31,19 +100,31 @@ import nodemailer from 'nodemailer';
 import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
 
 /**
- * Define __dirname manually for ES modules
- * ES modules don't have access to __dirname, so we need to create it from import.meta.url
+ * Handle file cleanup in GridFS
+ * @param {string} fileId - GridFS file ID to delete
  */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const cleanupFile = async (fileId) => {
+    if (!fileId) return;
+    try {
+        const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db);
+        await bucket.delete(new mongoose.Types.ObjectId(fileId));
+    } catch (error) {
+        console.error('Error cleaning up file:', error);
+    }
+};
 
 /**
- * Normalize file paths relative to the project root
- * 
- * @param {string} filePath - Path relative to project root (starting with /)
- * @returns {string} Absolute normalized path
+ * Update file in GridFS
+ * @param {string} oldFileId - Existing file ID to replace
+ * @param {string} newFileId - New file ID
+ * @returns {string} New file ID
  */
-const normalizePath = (filePath) => path.resolve(__dirname, `..${filePath}`);
+const updateFile = async (oldFileId, newFileId) => {
+    if (oldFileId && newFileId) {
+        await cleanupFile(oldFileId);
+    }
+    return newFileId || oldFileId;
+};
 
 /**
  * Parse and validate metadata JSON 
@@ -338,14 +419,22 @@ export const createBlog = async (req, res) => {
       return sendResponse(res, false, 'Title, content, and author are required.');
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      // Construct the relative path
-      imageUrl = `/uploads/images/${req.file.filename}`;
-      console.log('🔍 DEBUG: Image URL:', imageUrl);
+      imageUrl = req.file.id; // Store GridFS file ID
+      console.log('🔍 DEBUG: Stored file ID:', imageUrl);
     }
 
     console.log('🔍 DEBUG: Parsing metadata...');
     let parsedMetadata = {};
+
+    // Setup error handler to cleanup file if blog creation fails
+    const handleError = async (error) => {
+      if (imageUrl) {
+        await cleanupGridFSFile(imageUrl);
+      }
+      return sendResponse(res, false, 'Failed to create blog', null, error.message);
+    };
     try {
       parsedMetadata = parseMetadata(metadata);
     } catch (e) {
@@ -385,10 +474,17 @@ export const createBlog = async (req, res) => {
       author,
       category: category || 'General',
       tags: parsedTags,
-      imageUrl,
+      image: imageUrl, // Store GridFS file ID in image field
       metadata: parsedMetadata,
       published: published === 'true' || published === true || published === "true"
     });
+
+    try {
+      await newBlog.save();
+      return sendResponse(res, true, 'Blog created successfully', newBlog);
+    } catch (error) {
+      return handleError(error);
+    }
 
     console.log('🔍 DEBUG: Blog instance created, attempting to save...');
     const savedBlog = await newBlog.save();
@@ -497,6 +593,22 @@ export const updateBlog = async (req, res) => {
     
     console.log('Request body:', req.body);
     
+    // Find existing blog to get current image
+    const existingBlog = await Blog.findById(id);
+    if (!existingBlog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blog not found'
+      });
+    }
+    
+    // Handle file update if new file uploaded
+    let imageUrl = existingBlog.image;
+    if (req.file) {
+      // Update file in GridFS and get new file ID
+      imageUrl = await updateFile(existingBlog.image, req.file.id);
+    }
+    
     // Parse metadata if it's a string
     let parsedMetadata = {};
     try {
@@ -576,9 +688,9 @@ export const updateBlog = async (req, res) => {
       updateData.published = published === 'true' || published === true;
     }
 
-    if (req.file) {
-      // Construct the relative path
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+    // Set the GridFS file ID for the image field
+    if (imageUrl) {
+      updateData.image = imageUrl;
     }
 
     const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, { new: true });
@@ -610,12 +722,9 @@ export const deleteBlog = async (req, res) => {
       return res.status(404).json({ message: 'Blog not found' });
     }
 
-    // Delete the associated image file if it exists
-    if (blog.imageUrl) {
-      const imagePath = path.join(__dirname, '..', blog.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated file from GridFS if it exists
+    if (blog.image) {
+      await cleanupFile(blog.image);
     }
 
     // Delete the blog from the database
@@ -631,16 +740,24 @@ export const deleteBlog = async (req, res) => {
 export const createNews = async (req, res) => {
   try {
     const { title, content, author, category, tags, metadata, published, featured, isBreaking } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !content) {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      // Construct the relative path
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
+
+    // Setup error handler to cleanup file if news creation fails
+    const handleError = async (error) => {
+      if (imageId) {
+        await cleanupGridFSFile(imageId);
+      }
+      return sendResponse(res, false, 'Failed to create news', null, error.message, 500);
+    };
 
     // Parse metadata (check if it's already an object or needs parsing)
     let parsedMetadata = {};
@@ -678,15 +795,19 @@ export const createNews = async (req, res) => {
       author: author || '',
       category: category || 'general',
       tags: parsedTags,
-      imageUrl,
+      image: imageId, // Store GridFS file ID instead of imageUrl
       metadata: parsedMetadata,
       published: published === 'true' || published === true,
       featured: featured === 'true' || featured === true,
       isBreaking: isBreaking === 'true' || isBreaking === true
     });
 
-    const savedNews = await newNews.save();
-    sendResponse(res, true, 'News created successfully', savedNews, null, 201);
+    try {
+      const savedNews = await newNews.save();
+      sendResponse(res, true, 'News created successfully', savedNews, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating news:', error);
     sendResponse(res, false, 'Failed to create news', null, error.message, 500);
@@ -758,22 +879,33 @@ export const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, metadata, published, isBreaking } = req.body;
+    
+    const existingNews = await News.findById(id);
+    if (!existingNews) {
+      return sendResponse(res, false, 'News not found', null, null, 404);
+    }
+
+    let imageId = existingNews.image;
+    
+    // Handle new file upload
+    if (req.file) {
+      imageId = await updateGridFSFile(existingNews.image, req.file.id);
+    }
+
     let updateData = { 
       title, 
       content, 
       metadata, 
       published,
-      isBreaking: isBreaking === 'true' || isBreaking === true
+      isBreaking: isBreaking === 'true' || isBreaking === true,
+      image: imageId
     };
 
-    if (req.file) {
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
-    }
-
     const updatedNews = await News.findByIdAndUpdate(id, updateData, { new: true });
-    res.json(updatedNews);
+    sendResponse(res, true, 'News updated successfully', updatedNews);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating news:', error);
+    sendResponse(res, false, 'Failed to update news', null, error.message, 500);
   }
 };
 
@@ -783,24 +915,21 @@ export const deleteNews = async (req, res) => {
     const news = await News.findById(id);
 
     if (!news) {
-      return res.status(404).json({ message: 'News not found' });
+      return sendResponse(res, false, 'News not found', null, null, 404);
     }
 
-    // Delete the associated image file if it exists
-    if (news.imageUrl) {
-      const imagePath = path.join(__dirname, '..', news.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated image file from GridFS if it exists
+    if (news.image) {
+      await cleanupGridFSFile(news.image);
     }
 
     // Delete the news from the database
     await News.findByIdAndDelete(id);
 
-    res.json({ message: 'News deleted successfully' });
+    sendResponse(res, true, 'News deleted successfully');
   } catch (error) {
     console.error('Error deleting news:', error);
-    res.status(500).json({ message: 'Failed to delete news' });
+    sendResponse(res, false, 'Failed to delete news', null, error.message, 500);
   }
 };
 
@@ -821,9 +950,20 @@ export const createBasic = async (req, res) => {
       return sendResponse(res, false, 'Title, description, file type, and media file are required.', null, null, 400);
     }
 
-    // Construct file paths
-    const fileUrl = `/uploads/media/${media.filename}`;
-    const imageUrl = image ? `/uploads/images/${image.filename}` : null;
+    // Get GridFS file IDs
+    const mediaFileId = media.id; // GridFS file ID for main media
+    const thumbnailId = image ? image.id : null; // GridFS file ID for thumbnail
+
+    // Setup error handler to cleanup files if creation fails
+    const handleError = async (error) => {
+      if (mediaFileId) {
+        await cleanupGridFSFile(mediaFileId);
+      }
+      if (thumbnailId) {
+        await cleanupGridFSFile(thumbnailId);
+      }
+      return sendResponse(res, false, 'Failed to create basic media', null, error.message, 500);
+    };
 
     // Parse metadata
     const parsedMetadata = metadata ? JSON.parse(metadata) : {};
@@ -832,16 +972,20 @@ export const createBasic = async (req, res) => {
     const newBasic = new Basic({
       title,
       description,
-      fileUrl,
-      imageUrl,
+      mediaFile: mediaFileId, // GridFS file ID for main media
+      thumbnail: thumbnailId, // GridFS file ID for thumbnail
       fileType,
       duration: duration ? parseInt(duration) : null,
       published: published === 'true' || published === true,
       metadata: parsedMetadata,
     });
 
-    const savedBasic = await newBasic.save();
-    sendResponse(res, true, 'Basic media created successfully', savedBasic, null, 201);
+    try {
+      const savedBasic = await newBasic.save();
+      sendResponse(res, true, 'Basic media created successfully', savedBasic, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating basic media:', error);
     sendResponse(res, false, 'Failed to create basic media', null, error.message, 500);
@@ -941,11 +1085,12 @@ export const updateBasic = async (req, res) => {
       updateData.duration = duration ? parseInt(duration) : null;
     }
 
+    // Handle GridFS file updates
     if (media) {
-      updateData.fileUrl = `/uploads/media/${media.filename}`;
+      updateData.mediaFile = media.id; // GridFS file ID
     }
     if (image) {
-      updateData.imageUrl = `/uploads/images/${image.filename}`;
+      updateData.thumbnail = image.id; // GridFS file ID
     }
 
     const updatedBasic = await Basic.findByIdAndUpdate(id, updateData, { new: true });
@@ -972,19 +1117,13 @@ export const deleteBasic = async (req, res) => {
       return sendResponse(res, false, 'Basic media not found');
     }
 
-    // Delete associated media files
-    if (basic.fileUrl) {
-      const filePath = normalizePath(basic.fileUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    // Delete associated GridFS files
+    if (basic.mediaFile) {
+      await cleanupGridFSFile(basic.mediaFile);
     }
 
-    if (basic.imageUrl) {
-      const imagePath = normalizePath(basic.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    if (basic.thumbnail) {
+      await cleanupGridFSFile(basic.thumbnail);
     }
 
     await Basic.findByIdAndDelete(id);
@@ -1043,14 +1182,15 @@ export const deleteComment = async (req, res) => {
 export const createFarm = async (req, res) => {
   try {
     const { name, location, price, description, metadata } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!name || !location || !price || !description) {
       return sendResponse(res, false, 'Name, location, price, and description are required.');
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
 
     const parsedMetadata = parseMetadata(metadata);
@@ -1060,7 +1200,7 @@ export const createFarm = async (req, res) => {
       location,
       price,
       description,
-      imageUrl,
+      image: imageId, // Use GridFS file ID
       metadata: parsedMetadata,
     });
 
@@ -1129,10 +1269,18 @@ export const updateFarm = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, location, price, description, metadata } = req.body;
+    
+    const existingFarm = await Farm.findById(id);
+    if (!existingFarm) {
+      return res.status(404).json({ message: 'Farm not found' });
+    }
+
     let updateData = { name, location, price, description, metadata };
 
+    // Handle GridFS file update
     if (req.file) {
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+      // Update the GridFS file ID
+      updateData.image = await updateGridFSFile(existingFarm.image, req.file.id);
     }
 
     const updatedFarm = await Farm.findByIdAndUpdate(id, updateData, { new: true });
@@ -1154,12 +1302,9 @@ export const deleteFarm = async (req, res) => {
       return res.status(404).json({ message: 'Farm not found' });
     }
 
-    // Delete the associated image file if it exists
-    if (farm.imageUrl) {
-      const imagePath = path.join(__dirname, '..', farm.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated GridFS file if it exists
+    if (farm.image) {
+      await cleanupGridFSFile(farm.image);
     }
 
     // Delete the farm from the database
@@ -1205,8 +1350,19 @@ export const createMagazine = async (req, res) => {
       return sendResponse(res, false, 'Both image and PDF file are required.', null, null, 400);
     }
 
-    const imageUrl = `/uploads/images/${image.filename}`;
-    const fileUrl = `/uploads/pdfs/${pdf.filename}`;
+    const coverImageId = image.id; // GridFS file ID
+    const pdfId = pdf.id; // GridFS file ID
+
+    // Setup error handler to cleanup files if magazine creation fails
+    const handleError = async (error) => {
+      if (coverImageId) {
+        await cleanupGridFSFile(coverImageId);
+      }
+      if (pdfId) {
+        await cleanupGridFSFile(pdfId);
+      }
+      return sendResponse(res, false, 'Failed to create magazine', null, error.message, 500);
+    };
 
     console.log('📖 createMagazine: Parsing metadata');
     // Parse metadata
@@ -1294,8 +1450,8 @@ export const createMagazine = async (req, res) => {
       author: author || '',
       category: category || 'Magazine',
       tags: parsedTags,
-      imageUrl,
-      fileUrl,
+      coverImage: coverImageId, // GridFS file ID for cover image
+      pdf: pdfId, // GridFS file ID for PDF
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -1306,10 +1462,14 @@ export const createMagazine = async (req, res) => {
     });
 
     console.log('📖 createMagazine: Saving to database');
-    const savedMagazine = await newMagazine.save();
-    console.log('📖 createMagazine: Saved successfully');
-    
-    sendResponse(res, true, 'Magazine created successfully', savedMagazine, null, 201);
+    try {
+      const savedMagazine = await newMagazine.save();
+      console.log('📖 createMagazine: Saved successfully');
+      
+      sendResponse(res, true, 'Magazine created successfully', savedMagazine, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating magazine:', error);
     sendResponse(res, false, 'Failed to create magazine', null, error.message, 500);
@@ -1381,6 +1541,11 @@ export const updateMagazine = async (req, res) => {
     const { title, description, issue, price, discount, metadata, published } = req.body;
     const files = req.files || {};
 
+    const existingMagazine = await Magazine.findById(id);
+    if (!existingMagazine) {
+      return sendResponse(res, false, 'Magazine not found');
+    }
+
     let parsedMetadata = {};
     try {
       parsedMetadata = metadata ? JSON.parse(metadata) : {};
@@ -1398,12 +1563,13 @@ export const updateMagazine = async (req, res) => {
       published,
     };
 
+    // Handle GridFS file updates
     if (files.image?.[0]) {
-      updateData.imageUrl = `/uploads/images/${files.image[0].filename}`;
+      updateData.coverImage = await updateGridFSFile(existingMagazine.coverImage, files.image[0].id);
     }
 
     if (files.pdf?.[0]) {
-      updateData.fileUrl = `/uploads/pdfs/${files.pdf[0].filename}`;
+      updateData.pdf = await updateGridFSFile(existingMagazine.pdf, files.pdf[0].id);
     }
 
     const updatedMagazine = await Magazine.findByIdAndUpdate(id, updateData, { new: true });
@@ -1428,19 +1594,13 @@ export const deleteMagazine = async (req, res) => {
       return sendResponse(res, false, 'Magazine not found');
     }
 
-    // Delete associated files
-    if (magazine.fileUrl) {
-      const filePath = normalizePath(magazine.fileUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    // Delete associated GridFS files
+    if (magazine.pdf) {
+      await cleanupGridFSFile(magazine.pdf);
     }
 
-    if (magazine.imageUrl) {
-      const imagePath = normalizePath(magazine.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    if (magazine.coverImage) {
+      await cleanupGridFSFile(magazine.coverImage);
     }
 
     await Magazine.findByIdAndDelete(id);
@@ -1455,16 +1615,24 @@ export const deleteMagazine = async (req, res) => {
 export const createPiggery = async (req, res) => {
   try {
     const { title, content, metadata, published, featured, category, tags, readTime } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !content) {
-      return sendResponse(res, false, 'Title and content are required.');
+      return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      // Construct the relative path
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
+
+    // Setup error handler to cleanup file if creation fails
+    const handleError = async (error) => {
+      if (imageId) {
+        await cleanupGridFSFile(imageId);
+      }
+      return sendResponse(res, false, 'Failed to create piggery content', null, error.message, 500);
+    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -1489,7 +1657,7 @@ export const createPiggery = async (req, res) => {
       content,
       category: category || 'Piggery',
       tags: parsedTags,
-      imageUrl,
+      image: imageId, // GridFS file ID
       metadata: {
         ...parsedMetadata,
         readTime: readTime || 5
@@ -1498,10 +1666,15 @@ export const createPiggery = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    const savedPiggery = await newPiggery.save();
-    sendResponse(res, true, 'Piggery created successfully', savedPiggery);
+    try {
+      const savedPiggery = await newPiggery.save();
+      sendResponse(res, true, 'Piggery content created successfully', savedPiggery, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
-    sendResponse(res, false, 'Failed to create piggery', null, error.message);
+    console.error('Error creating piggery content:', error);
+    sendResponse(res, false, 'Failed to create piggery content', null, error.message, 500);
   }
 };
 
@@ -1558,31 +1731,39 @@ export const getAdminPiggeries = async (req, res) => {
 export const updatePiggery = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-
-    // Parse metadata from JSON string to object inline
-    let parsedMetadata = {};
-    try {
-      parsedMetadata = metadata ? JSON.parse(metadata) : {};
-    } catch (error) {
-      return res.status(400).json({ message: 'Invalid metadata format' });
+    const { title, content, metadata, published, featured } = req.body;
+    
+    const existingPiggery = await Piggery.findById(id);
+    if (!existingPiggery) {
+      return sendResponse(res, false, 'Piggery content not found', null, null, 404);
     }
 
-    let updateData = { title, content, metadata: parsedMetadata, published };
-
+    let imageId = existingPiggery.image;
+    
+    // Handle new file upload
     if (req.file) {
-      // Construct the relative path for the image
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = await updateGridFSFile(existingPiggery.image, req.file.id);
     }
+
+    // Parse metadata to ensure it's stored as an object
+    const parsedMetadata = metadata ? parseMetadata(metadata) : existingPiggery.metadata;
+    
+    let updateData = { 
+      title: title || existingPiggery.title,
+      content: content || existingPiggery.content,
+      metadata: parsedMetadata,
+      published: published !== undefined ? (published === 'true' || published === true) : existingPiggery.published,
+      featured: featured !== undefined ? (featured === 'true' || featured === true) : existingPiggery.featured,
+      image: imageId
+    };
 
     const updatedPiggery = await Piggery.findByIdAndUpdate(id, updateData, { new: true });
-    res.json(updatedPiggery);
+    sendResponse(res, true, 'Piggery content updated successfully', updatedPiggery);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating piggery content:', error);
+    sendResponse(res, false, 'Failed to update piggery content', null, error.message, 500);
   }
 };
-
-
 
 export const deletePiggery = async (req, res) => {
   try {
@@ -1590,24 +1771,21 @@ export const deletePiggery = async (req, res) => {
     const piggery = await Piggery.findById(id);
 
     if (!piggery) {
-      return res.status(404).json({ message: 'Piggery not found' });
+      return sendResponse(res, false, 'Piggery content not found', null, null, 404);
     }
 
-    // Delete the associated image file if it exists
-    if (piggery.imageUrl) {
-      const imagePath = path.join(__dirname, '..', piggery.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated image file from GridFS if it exists
+    if (piggery.image) {
+      await cleanupGridFSFile(piggery.image);
     }
 
-    // Delete the piggery from the database
+    // Delete the piggery content from the database
     await Piggery.findByIdAndDelete(id);
 
-    res.json({ message: 'Piggery deleted successfully' });
+    sendResponse(res, true, 'Piggery content deleted successfully');
   } catch (error) {
-    console.error('Error deleting piggery:', error);
-    res.status(500).json({ message: 'Failed to delete piggery' });
+    console.error('Error deleting piggery content:', error);
+    sendResponse(res, false, 'Failed to delete piggery content', null, error.message, 500);
   }
 };
 
@@ -1617,15 +1795,24 @@ export const deletePiggery = async (req, res) => {
 export const createGoat = async (req, res) => {
   try {
     const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !content) {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
+
+    // Setup error handler to cleanup file if creation fails
+    const handleError = async (error) => {
+      if (imageId) {
+        await cleanupGridFSFile(imageId);
+      }
+      return sendResponse(res, false, 'Failed to create goat content', null, error.message, 500);
+    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -1660,7 +1847,7 @@ export const createGoat = async (req, res) => {
       author: author || '',
       category: category || 'Goat',
       tags: parsedTags,
-      imageUrl,
+      image: imageId, // GridFS file ID
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -1671,8 +1858,12 @@ export const createGoat = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    const savedGoat = await newGoat.save();
-    sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
+    try {
+      const savedGoat = await newGoat.save();
+      sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating goat content:', error);
     sendResponse(res, false, 'Failed to create goat content', null, error.message, 500);
@@ -1733,29 +1924,39 @@ export const getAdminGoats = async (req, res) => {
 export const updateGoat = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-
-    let parsedMetadata = {};
-    try {
-      parsedMetadata = metadata ? JSON.parse(metadata) : {};
-    } catch (error) {
-      return res.status(400).json({ message: 'Invalid metadata format' });
+    const { title, content, metadata, published, featured } = req.body;
+    
+    const existingGoat = await Goat.findById(id);
+    if (!existingGoat) {
+      return sendResponse(res, false, 'Goat content not found', null, null, 404);
     }
 
-    let updateData = { title, content, metadata: parsedMetadata, published };
-
+    let imageId = existingGoat.image;
+    
+    // Handle new file upload
     if (req.file) {
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = await updateGridFSFile(existingGoat.image, req.file.id);
     }
+
+    // Parse metadata to ensure it's stored as an object
+    const parsedMetadata = metadata ? parseMetadata(metadata) : existingGoat.metadata;
+    
+    let updateData = { 
+      title: title || existingGoat.title,
+      content: content || existingGoat.content,
+      metadata: parsedMetadata,
+      published: published !== undefined ? (published === 'true' || published === true) : existingGoat.published,
+      featured: featured !== undefined ? (featured === 'true' || featured === true) : existingGoat.featured,
+      image: imageId
+    };
 
     const updatedGoat = await Goat.findByIdAndUpdate(id, updateData, { new: true });
-    res.json(updatedGoat);
+    sendResponse(res, true, 'Goat content updated successfully', updatedGoat);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating goat content:', error);
+    sendResponse(res, false, 'Failed to update goat content', null, error.message, 500);
   }
 };
-
-
 
 export const deleteGoat = async (req, res) => {
   try {
@@ -1763,22 +1964,21 @@ export const deleteGoat = async (req, res) => {
     const goat = await Goat.findById(id);
 
     if (!goat) {
-      return res.status(404).json({ message: 'Goat content not found' });
+      return sendResponse(res, false, 'Goat content not found', null, null, 404);
     }
 
-    if (goat.imageUrl) {
-      const imagePath = path.join(__dirname, '..', goat.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated image file from GridFS if it exists
+    if (goat.image) {
+      await cleanupGridFSFile(goat.image);
     }
 
+    // Delete the goat content from the database
     await Goat.findByIdAndDelete(id);
 
-    res.json({ message: 'Goat content deleted successfully' });
+    sendResponse(res, true, 'Goat content deleted successfully');
   } catch (error) {
     console.error('Error deleting goat content:', error);
-    res.status(500).json({ message: 'Failed to delete goat content' });
+    sendResponse(res, false, 'Failed to delete goat content', null, error.message, 500);
   }
 };
 
@@ -1787,15 +1987,24 @@ export const deleteGoat = async (req, res) => {
 export const createDairy = async (req, res) => {
   try {
     const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !content) {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
+
+    // Setup error handler to cleanup file if creation fails
+    const handleError = async (error) => {
+      if (imageId) {
+        await cleanupGridFSFile(imageId);
+      }
+      return sendResponse(res, false, 'Failed to create dairy content', null, error.message, 500);
+    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -1827,9 +2036,10 @@ export const createDairy = async (req, res) => {
     const newDairy = new Dairy({
       title,
       content,
+      author: author || '',
       category: category || 'Dairy',
       tags: parsedTags,
-      imageUrl,
+      image: imageId, // GridFS file ID
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -1840,8 +2050,12 @@ export const createDairy = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    const savedDairy = await newDairy.save();
-    sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
+    try {
+      const savedDairy = await newDairy.save();
+      sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating dairy content:', error);
     sendResponse(res, false, 'Failed to create dairy content', null, error.message, 500);
@@ -1901,23 +2115,39 @@ export const getAdminDairies = async (req, res) => {
 export const updateDairy = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-    // Parse metadata to ensure it's stored as an object:
-    const parsedMetadata = parseMetadata(metadata);
-    let updateData = { title, content, metadata: parsedMetadata, published };
-
-    if (req.file) {
-      // Construct the relative path for the updated image
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+    const { title, content, metadata, published, featured } = req.body;
+    
+    const existingDairy = await Dairy.findById(id);
+    if (!existingDairy) {
+      return sendResponse(res, false, 'Dairy content not found', null, null, 404);
     }
 
+    let imageId = existingDairy.image;
+    
+    // Handle new file upload
+    if (req.file) {
+      imageId = await updateGridFSFile(existingDairy.image, req.file.id);
+    }
+
+    // Parse metadata to ensure it's stored as an object
+    const parsedMetadata = metadata ? parseMetadata(metadata) : existingDairy.metadata;
+    
+    let updateData = { 
+      title: title || existingDairy.title,
+      content: content || existingDairy.content,
+      metadata: parsedMetadata,
+      published: published !== undefined ? (published === 'true' || published === true) : existingDairy.published,
+      featured: featured !== undefined ? (featured === 'true' || featured === true) : existingDairy.featured,
+      image: imageId
+    };
+
     const updatedDairy = await Dairy.findByIdAndUpdate(id, updateData, { new: true });
-    res.json(updatedDairy);
+    sendResponse(res, true, 'Dairy content updated successfully', updatedDairy);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating dairy content:', error);
+    sendResponse(res, false, 'Failed to update dairy content', null, error.message, 500);
   }
 };
-
 
 export const deleteDairy = async (req, res) => {
   try {
@@ -1925,41 +2155,46 @@ export const deleteDairy = async (req, res) => {
     const dairy = await Dairy.findById(id);
 
     if (!dairy) {
-      return res.status(404).json({ message: 'Dairy content not found' });
+      return sendResponse(res, false, 'Dairy content not found', null, null, 404);
     }
 
-    // Delete the associated image file if it exists
-    if (dairy.imageUrl) {
-      const imagePath = path.join(__dirname, '..', dairy.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated image file from GridFS if it exists
+    if (dairy.image) {
+      await cleanupGridFSFile(dairy.image);
     }
 
     // Delete the dairy content from the database
     await Dairy.findByIdAndDelete(id);
 
-    res.json({ message: 'Dairy content deleted successfully' });
+    sendResponse(res, true, 'Dairy content deleted successfully');
   } catch (error) {
     console.error('Error deleting dairy content:', error);
-    res.status(500).json({ message: 'Failed to delete dairy content' });
+    sendResponse(res, false, 'Failed to delete dairy content', null, error.message, 500);
   }
 };
-
 // ----- BEEF CRUD -----
 
 export const createBeef = async (req, res) => {
   try {
     const { title, content, metadata, published, featured, author, category, tags, keywords, summary, readTime } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !content) {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
+
+    // Setup error handler to cleanup file if creation fails
+    const handleError = async (error) => {
+      if (imageId) {
+        await cleanupGridFSFile(imageId);
+      }
+      return sendResponse(res, false, 'Failed to create beef content', null, error.message, 500);
+    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -1991,9 +2226,10 @@ export const createBeef = async (req, res) => {
     const newBeef = new Beef({
       title,
       content,
+      author: author || '',
       category: category || 'Beef',
       tags: parsedTags,
-      imageUrl,
+      image: imageId, // GridFS file ID
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -2004,8 +2240,12 @@ export const createBeef = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    const savedBeef = await newBeef.save();
-    sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
+    try {
+      const savedBeef = await newBeef.save();
+      sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('Error creating beef content:', error);
     sendResponse(res, false, 'Failed to create beef content', null, error.message, 500);
@@ -2064,25 +2304,39 @@ export const getAdminBeefs = async (req, res) => {
 export const updateBeef = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, metadata, published } = req.body;
-    // Parse the metadata string into an object
-    const parsedMetadata = parseMetadata(metadata);
-    let updateData = { title, content, metadata: parsedMetadata, published };
-
-    if (req.file) {
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
-    }
-
-    const updatedBeef = await Beef.findByIdAndUpdate(id, updateData, { new: true });
-    if (!updatedBeef) {
+    const { title, content, metadata, published, featured } = req.body;
+    
+    const existingBeef = await Beef.findById(id);
+    if (!existingBeef) {
       return sendResponse(res, false, 'Beef content not found', null, null, 404);
     }
+
+    let imageId = existingBeef.image;
+    
+    // Handle new file upload
+    if (req.file) {
+      imageId = await updateGridFSFile(existingBeef.image, req.file.id);
+    }
+
+    // Parse metadata to ensure it's stored as an object
+    const parsedMetadata = metadata ? parseMetadata(metadata) : existingBeef.metadata;
+    
+    let updateData = { 
+      title: title || existingBeef.title,
+      content: content || existingBeef.content,
+      metadata: parsedMetadata,
+      published: published !== undefined ? (published === 'true' || published === true) : existingBeef.published,
+      featured: featured !== undefined ? (featured === 'true' || featured === true) : existingBeef.featured,
+      image: imageId
+    };
+
+    const updatedBeef = await Beef.findByIdAndUpdate(id, updateData, { new: true });
     sendResponse(res, true, 'Beef content updated successfully', updatedBeef);
   } catch (error) {
-    sendResponse(res, false, 'Failed to update beef content', null, error.message);
+    console.error('Error updating beef content:', error);
+    sendResponse(res, false, 'Failed to update beef content', null, error.message, 500);
   }
 };
-
 
 export const deleteBeef = async (req, res) => {
   try {
@@ -2093,19 +2347,18 @@ export const deleteBeef = async (req, res) => {
       return sendResponse(res, false, 'Beef content not found', null, null, 404);
     }
 
-    if (beef.imageUrl) {
-      const imagePath = path.join(__dirname, '..', beef.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Delete the associated image file from GridFS if it exists
+    if (beef.image) {
+      await cleanupGridFSFile(beef.image);
     }
 
+    // Delete the beef content from the database
     await Beef.findByIdAndDelete(id);
 
     sendResponse(res, true, 'Beef content deleted successfully');
   } catch (error) {
     console.error('Error deleting beef content:', error);
-    sendResponse(res, false, 'Failed to delete beef content', null, error.message);
+    sendResponse(res, false, 'Failed to delete beef content', null, error.message, 500);
   }
 };
 
@@ -2587,16 +2840,16 @@ export const sendNewsletter = async (req, res) => {
 export const createEvent = async (req, res) => {
   try {
     const { title, description, startDate, endDate, location, metadata, published } = req.body;
-    let imageUrl = null;
+    let imageId = null;
 
     // Check required fields
     if (!title || !description || !startDate) {
       return sendResponse(res, false, 'Title, description, and start date are required.');
     }
 
+    // Handle file from GridFS
     if (req.file) {
-      // Construct the relative path
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
 
     // Safely parse metadata
@@ -2614,7 +2867,7 @@ export const createEvent = async (req, res) => {
       startDate,
       endDate: endDate || null,
       location: location || "",
-      imageUrl,
+      image: imageId, // Use GridFS file ID
       metadata: parsedMetadata,
       published: published === 'true' || published === true
     });
@@ -2700,6 +2953,11 @@ export const updateEvent = async (req, res) => {
     const { id } = req.params;
     const { title, description, startDate, endDate, location, metadata, published } = req.body;
     
+    const existingEvent = await Event.findById(id);
+    if (!existingEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
     // Safely parse metadata
     let parsedMetadata = {};
     try {
@@ -2718,16 +2976,12 @@ export const updateEvent = async (req, res) => {
       published: published === 'true' || published === true
     };
 
+    // Handle GridFS file update
     if (req.file) {
-      // Construct the relative path
-      updateData.imageUrl = `/uploads/images/${req.file.filename}`;
+      updateData.image = await updateGridFSFile(existingEvent.image, req.file.id);
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true });
-    
-    if (!updatedEvent) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
     
     sendResponse(res, true, 'Event updated successfully', updatedEvent);
   } catch (error) {
@@ -2745,12 +2999,9 @@ export const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Delete the associated image file if it exists
-    if (event.imageUrl) {
-      const imagePath = path.join(__dirname, '..', event.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Clean up GridFS file if it exists
+    if (event.image) {
+      await cleanupGridFSFile(event.image);
     }
 
     // Delete the event from the database
@@ -2774,15 +3025,14 @@ export const createAuction = async (req, res) => {
       registrationFee, terms, published 
     } = req.body;
     
-    let imageUrl = null;
+    let imageId = null;
 
     if (!title || !description || !location || !date || !startTime || !endTime) {
       return sendResponse(res, false, 'Title, description, location, date, start time, and end time are required.');
     }
 
     if (req.file) {
-      // Construct the relative path
-      imageUrl = `/uploads/images/${req.file.filename}`;
+      imageId = req.file.id; // Store GridFS file ID
     }
 
     // Parse livestock data if it's a string
@@ -2818,7 +3068,7 @@ export const createAuction = async (req, res) => {
       registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : null,
       registrationFee: Number(registrationFee) || 0,
       terms: terms || 'Standard auction terms and conditions apply',
-      imageUrl,
+      image: imageId, // Store GridFS file ID in image field
       published: published !== 'false'
     });
 
@@ -2942,14 +3192,11 @@ export const updateAuction = async (req, res) => {
 
     // Update image if provided
     if (req.file) {
-      // Delete old image
-      if (auction.imageUrl) {
-        const oldImagePath = normalizePath(auction.imageUrl);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
+      // Clean up old GridFS file
+      if (auction.image) {
+        await cleanupGridFSFile(auction.image);
       }
-      auction.imageUrl = `/uploads/images/${req.file.filename}`;
+      auction.image = req.file.id; // Store new GridFS file ID
     }
 
     // Update fields
@@ -3001,12 +3248,9 @@ export const deleteAuction = async (req, res) => {
       return sendResponse(res, false, 'Auction not found');
     }
 
-    // Delete associated image
-    if (auction.imageUrl) {
-      const imagePath = normalizePath(auction.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Clean up GridFS file if it exists
+    if (auction.image) {
+      await cleanupGridFSFile(auction.image);
     }
 
     await Auction.findByIdAndDelete(id);

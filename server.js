@@ -85,7 +85,6 @@ import path from 'path';
 
 import { createServer } from 'http';
 import connectDB from './config/db.js';
-import upload from './middleware/fileUpload.js';
 import { sanitizeInput, securityHeaders } from './middleware/sanitization.js';
 import { requestLogger, errorLogger, logSecurityEvent } from './utils/logger.js';
 // import { setupSwagger } from './config/swagger.js';
@@ -389,123 +388,13 @@ connectDB()
     process.exit(1);
   });
 
-// Ensure uploads directories exist (only in development - Railway handles this in production)
-if (process.env.NODE_ENV !== 'production') {
-  const uploadsDir = path.join(__dirname, 'uploads', 'images');
-  const mediaDir = path.join(__dirname, 'uploads', 'media');
-  const pdfsDir = path.join(__dirname, 'uploads', 'pdfs');
-
-  [uploadsDir, mediaDir, pdfsDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      console.log(`${dir} directory created.`);
-    }
-  });
-}
+// GridFS file serving routes (replaced old filesystem routes)
+// All files are now served through GridFS via API endpoints in routes
 
 // Middleware for handling video streaming with range requests
-app.get('/uploads/media/:filename', (req, res) => {
-  const mediaPath = process.env.NODE_ENV === 'production' 
-    ? path.join('/uploads', 'media', req.params.filename)
-    : path.join(__dirname, 'uploads', 'media', req.params.filename);
-  
-  // Check if file exists
-  fs.stat(mediaPath, (err, stats) => {
-    if (err) {
-      console.error(`Error accessing file: ${err.message}`);
-      return res.status(404).send('File not found');
-    }
-    
-    // Get file size
-    const fileSize = stats.size;
-    const range = req.headers.range;
-    
-    // Get file extension for content type
-    const ext = path.extname(mediaPath).toLowerCase();
-    const contentTypeMap = {
-      '.mp4': 'video/mp4',
-      '.webm': 'video/webm',
-      '.ogg': 'video/ogg',
-      '.mov': 'video/quicktime',
-      '.mp3': 'audio/mpeg',
-      '.wav': 'audio/wav'
-    };
-    const contentType = contentTypeMap[ext] || 'application/octet-stream';
-    
-    // Handle range requests (for video streaming)
-    if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = (end - start) + 1;
-      
-      // Range request is being processed
-      
-      // Set response headers for partial content
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize,
-        'Content-Type': contentType
-      });
-      
-      // Create read stream for the specified range
-      const fileStream = fs.createReadStream(mediaPath, { start, end });
-      
-      // Pipe the file stream to the response
-      fileStream.pipe(res);
-    } else {
-      // If no range is specified, send the entire file
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': contentType,
-        'Accept-Ranges': 'bytes'
-      });
-      
-      // Create read stream for the entire file
-      const fileStream = fs.createReadStream(mediaPath);
-      
-      // Pipe the file stream to the response
-      fileStream.pipe(res);
-    }
-  });
-});
+// GridFS handles all file serving through API endpoints
 
-// Serve static files with proper headers - supports both Railway volumes and local development
-const uploadsPath = process.env.NODE_ENV === 'production' ? '/uploads' : path.join(__dirname, 'uploads');
-app.use(
-  '/uploads',
-  express.static(uploadsPath, {
-    setHeaders: (res, filePath) => {
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeTypes = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-        '.mp4': 'video/mp4',
-        '.webm': 'video/webm',
-        '.ogg': 'video/ogg',
-        '.mov': 'video/quicktime',
-        '.mp3': 'audio/mpeg',
-        '.wav': 'audio/wav'
-      };
-      
-      // Set Content-Type
-      res.set('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-      
-      // Set CORS headers
-      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-      
-      // For media files, set range request headers
-      if (['.mp4', '.webm', '.ogg', '.mov', '.mp3', '.wav'].includes(ext)) {
-        res.set('Accept-Ranges', 'bytes');
-      }
-    }
-  })
-);
+// GridFS handles all static file serving
 
 // Request logger (only in development)
 if (process.env.NODE_ENV === 'development') {
@@ -530,6 +419,7 @@ import syndicationRoutes from './routes/syndicationRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import pushSubscriptionRoutes from './routes/pushSubscriptionRoutes.js';
 import passwordSetupRoutes from './routes/passwordSetupRoutes.js';
+import fileRoutes from './routes/fileRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -547,6 +437,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
+app.use('/api/files', fileRoutes); // File serving routes
 // Password-specific rate limiter
 const passwordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -557,20 +448,7 @@ const passwordLimiter = rateLimit({
 
 app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
 
-// File upload route
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'File upload failed', error: 'No file provided' });
-  }
-  res.status(201).json({
-    message: 'File uploaded successfully',
-    file: {
-      path: `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`,
-      name: req.file.originalname,
-      type: req.file.mimetype,
-    },
-  });
-});
+// GridFS file upload is handled through content routes
 
 // Health check route
 app.get('/health', (req, res) => {

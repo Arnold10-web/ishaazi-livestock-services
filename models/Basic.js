@@ -28,6 +28,18 @@ const basicSchema = new mongoose.Schema(
       trim: true 
     }, // Description of the video/audio
     
+    mediaFile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'fs.files',
+      required: true
+    }, // GridFS ID of the video/audio file
+
+    thumbnail: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'fs.files',
+      default: null
+    }, // GridFS ID of the thumbnail image
+    
     fileUrl: { 
       type: String, 
       required: true,

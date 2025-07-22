@@ -32,10 +32,10 @@ const farmSchema = new mongoose.Schema({
     type: String,
     trim: true 
   },
-  imageUrl: { 
-    type: String, 
-    required: false,
-    trim: true
+  image: { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'fs.files',
+    default: null
   },
   
   // Farm physical details
