@@ -34,8 +34,9 @@ farming-magazine-frontend/
 *api-key*
 *apikey*
 *token*
-*password*
-*login*
+password.txt
+passwords.txt
+login.txt
 *auth*config*
 
 # Logs and debug files
