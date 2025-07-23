@@ -74,8 +74,8 @@ export const uploadMedia = multer({
   }
 });
 
-// Middleware to store file in GridFS
-export const storeInGridFS = async (req, res, next) => {
+// GridFS storage middleware (after multer processing)
+const gridFSStorageMiddleware = async (req, res, next) => {
   try {
     if (!req.file && !req.files) {
       return next();
@@ -112,6 +112,57 @@ export const storeInGridFS = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// Function that returns middleware chain for file upload + GridFS storage
+export const storeInGridFS = (fieldName, allowedMimeTypes = [], options = {}) => {
+  // Create multer instance with specific field and file type filtering
+  const uploadInstance = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+      // Check if field matches
+      if (file.fieldname !== fieldName) {
+        return cb(new Error(`Invalid field name. Expected: ${fieldName}`), false);
+      }
+
+      // If specific mime types are provided, check them
+      if (allowedMimeTypes.length > 0) {
+        const isAllowed = allowedMimeTypes.some(type => {
+          if (type.endsWith('/*')) {
+            return file.mimetype.startsWith(type.replace('/*', '/'));
+          }
+          return file.mimetype === type;
+        });
+        
+        if (!isAllowed) {
+          return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(', ')}`), false);
+        }
+      }
+
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+      files: 5
+    }
+  });
+
+  // If optional is true, wrap the upload middleware to handle no file gracefully
+  const uploadMiddleware = options.optional 
+    ? (req, res, next) => {
+        uploadInstance.single(fieldName)(req, res, (err) => {
+          // If no file provided and it's optional, just continue
+          if (err && err.message.includes('Unexpected field')) {
+            return next();
+          }
+          if (err) return next(err);
+          next();
+        });
+      }
+    : uploadInstance.single(fieldName);
+
+  // Return middleware chain: multer upload + GridFS storage
+  return [uploadMiddleware, gridFSStorageMiddleware];
 };
 
 export default upload;

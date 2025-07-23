@@ -82,22 +82,6 @@ const updateGridFSFile = async (oldFileId, newFileId) => {
     }
     return newFileId || oldFileId;
 };
-import EventRegistration from '../models/EventRegistration.js';
-import News from '../models/News.js';
-import Basic from '../models/Basic.js';
-import Farm from '../models/Farm.js';
-import Magazine from '../models/Magazine.js';
-import Dairy from '../models/Dairy.js';
-import Goat from '../models/Goat.js';
-import Piggery from '../models/Piggery.js';
-import Beef from '../models/Beef.js';
-import Auction from '../models/Auction.js';
-import Newsletter from '../models/Newsletter.js';
-import Subscriber from '../models/Subscriber.js';
-import User from '../models/User.js';
-import mongoose from 'mongoose';
-import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
 
 /**
  * Handle file cleanup in GridFS
