@@ -432,7 +432,10 @@ app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/email', emailTestRoutes);
+// Email test routes only in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/email', emailTestRoutes);
+}
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps

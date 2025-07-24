@@ -37,30 +37,20 @@ const UserSchema = new mongoose.Schema({
     knownIPs: [String],
     lastLoginAt: Date,
     /**
-     * @property {String} username - Unique username for system_admin role only
+     * @property {String} username - Optional internal identifier (can be auto-generated)
      */
     username: { 
         type: String, 
         unique: true,
         sparse: true, // Allows null/undefined, but enforces uniqueness when present
-        required: function() { return this.role === 'system_admin'; },
+        required: false, // Username is now optional for all roles
         trim: true,
         minlength: 3,
-        maxlength: 30,
-        validate: {
-            validator: function(v) {
-                // Username is only required for system_admin
-                if (this.role === 'system_admin' && !v) {
-                    return false;
-                }
-                return true;
-            },
-            message: 'System admin must have a username'
-        }
+        maxlength: 30
     },
     
     /**
-     * @property {String} email - General email field (optional for system_admin)
+     * @property {String} email - Required email field for all users including system_admin
      */
     email: { 
         type: String, 
@@ -68,7 +58,7 @@ const UserSchema = new mongoose.Schema({
         sparse: true,
         trim: true,
         lowercase: true,
-        required: false,
+        required: true, // Email is now required for all roles including system_admin
         validate: {
             validator: function(v) {
                 return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -329,9 +319,14 @@ UserSchema.pre('save', async function(next) {
  * Pre-save middleware for role-specific validation
  */
 UserSchema.pre('save', function(next) {
-    // Ensure system_admin has username (email is optional)
+    // Ensure system_admin has email (username is optional)
+    if (this.role === 'system_admin' && !this.email) {
+        return next(new Error('System admin must have an email address'));
+    }
+    
+    // Auto-generate username for system_admin if not provided
     if (this.role === 'system_admin' && !this.username) {
-        return next(new Error('System admin must have a username'));
+        this.username = this.email.split('@')[0] + '_admin';
     }
     
     // Ensure editor has company email

@@ -154,10 +154,19 @@ export const registerAdmin = async (req, res) => {
     try {
         const { username, password, email, role = 'system_admin' } = req.body;
         
-        if (!username || !password) {
+        if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Username and password are required'
+                message: 'Email and password are required for system admin'
+            });
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address'
             });
         }
         
@@ -172,21 +181,21 @@ export const registerAdmin = async (req, res) => {
             });
         }
         
-        // Check if username already exists
-        const existingUser = await User.findOne({ username });
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
         
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'Username already exists'
+                message: 'Email already exists'
             });
         }
         
         // Create new system admin
         const newAdmin = new User({
-            username,
+            username: username || email.split('@')[0] + '_admin', // Auto-generate username if not provided
             password,
-            email: email?.toLowerCase() || undefined, // Email is optional for system_admin
+            email: email.toLowerCase(),
             role: 'system_admin',
             isActive: true
         });
@@ -196,7 +205,7 @@ export const registerAdmin = async (req, res) => {
         // Log activity
         await ActivityLog.logActivity({
             userId: newAdmin._id,
-            username: newAdmin.username,
+            username: newAdmin.email, // Use email as identifier
             userRole: newAdmin.role,
             action: 'user_created',
             resource: 'user',
