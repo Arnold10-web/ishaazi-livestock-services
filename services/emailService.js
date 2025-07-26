@@ -43,7 +43,7 @@ class EmailService {
   }
 
   getEmailConfig() {
-    const provider = process.env.EMAIL_PROVIDER || process.env.EMAIL_SERVICE || 'smtp';
+    const provider = process.env.EMAIL_SERVICE || 'smtp';
     
     console.log('📧 Email provider selected:', provider);
     console.log('📧 Environment variables check:', {
@@ -57,6 +57,10 @@ class EmailService {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
+        requireTLS: true,
+        tls: {
+          rejectUnauthorized: false // Allow self-signed certificates for hosting providers
+        },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
@@ -97,7 +101,7 @@ class EmailService {
       const hasValidCredentials = this.validateCredentials();
       
       if (!hasValidCredentials) {
-        console.log('📧 Email credentials not configured. Running without email service...');
+        console.warn('⚠️  Email credentials not configured properly. Check your environment variables.');
         this.transporter = {
           sendMail: this.mockSendMail.bind(this)
         };
@@ -106,31 +110,28 @@ class EmailService {
 
       this.transporter = nodemailer.createTransport(this.config);
       
-      // Handle verification based on environment
+      // Verify the connection
       if (process.env.NODE_ENV === 'production') {
-        try {
-          await this.transporter.verify();
-          console.log('✅ Email service initialized and verified successfully');
-        } catch (verifyError) {
-          console.log('⚠️  Email verification failed in production:', verifyError.message);
-          console.log('📧 This might indicate server connectivity issues');
-          // In production, we still want to try sending emails
-        }
+        await this.transporter.verify();
+        console.log('✅ Email service initialized and verified successfully');
       } else {
         console.log('📧 Email service initialized (development mode)');
         console.log('📧 Note: SMTP verification skipped for local development');
-        console.log('📧 Email authentication may fail locally but should work on Railway');
       }
       
       // Load email templates
       await this.loadTemplates();
     } catch (error) {
       console.error('❌ Email service initialization failed:', error.message);
-      // Fall back to console logging in development
+      // In production, this should be treated as a critical error
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🚨 CRITICAL: Email service failure in production environment');
+      }
+      // Fall back to mock for development only
       this.transporter = {
         sendMail: this.mockSendMail.bind(this)
       };
-      console.log('📧 Using mock email service for development');
+      console.log('📧 Using mock email service as fallback');
     }
   }
 
@@ -849,6 +850,15 @@ export const sendAccountStatusEmail = (companyEmail, isActive, changedBy) => {
 
 export const validateCompanyEmail = (email) => {
   return emailService.validateCompanyEmail(email);
+};
+
+// Email service statistics and health
+export const getStats = () => {
+  return emailService.getStats();
+};
+
+export const healthCheck = () => {
+  return emailService.healthCheck();
 };
 
 // Generic send email function

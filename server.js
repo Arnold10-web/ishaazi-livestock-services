@@ -412,7 +412,6 @@ if (process.env.NODE_ENV === 'development') {
 import enhancedAdminRoutes from './routes/enhancedAdminRoutes.js';
 import contentRoutes from './routes/contentRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
-import emailTestRoutes from './routes/emailTestRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import syndicationRoutes from './routes/syndicationRoutes.js';
@@ -432,10 +431,6 @@ app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
-// Email test routes only in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use('/api/email', emailTestRoutes);
-}
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps

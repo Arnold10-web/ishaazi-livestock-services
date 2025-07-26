@@ -28,10 +28,12 @@ import Notification from '../models/Notification.js';
  */
 const createTransporter = () => {
   const config = {
-    service: 'gmail',
+    host: process.env.EMAIL_HOST || 'server252.web-hosting.com',
+    port: parseInt(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE === 'true',
     auth: {
-      user: process.env.EMAIL_USER || 'your-email@gmail.com',
-      pass: process.env.EMAIL_APP_PASSWORD || 'your-app-password'
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
     },
     pool: true,
     maxConnections: 5,
@@ -39,7 +41,7 @@ const createTransporter = () => {
     rateLimit: 14
   };
 
-  return nodemailer.createTransporter(config);
+  return nodemailer.createTransport(config);
 };
 
 /**
