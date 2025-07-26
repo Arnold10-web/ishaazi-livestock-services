@@ -59,7 +59,7 @@ class EmailService {
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
         requireTLS: true,
         tls: {
-          rejectUnauthorized: false // Allow self-signed certificates for hosting providers
+          rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : (process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : true)
         },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
@@ -112,8 +112,14 @@ class EmailService {
       
       // Verify the connection
       if (process.env.NODE_ENV === 'production') {
-        await this.transporter.verify();
-        console.log('✅ Email service initialized and verified successfully');
+        try {
+          await this.transporter.verify();
+          console.log('✅ Email service initialized and verified successfully');
+        } catch (verifyError) {
+          console.warn('⚠️  Email transporter verification failed in production:', verifyError.message);
+          // Continue with unverified transporter rather than failing completely
+        }
+      } else {
       } else {
         console.log('📧 Email service initialized (development mode)');
         console.log('📧 Note: SMTP verification skipped for local development');
