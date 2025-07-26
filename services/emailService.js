@@ -45,6 +45,13 @@ class EmailService {
   getEmailConfig() {
     const provider = process.env.EMAIL_PROVIDER || process.env.EMAIL_SERVICE || 'smtp';
     
+    console.log('📧 Email provider selected:', provider);
+    console.log('📧 Environment variables check:', {
+      EMAIL_HOST: process.env.EMAIL_HOST ? '[SET]' : '[NOT SET]',
+      EMAIL_USER: process.env.EMAIL_USER ? '[SET]' : '[NOT SET]',
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE
+    });
+    
     const configs = {
       smtp: {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -71,7 +78,7 @@ class EmailService {
       }
     };
 
-    const selectedConfig = configs[provider] || configs.gmail;
+    const selectedConfig = configs[provider] || configs.smtp;
 
     return {
       provider,
@@ -97,14 +104,22 @@ class EmailService {
         return;
       }
 
-      this.transporter = nodemailer.createTransporter(this.config);
+      this.transporter = nodemailer.createTransport(this.config);
       
-      // Verify the connection in production
+      // Handle verification based on environment
       if (process.env.NODE_ENV === 'production') {
-        await this.transporter.verify();
-        console.log('✅ Email service initialized successfully');
+        try {
+          await this.transporter.verify();
+          console.log('✅ Email service initialized and verified successfully');
+        } catch (verifyError) {
+          console.log('⚠️  Email verification failed in production:', verifyError.message);
+          console.log('📧 This might indicate server connectivity issues');
+          // In production, we still want to try sending emails
+        }
       } else {
         console.log('📧 Email service initialized (development mode)');
+        console.log('📧 Note: SMTP verification skipped for local development');
+        console.log('📧 Email authentication may fail locally but should work on Railway');
       }
       
       // Load email templates
@@ -123,6 +138,13 @@ class EmailService {
     const user = this.config.auth?.user;
     const pass = this.config.auth?.pass;
     
+    console.log('🔍 Email config validation:', {
+      user: user ? '[SET]' : '[NOT SET]',
+      pass: pass ? '[SET]' : '[NOT SET]',
+      host: this.config.host,
+      port: this.config.port
+    });
+    
     // Check for placeholder values or missing credentials
     const placeholderValues = [
       'your_email_username',
@@ -133,6 +155,7 @@ class EmailService {
     ];
     
     if (!user || !pass) {
+      console.log('❌ Missing email credentials');
       return false;
     }
     
@@ -141,6 +164,12 @@ class EmailService {
       user.includes(placeholder) || pass.includes(placeholder)
     );
     
+    if (hasPlaceholders) {
+      console.log('❌ Placeholder values detected in email credentials');
+      return false;
+    }
+    
+    console.log('✅ Email credentials validation passed');
     return !hasPlaceholders;
   }
 
