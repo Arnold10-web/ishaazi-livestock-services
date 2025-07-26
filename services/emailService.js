@@ -120,7 +120,6 @@ class EmailService {
           // Continue with unverified transporter rather than failing completely
         }
       } else {
-      } else {
         console.log('📧 Email service initialized (development mode)');
         console.log('📧 Note: SMTP verification skipped for local development');
       }
