@@ -35,7 +35,7 @@ const getVapidKeys = () => {
     const emailContact = process.env.EMAIL_USER?.trim();
 
     // Debug logging for VAPID configuration
-    console.log('\n📨 Push Notification Configuration:');
+    console.log('\n[PUSH] Push Notification Configuration:');
     console.log('- EMAIL_USER:', emailContact ? '[SET]' : '[NOT SET]');
     console.log('- PUSH_NOTIFICATION_VAPID_PUBLIC:', vapidPublic ? '[SET]' : '[NOT SET]');
     console.log('- PUSH_NOTIFICATION_VAPID_PRIVATE:', vapidPrivate ? '[SET]' : '[NOT SET]');

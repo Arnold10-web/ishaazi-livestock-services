@@ -17,7 +17,7 @@ try {
     }
     console.log('🔧 Environment Setup: Complete');
 } catch (error) {
-    console.error('❌ Error loading .env file:', error.message);
+    console.error('[ERROR] Error loading .env file:', error.message);
     process.exit(1);
 }
 
@@ -224,7 +224,7 @@ async function initializeServer() {
     
     console.log('✅ Services initialized successfully');
   } catch (error) {
-    console.error('❌ Failed to initialize services:', error);
+    console.error('[ERROR] Failed to initialize services:', error);
     process.exit(1); // Exit with error code to trigger container restart
   }
 }
@@ -595,7 +595,7 @@ async function startServer() {
       });
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('[ERROR] Failed to start server:', error);
     process.exit(1);
   }
 }
