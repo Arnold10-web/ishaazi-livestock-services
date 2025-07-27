@@ -193,9 +193,9 @@ class EmailService {
           this.templates.set(templateName, templateContent);
         }
       }
-      console.log(`📄 Loaded ${this.templates.size} email templates`);
+      console.log(`[TEMPLATES] Loaded ${this.templates.size} email templates`);
     } catch (error) {
-      console.log('📄 No email templates directory found, using default templates');
+      console.log('[TEMPLATES] No email templates directory found, using default templates');
       this.loadDefaultTemplates();
     }
   }
@@ -222,7 +222,7 @@ class EmailService {
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
             <div style="background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center;">
-              <div style="font-size: 36px; margin-bottom: 15px;">🌾</div>
+              <div style="font-size: 36px; margin-bottom: 15px;">&#127806;</div>
               <h1 style="font-size: 28px; margin-bottom: 10px;">Welcome to {{companyName}}!</h1>
               <p>Your gateway to modern farming knowledge</p>
             </div>
@@ -254,13 +254,13 @@ class EmailService {
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
             <div style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+              <div style="font-size: 48px; margin-bottom: 15px;">&#128231;</div>
               <h1>Confirm Your Subscription</h1>
               <p>One more step to complete your subscription</p>
             </div>
             <div style="padding: 40px 30px; background: white;">
               <div style="background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #e67e22; margin: 20px 0; text-align: center;">
-                <h2 style="color: #e67e22; margin-bottom: 15px;">🎉 Thanks for subscribing!</h2>
+                <h2 style="color: #e67e22; margin-bottom: 15px;">&#127881; Thanks for subscribing!</h2>
                 <p>Please confirm your email address to complete your subscription.</p>
               </div>
               <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
@@ -268,7 +268,7 @@ class EmailService {
                 <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">{{subscriberEmail}}</div>
               </div>
               <div style="text-align: center; margin: 40px 0;">
-                <a href="{{confirmationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px;">✓ Confirm My Subscription</a>
+                <a href="{{confirmationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px;">&#10003; Confirm My Subscription</a>
               </div>
             </div>
             <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
@@ -406,7 +406,7 @@ class EmailService {
 
       // Add delay between batches
       if (i + batchSize < subscribers.length) {
-        console.log(`⏳ Waiting ${delay}ms before next batch...`);
+        console.log(`[BATCH] Waiting ${delay}ms before next batch...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -602,7 +602,7 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       
-      console.log(`✅ Account status email sent to ${companyEmail}`);
+      console.log(`[SUCCESS] Account status email sent to ${companyEmail}`);
       return {
         success: true,
         messageId: result.messageId,
@@ -651,7 +651,7 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       
-      console.log(`✅ Confirmation email sent to: ${subscriberEmail}`);
+      console.log(`[SUCCESS] Confirmation email sent to: ${subscriberEmail}`);
       return {
         success: true,
         messageId: result.messageId,
@@ -709,7 +709,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div style="font-size: 36px; margin-bottom: 15px;">🌾</div>
+            <div style="font-size: 36px; margin-bottom: 15px;">&#127806;</div>
             <h1>Welcome to ${data.companyName}!</h1>
             <p>Your gateway to modern farming knowledge</p>
           </div>
@@ -719,7 +719,7 @@ class EmailService {
               <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
             </div>
             <div class="details-box">
-              <h3 style="color: #2d5a27;">📧 Your Subscription Details</h3>
+              <h3 style="color: #2d5a27;">&#128231; Your Subscription Details</h3>
               <p><strong>Email:</strong> ${data.subscriberEmail}</p>
               <p><strong>Subscription Type:</strong> ${data.subscriptionType}</p>
               <p><strong>Frequency:</strong> ${data.frequency} updates</p>
@@ -765,13 +765,13 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+            <div style="font-size: 48px; margin-bottom: 15px;">&#128231;</div>
             <h1>Confirm Your Subscription</h1>
             <p>One more step to complete your subscription</p>
           </div>
           <div class="content">
             <div class="confirmation-box">
-              <h2 style="color: #e67e22; margin-bottom: 15px;">🎉 Thanks for subscribing!</h2>
+              <h2 style="color: #e67e22; margin-bottom: 15px;">&#127881; Thanks for subscribing!</h2>
               <p>Please confirm your email address to complete your subscription.</p>
             </div>
             <div class="email-box">
@@ -779,7 +779,7 @@ class EmailService {
               <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">${data.subscriberEmail}</div>
             </div>
             <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.confirmationUrl}" class="button">✓ Confirm My Subscription</a>
+              <a href="${data.confirmationUrl}" class="button">&#10003; Confirm My Subscription</a>
             </div>
           </div>
           <div class="footer">
@@ -794,7 +794,7 @@ class EmailService {
 
   // Mock email sending for development/testing
   mockSendMail(options) {
-    console.log('📧 Mock Email Sent:');
+    console.log('[MOCK] Mock Email Sent:');
     console.log('To:', options.to);
     console.log('Subject:', options.subject);
     console.log('From:', options.from);
