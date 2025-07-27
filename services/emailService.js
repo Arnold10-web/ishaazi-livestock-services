@@ -45,8 +45,8 @@ class EmailService {
   getEmailConfig() {
     const provider = process.env.EMAIL_SERVICE || 'smtp';
     
-    console.log('📧 Email provider selected:', provider);
-    console.log('📧 Environment variables check:', {
+    console.log('[EMAIL] Email provider selected:', provider);
+    console.log('[EMAIL] Environment variables check:', {
       EMAIL_HOST: process.env.EMAIL_HOST ? '[SET]' : '[NOT SET]',
       EMAIL_USER: process.env.EMAIL_USER ? '[SET]' : '[NOT SET]',
       EMAIL_SERVICE: process.env.EMAIL_SERVICE
@@ -101,7 +101,7 @@ class EmailService {
       const hasValidCredentials = this.validateCredentials();
       
       if (!hasValidCredentials) {
-        console.warn('⚠️  Email credentials not configured properly. Check your environment variables.');
+        console.warn('[WARNING] Email credentials not configured properly. Check your environment variables.');
         this.transporter = {
           sendMail: this.mockSendMail.bind(this)
         };
@@ -114,29 +114,29 @@ class EmailService {
       if (process.env.NODE_ENV === 'production') {
         try {
           await this.transporter.verify();
-          console.log('✅ Email service initialized and verified successfully');
+          console.log('[SUCCESS] Email service initialized and verified successfully');
         } catch (verifyError) {
-          console.warn('⚠️  Email transporter verification failed in production:', verifyError.message);
+          console.warn('[WARNING] Email transporter verification failed in production:', verifyError.message);
           // Continue with unverified transporter rather than failing completely
         }
       } else {
-        console.log('📧 Email service initialized (development mode)');
-        console.log('📧 Note: SMTP verification skipped for local development');
+        console.log('[EMAIL] Email service initialized (development mode)');
+        console.log('[EMAIL] Note: SMTP verification skipped for local development');
       }
       
       // Load email templates
       await this.loadTemplates();
     } catch (error) {
-      console.error('❌ Email service initialization failed:', error.message);
+      console.error('[ERROR] Email service initialization failed:', error.message);
       // In production, this should be treated as a critical error
       if (process.env.NODE_ENV === 'production') {
-        console.error('🚨 CRITICAL: Email service failure in production environment');
+        console.error('[CRITICAL] Email service failure in production environment');
       }
       // Fall back to mock for development only
       this.transporter = {
         sendMail: this.mockSendMail.bind(this)
       };
-      console.log('📧 Using mock email service as fallback');
+      console.log('[EMAIL] Using mock email service as fallback');
     }
   }
 
@@ -144,7 +144,7 @@ class EmailService {
     const user = this.config.auth?.user;
     const pass = this.config.auth?.pass;
     
-    console.log('🔍 Email config validation:', {
+    console.log('[DEBUG] Email config validation:', {
       user: user ? '[SET]' : '[NOT SET]',
       pass: pass ? '[SET]' : '[NOT SET]',
       host: this.config.host,
@@ -161,7 +161,7 @@ class EmailService {
     ];
     
     if (!user || !pass) {
-      console.log('❌ Missing email credentials');
+      console.log('[ERROR] Missing email credentials');
       return false;
     }
     
@@ -171,11 +171,11 @@ class EmailService {
     );
     
     if (hasPlaceholders) {
-      console.log('❌ Placeholder values detected in email credentials');
+      console.log('[ERROR] Placeholder values detected in email credentials');
       return false;
     }
     
-    console.log('✅ Email credentials validation passed');
+    console.log('[SUCCESS] Email credentials validation passed');
     return !hasPlaceholders;
   }
 
@@ -323,7 +323,7 @@ class EmailService {
 
     try {
       const result = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully:', result.messageId);
+      console.log('[SUCCESS] Email sent successfully:', result.messageId);
       
       // Update subscriber success info if email is provided
       if (options.to && typeof options.to === 'string') {
@@ -332,7 +332,7 @@ class EmailService {
       
       return { success: true, messageId: result.messageId };
     } catch (error) {
-      console.error('❌ Email sending failed:', error.message);
+      console.error('[ERROR] Email sending failed:', error.message);
       
       // Handle email failure if subscriber email is provided
       if (options.to && typeof options.to === 'string') {
@@ -457,7 +457,7 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       
-      console.log(`✅ Welcome email sent to new subscriber: ${subscriberEmail}`);
+      console.log(`[SUCCESS] Welcome email sent to new subscriber: ${subscriberEmail}`);
       return {
         success: true,
         messageId: result.messageId,
@@ -507,7 +507,7 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       
-      console.log(`✅ Welcome email sent to ${companyEmail}`);
+      console.log(`[SUCCESS] Welcome email sent to ${companyEmail}`);
       return {
         success: true,
         messageId: result.messageId,
@@ -555,7 +555,7 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       
-      console.log(`✅ Password reset email sent to ${companyEmail}`);
+      console.log(`[SUCCESS] Password reset email sent to ${companyEmail}`);
       return {
         success: true,
         messageId: result.messageId,
