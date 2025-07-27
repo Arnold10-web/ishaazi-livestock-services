@@ -280,6 +280,10 @@ app.use(cors({
   ],
 }));
 
+// Log CORS configuration for debugging
+console.log('[CORS] Allowed origins:', corsOrigin);
+
+// Handle preflight requests
 app.options('*', cors());
 
 /**
@@ -455,16 +459,28 @@ const passwordLimiter = rateLimit({
 
 app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
 
+// API-only backend - frontend is hosted separately on Namecheap
+console.log('[BACKEND] Running in API-only mode - frontend hosted on Namecheap');
+
+// Basic API root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Ishaazi Livestock Services API',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV,
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api/*'
+    }
+  });
+});
+
 // GridFS file upload is handled through content routes
 
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.send('Welcome to the Online Farming Magazine API');
 });
 
 // Error logging middleware
