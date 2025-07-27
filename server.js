@@ -4,21 +4,30 @@
 import dotenv from 'dotenv';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 
 // Get directory name in ES modules
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const envPath = resolve(__dirname, '.env');
 
-// Load environment variables synchronously
+// Load environment variables (only for local development)
+// In production (Railway), environment variables are injected automatically
 try {
-    const result = dotenv.config({ path: envPath });
-    if (result.error) {
-        throw result.error;
+    if (existsSync(envPath)) {
+        const result = dotenv.config({ path: envPath });
+        if (result.error) {
+            throw result.error;
+        }
+        console.log('[ENV] Environment Setup: Complete (local .env loaded)');
+    } else {
+        console.log('[ENV] Environment Setup: Complete (using platform variables)');
     }
-    console.log('🔧 Environment Setup: Complete');
 } catch (error) {
     console.error('[ERROR] Error loading .env file:', error.message);
-    process.exit(1);
+    // Don't exit in production - environment variables might still be available
+    if (process.env.NODE_ENV !== 'production') {
+        process.exit(1);
+    }
 }
 
 // Configure VAPID keys

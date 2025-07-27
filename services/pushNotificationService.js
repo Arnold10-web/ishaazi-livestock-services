@@ -15,12 +15,19 @@ import Subscriber from '../models/Subscriber.js';
 import dotenv from 'dotenv';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const envPath = resolve(__dirname, '..', '.env');
 
-// Ensure environment variables are loaded
-dotenv.config({ path: envPath });
+// Only load .env file if it exists (for local development)
+// In production (Railway), environment variables are injected automatically
+if (existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  console.log('[PUSH] Loaded local .env file for development');
+} else {
+  console.log('[PUSH] Using environment variables from platform (production mode)');
+}
 
 /**
  * Configure web-push library with Voluntary Application Server Identification (VAPID) keys
