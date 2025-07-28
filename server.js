@@ -280,10 +280,6 @@ app.use(cors({
   ],
 }));
 
-// Log CORS configuration for debugging
-console.log('[CORS] Allowed origins:', corsOrigin);
-
-// Handle preflight requests
 app.options('*', cors());
 
 /**
@@ -459,22 +455,42 @@ const passwordLimiter = rateLimit({
 
 app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
 
-// API-only backend - frontend is hosted separately on Namecheap
-console.log('[BACKEND] Running in API-only mode - frontend hosted on Namecheap');
+// Frontend serving (Production)
+// Serve static files from the React app build folder
+const frontendBuildPath = resolve(__dirname, 'farming-magazine-frontend', 'build');
 
-// Basic API root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Ishaazi Livestock Services API',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV,
-    status: 'running',
-    endpoints: {
-      health: '/health',
-      api: '/api/*'
+if (existsSync(frontendBuildPath)) {
+  console.log('[FRONTEND] Serving React frontend from:', frontendBuildPath);
+  
+  // Serve static files with cache headers
+  app.use(express.static(frontendBuildPath, {
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
+    etag: true,
+    lastModified: true
+  }));
+  
+  // Handle React Router - send all non-API requests to index.html
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+      return next();
     }
+    
+    res.sendFile(resolve(frontendBuildPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('[FRONTEND] Error serving index.html:', err);
+        res.status(500).send('Frontend serving error');
+      }
+    });
   });
-});
+} else {
+  console.log('[FRONTEND] No frontend build found, serving API-only');
+  
+  // Basic route for API-only mode
+  app.get('/', (req, res) => {
+    res.send('Welcome to the Online Farming Magazine API');
+  });
+}
 
 // GridFS file upload is handled through content routes
 
