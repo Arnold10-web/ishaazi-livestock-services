@@ -400,13 +400,15 @@ connectDB()
       console.log('🔧 Running production deployment optimizations...');
       
       try {
-        // Import and run critical database indexes
-        const { runCriticalIndexes } = await import('./scripts/criticalIndexes.js');
+        // Import and run critical database indexes using absolute path
+        const scriptPath = resolve(__dirname, 'scripts', 'criticalIndexes.js');
+        const { runCriticalIndexes } = await import(`file://${scriptPath}`);
         await runCriticalIndexes();
         console.log('✅ Critical database indexes deployed');
         
         // Import and run code ANALYSIS only (no file deletion in production)
-        const cleanupModule = await import('./scripts/cleanupCode.js');
+        const cleanupPath = resolve(__dirname, 'scripts', 'cleanupCode.js');
+        const cleanupModule = await import(`file://${cleanupPath}`);
         const { analyzeCodebaseHealth } = cleanupModule.default;
         console.log('🧹 Running codebase analysis...');
         analyzeCodebaseHealth();
