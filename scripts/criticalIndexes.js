@@ -9,13 +9,23 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables only if not already loaded (for standalone execution)
+if (!process.env.MONGODB_URI) {
+  dotenv.config();
+}
 
 const createCriticalIndexes = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('🔗 Connected to MongoDB for critical index creation');
+    // Use existing connection if available, otherwise create new one
+    if (mongoose.connection.readyState === 1) {
+      console.log('🔗 Using existing MongoDB connection for critical index creation');
+    } else {
+      if (!process.env.MONGODB_URI) {
+        throw new Error('MONGODB_URI environment variable is not set');
+      }
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('🔗 Connected to MongoDB for critical index creation');
+    }
 
     const db = mongoose.connection.db;
 
@@ -95,10 +105,18 @@ const createCriticalIndexes = async () => {
     
   } catch (error) {
     console.error('❌ CRITICAL ERROR creating indexes:', error);
-    process.exit(1);
+    // Only exit if running standalone
+    if (import.meta.url === `file://${process.argv[1]}`) {
+      process.exit(1);
+    } else {
+      throw error; // Let the caller handle the error
+    }
   } finally {
-    await mongoose.disconnect();
-    process.exit(0);
+    // Only disconnect if we created the connection (standalone execution)
+    if (import.meta.url === `file://${process.argv[1]}`) {
+      await mongoose.disconnect();
+      process.exit(0);
+    }
   }
 };
 
