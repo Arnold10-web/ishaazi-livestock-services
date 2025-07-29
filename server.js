@@ -400,9 +400,9 @@ connectDB()
     console.log("Connected to MongoDB");
     
     // 🚀 PRODUCTION DEPLOYMENT AUTOMATION
-    // Run critical optimizations once on production startup
+    // Run ONLY database optimizations on production startup
     if (process.env.NODE_ENV === 'production' && !process.env.DEPLOYMENT_SCRIPTS_EXECUTED) {
-      console.log('🔧 Running production deployment optimizations...');
+      console.log('🔧 Running production database optimizations...');
       
       try {
         // Import and run critical database indexes using absolute path
@@ -411,20 +411,15 @@ connectDB()
         await runCriticalIndexes();
         console.log('✅ Critical database indexes deployed');
         
-        // Import and run code ANALYSIS only (no file deletion in production)
-        const cleanupPath = resolve(__dirname, 'scripts', 'cleanupCode.js');
-        const cleanupModule = await import(`file://${cleanupPath}`);
-        const { analyzeCodebaseHealth } = cleanupModule.default;
-        console.log('🧹 Running codebase analysis...');
-        analyzeCodebaseHealth();
-        console.log('✅ Codebase analysis completed (files preserved)');
+        // NOTE: Code cleanup script runs LOCALLY ONLY
+        // Use: node scripts/cleanupCode.js --execute (local development only)
         
         // Set environment flag to prevent re-running
         process.env.DEPLOYMENT_SCRIPTS_EXECUTED = 'true';
-        console.log('🎯 All deployment optimizations completed successfully');
+        console.log('🎯 Database optimizations completed successfully');
         
       } catch (error) {
-        console.error('❌ Deployment optimization error:', error.message);
+        console.error('❌ Database optimization error:', error.message);
         // Don't exit - let the server start even if optimizations fail
       }
     }

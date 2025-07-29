@@ -15,14 +15,13 @@ const projectRoot = path.resolve(__dirname, '..');
 
 // Files that are candidates for removal (duplicates/unused)
 const POTENTIALLY_UNUSED_FILES = [
-  // Duplicate dashboard controllers
-  'controllers/dashboardCleanupController.js', // Functionality merged into main dashboard
+  // Old optimization scripts (functionality integrated) - VERIFIED SAFE
+  // 'scripts/optimizeDatabase.js', // File doesn't exist - already removed
   
-  // Redundant auth components (frontend)
-  'farming-magazine-frontend/src/components/AdminAuth.js', // Replaced by EnhancedAdminAuth
+  // Frontend auth components - VERIFIED SAFE
+  // 'farming-magazine-frontend/src/components/AdminAuth.js', // File doesn't exist - already removed
   
-  // Old optimization scripts (functionality integrated)
-  'scripts/optimizeDatabase.js', // Replaced by criticalIndexes.js
+  // Note: dashboardCleanupController.js is STILL BEING USED - DO NOT DELETE
 ];
 
 // Files with consolidation opportunities
@@ -70,10 +69,10 @@ const analyzeCodebaseHealth = () => {
   });
 
   console.log('\n🎯 CLEANUP RECOMMENDATIONS:');
-  console.log('  1. Controllers: Merge dashboardCleanupController.js into dashboardController.js');
-  console.log('  2. Authentication: Remove old AdminAuth.js (replaced by EnhancedAdminAuth.js)');
-  console.log('  3. Cache: Consolidate cache.js and enhancedCache.js');
-  console.log('  4. Database: Remove old optimizeDatabase.js (replaced by criticalIndexes.js)');
+  console.log('  1. Code Review: dashboardCleanupController.js is still in use (check if can be merged)');
+  console.log('  2. Performance: Large files could be refactored into smaller modules');
+  console.log('  3. Cache: Consider consolidating cache.js and enhancedCache.js');
+  console.log('  4. Testing: Add comprehensive test coverage for large controllers');
 
   console.log('\n⚡ PERFORMANCE IMPROVEMENTS NEEDED:');
   console.log('  1. Add database indexes (run criticalIndexes.js)');

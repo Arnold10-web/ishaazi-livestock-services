@@ -59,7 +59,7 @@ frontend/build/
 /.nuxt/
 .cache/
 coverage/
-
+scripts
 load-test.yml
 # Local development files
 .DS_Store
@@ -74,6 +74,7 @@ load-test.yml
 .tmp/
 tmp/
 temp/
+scripts
 
 # Database dumps and backups
 *.sql
