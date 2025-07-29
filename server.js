@@ -478,11 +478,23 @@ const frontendBuildPath = resolve(__dirname, 'farming-magazine-frontend', 'build
 if (existsSync(frontendBuildPath)) {
   console.log('[FRONTEND] Serving React frontend from:', frontendBuildPath);
   
-  // Serve static files with cache headers
+  // Serve static files with proper cache headers
   app.use(express.static(frontendBuildPath, {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : '0', // Reduced from 1d to 1h
     etag: true,
-    lastModified: true
+    lastModified: true,
+    cacheControl: true,
+    setHeaders: (res, path) => {
+      // Disable cache for HTML files to ensure fresh content
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else if (path.endsWith('.js') || path.endsWith('.css')) {
+        // Allow caching for JS/CSS but with versioning
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+      }
+    }
   }));
   
   // Handle React Router - send all non-API requests to index.html
