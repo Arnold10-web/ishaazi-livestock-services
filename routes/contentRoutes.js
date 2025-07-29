@@ -98,6 +98,8 @@ import {
   trackLike,
   trackShare,
   getEngagementStats,
+  verifyReadingTimeAccuracy,
+  verifyStatisticsAccuracy,
 
 } from '../controllers/contentController.js';
 
@@ -353,5 +355,12 @@ router.post('/:contentType/:id/share', trackShare);
 
 // Get engagement stats for any content
 router.get('/:contentType/:id/stats', getEngagementStats);
+
+// ACCURACY VERIFICATION ROUTES
+// Verify reading time accuracy across all content types
+router.get('/verify/reading-time', verifyReadingTimeAccuracy);
+
+// Verify statistics accuracy across dashboard metrics
+router.get('/verify/statistics', verifyStatisticsAccuracy);
 
 export default router;

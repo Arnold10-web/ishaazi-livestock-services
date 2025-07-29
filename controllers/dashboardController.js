@@ -62,16 +62,23 @@ export const getDashboardStats = async (req, res) => {
     
     const totalContentCount = Object.values(totalContent).reduce((sum, count) => sum + count, 0);
     
-    // Get previous month content count for percentage change
-    const previousMonthContent = await Blog.countDocuments({
-      createdAt: { $gte: previousMonth, $lte: previousMonthEnd }
-    }) + await News.countDocuments({
-      createdAt: { $gte: previousMonth, $lte: previousMonthEnd }
-    }) + await Event.countDocuments({
-      createdAt: { $gte: previousMonth, $lte: previousMonthEnd }
-    }) + await Newsletter.countDocuments({
-      createdAt: { $gte: previousMonth, $lte: previousMonthEnd }
-    });
+    // Get previous month content count for percentage change (ALL content types)
+    const [prevBlogs, prevNews, prevEvents, prevFarms, prevMagazines, prevBasics, prevDairy, prevBeef, prevGoats, prevPiggery, prevNewsletters] = await Promise.all([
+      Blog.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      News.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Event.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Farm.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Magazine.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Basic.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Dairy.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Beef.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Goat.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Piggery.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+      Newsletter.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } })
+    ]);
+
+    const previousMonthContent = prevBlogs + prevNews + prevEvents + prevFarms + prevMagazines + 
+                                prevBasics + prevDairy + prevBeef + prevGoats + prevPiggery + prevNewsletters;
     
     const contentChange = previousMonthContent > 0 
       ? ((totalContentCount - previousMonthContent) / previousMonthContent * 100).toFixed(1)
@@ -131,21 +138,60 @@ export const getDashboardStats = async (req, res) => {
       ? ((newsletterClickRate[0].totalClicks / newsletterClickRate[0].totalSent) * 100).toFixed(1) + '%'
       : '0%';
 
-    // 3. ENGAGEMENT RATE (DYNAMIC - based on views)
-    const totalViews = await Blog.aggregate([
-      { $group: { _id: null, count: { $sum: '$views' } } }
+    // 3. ENGAGEMENT RATE (DYNAMIC - based on views from ALL content types)
+    // Calculate total views across all content types
+    const [blogViews, newsViews, eventViews, farmViews, magazineViews, basicViews, dairyViews, beefViews, goatViews, piggeryViews] = await Promise.all([
+      Blog.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      News.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Event.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Farm.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Magazine.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Basic.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Dairy.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Beef.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Goat.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }]),
+      Piggery.aggregate([{ $group: { _id: null, count: { $sum: '$views' } } }])
     ]);
-    const viewsCount = totalViews[0]?.count || 0;
+
+    const viewsCount = (blogViews[0]?.count || 0) + 
+                      (newsViews[0]?.count || 0) + 
+                      (eventViews[0]?.count || 0) + 
+                      (farmViews[0]?.count || 0) + 
+                      (magazineViews[0]?.count || 0) + 
+                      (basicViews[0]?.count || 0) + 
+                      (dairyViews[0]?.count || 0) + 
+                      (beefViews[0]?.count || 0) + 
+                      (goatViews[0]?.count || 0) + 
+                      (piggeryViews[0]?.count || 0);
+
     const engagementRate = totalContentCount > 0 
       ? ((viewsCount / totalContentCount) * 100).toFixed(0) + '%'
       : '0%';
     
-    // Calculate previous month's engagement for comparison
-    const previousMonthViewsCount = await Blog.aggregate([
-      { $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } },
-      { $group: { _id: null, count: { $sum: '$views' } } }
+    // Calculate previous month's engagement for comparison (all content types)
+    const [prevBlogViews, prevNewsViews, prevEventViews, prevFarmViews, prevMagazineViews, prevBasicViews, prevDairyViews, prevBeefViews, prevGoatViews, prevPiggeryViews] = await Promise.all([
+      Blog.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      News.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Event.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Farm.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Magazine.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Basic.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Dairy.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Beef.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Goat.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }]),
+      Piggery.aggregate([{ $match: { createdAt: { $gte: previousMonth, $lte: previousMonthEnd } } }, { $group: { _id: null, count: { $sum: '$views' } } }])
     ]);
-    const prevViewsCount = previousMonthViewsCount[0]?.count || 0;
+
+    const prevViewsCount = (prevBlogViews[0]?.count || 0) + 
+                          (prevNewsViews[0]?.count || 0) + 
+                          (prevEventViews[0]?.count || 0) + 
+                          (prevFarmViews[0]?.count || 0) + 
+                          (prevMagazineViews[0]?.count || 0) + 
+                          (prevBasicViews[0]?.count || 0) + 
+                          (prevDairyViews[0]?.count || 0) + 
+                          (prevBeefViews[0]?.count || 0) + 
+                          (prevGoatViews[0]?.count || 0) + 
+                          (prevPiggeryViews[0]?.count || 0);
     const prevEngagementRate = previousMonthContent > 0 
       ? (prevViewsCount / previousMonthContent) * 100
       : 0;

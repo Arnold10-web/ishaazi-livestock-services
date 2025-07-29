@@ -396,33 +396,8 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
 // Database connection
 connectDB()
-  .then(async () => {
+  .then(() => {
     console.log("Connected to MongoDB");
-    
-    // 🚀 PRODUCTION DEPLOYMENT AUTOMATION
-    // Run ONLY database optimizations on production startup
-    if (process.env.NODE_ENV === 'production' && !process.env.DEPLOYMENT_SCRIPTS_EXECUTED) {
-      console.log('🔧 Running production database optimizations...');
-      
-      try {
-        // Import and run critical database indexes using absolute path
-        const scriptPath = resolve(__dirname, 'scripts', 'criticalIndexes.js');
-        const { runCriticalIndexes } = await import(`file://${scriptPath}`);
-        await runCriticalIndexes();
-        console.log('✅ Critical database indexes deployed');
-        
-        // NOTE: Code cleanup script runs LOCALLY ONLY
-        // Use: node scripts/cleanupCode.js --execute (local development only)
-        
-        // Set environment flag to prevent re-running
-        process.env.DEPLOYMENT_SCRIPTS_EXECUTED = 'true';
-        console.log('🎯 Database optimizations completed successfully');
-        
-      } catch (error) {
-        console.error('❌ Database optimization error:', error.message);
-        // Don't exit - let the server start even if optimizations fail
-      }
-    }
   })
   .catch(err => {
     console.error('Database connection failed:', err.message);

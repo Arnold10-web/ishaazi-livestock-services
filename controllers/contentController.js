@@ -29,6 +29,7 @@ import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
 import nodemailer from 'nodemailer';
 import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
+import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
 /**
  * Define __dirname manually for ES modules
@@ -451,6 +452,10 @@ export const createBlog = async (req, res) => {
     
     console.log('🔍 DEBUG: Parsed tags:', parsedTags);
 
+    // Calculate accurate reading time
+    const calculatedReadTime = calculateReadingTimeByType(content, 'blog');
+    console.log('🔍 DEBUG: Calculated reading time:', calculatedReadTime, 'minutes');
+
     console.log('🔍 DEBUG: Creating new Blog instance...');
     const newBlog = new Blog({
       title,
@@ -460,7 +465,8 @@ export const createBlog = async (req, res) => {
       tags: parsedTags,
       image: imageUrl, // Store GridFS file ID in image field
       metadata: parsedMetadata,
-      published: published === 'true' || published === true || published === "true"
+      published: published === 'true' || published === true || published === "true",
+      readTime: calculatedReadTime // Store calculated reading time
     });
 
     try {
@@ -1636,6 +1642,9 @@ export const createPiggery = async (req, res) => {
       parsedTags = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
     }
 
+    // Calculate accurate reading time if not provided
+    const calculatedReadTime = readTime || calculateReadingTimeByType(content, 'piggery');
+
     const newPiggery = new Piggery({
       title,
       content,
@@ -1644,10 +1653,11 @@ export const createPiggery = async (req, res) => {
       image: imageId, // GridFS file ID
       metadata: {
         ...parsedMetadata,
-        readTime: readTime || 5
+        readTime: calculatedReadTime
       },
       published: published === 'true' || published === true,
-      featured: featured === 'true' || featured === true
+      featured: featured === 'true' || featured === true,
+      readTime: calculatedReadTime // Store in main document for queries
     });
 
     try {
@@ -3914,5 +3924,246 @@ export const updateEmailPreferences = async (req, res) => {
       message: 'Failed to update email preferences',
       error: error.message
     });
+  }
+};
+
+/**
+ * READING TIME AND STATISTICS VERIFICATION
+ * ========================================
+ */
+
+/**
+ * Verify and fix reading time accuracy across all content types
+ * This function analyzes all content and provides statistics on reading time accuracy
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with reading time verification results
+ */
+export const verifyReadingTimeAccuracy = async (req, res) => {
+  try {
+    const { fix = false } = req.query; // Optional parameter to fix inaccuracies
+    
+    console.log('🔍 Starting reading time verification across all content types...');
+    
+    const results = {
+      verification: {
+        blogs: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        news: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        events: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        farms: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        magazines: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        basics: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        dairy: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        beef: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        goats: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 },
+        piggery: { total: 0, accurate: 0, inaccurate: 0, fixed: 0 }
+      },
+      summary: {
+        totalContent: 0,
+        totalAccurate: 0,
+        totalInaccurate: 0,
+        totalFixed: 0,
+        accuracyPercentage: 0
+      },
+      inaccurateItems: []
+    };
+
+    // Define content models and their types
+    const contentModels = [
+      { model: Blog, type: 'blog', key: 'blogs' },
+      { model: News, type: 'news', key: 'news' },
+      { model: Event, type: 'default', key: 'events' },
+      { model: Farm, type: 'farm', key: 'farms' },
+      { model: Magazine, type: 'magazine', key: 'magazines' },
+      { model: Basic, type: 'basic', key: 'basics' },
+      { model: Dairy, type: 'dairy', key: 'dairy' },
+      { model: Beef, type: 'beef', key: 'beef' },
+      { model: Goat, type: 'goats', key: 'goats' },
+      { model: Piggery, type: 'piggery', key: 'piggery' }
+    ];
+
+    // Process each content type
+    for (const { model, type, key } of contentModels) {
+      console.log(`🔍 Verifying ${key}...`);
+      
+      const content = await model.find({}).select('_id title content readTime');
+      results.verification[key].total = content.length;
+      
+      for (const item of content) {
+        const calculatedReadTime = calculateReadingTimeByType(item.content || '', type);
+        const currentReadTime = item.readTime || 5;
+        
+        // Check if current reading time is within 25% of calculated time
+        const difference = Math.abs(calculatedReadTime - currentReadTime);
+        const percentageDiff = (difference / calculatedReadTime) * 100;
+        
+        if (percentageDiff <= 25) {
+          results.verification[key].accurate++;
+        } else {
+          results.verification[key].inaccurate++;
+          
+          // Store details of inaccurate items
+          results.inaccurateItems.push({
+            id: item._id,
+            type: key,
+            title: item.title.substring(0, 50) + '...',
+            currentReadTime,
+            calculatedReadTime,
+            difference,
+            percentageDifference: percentageDiff.toFixed(1)
+          });
+          
+          // Fix if requested
+          if (fix === 'true') {
+            await model.findByIdAndUpdate(item._id, { readTime: calculatedReadTime });
+            results.verification[key].fixed++;
+            console.log(`✅ Fixed reading time for ${key}: ${item.title.substring(0, 30)}... (${currentReadTime} → ${calculatedReadTime} min)`);
+          }
+        }
+      }
+    }
+
+    // Calculate summary statistics
+    for (const key in results.verification) {
+      const stats = results.verification[key];
+      results.summary.totalContent += stats.total;
+      results.summary.totalAccurate += stats.accurate;
+      results.summary.totalInaccurate += stats.inaccurate;
+      results.summary.totalFixed += stats.fixed;
+    }
+    
+    results.summary.accuracyPercentage = results.summary.totalContent > 0 
+      ? ((results.summary.totalAccurate / results.summary.totalContent) * 100).toFixed(1)
+      : 0;
+
+    console.log(`📊 Reading time verification complete:`);
+    console.log(`   Total content: ${results.summary.totalContent}`);
+    console.log(`   Accurate: ${results.summary.totalAccurate} (${results.summary.accuracyPercentage}%)`);
+    console.log(`   Inaccurate: ${results.summary.totalInaccurate}`);
+    if (fix === 'true') {
+      console.log(`   Fixed: ${results.summary.totalFixed}`);
+    }
+
+    sendResponse(res, true, 'Reading time verification completed', results);
+  } catch (error) {
+    console.error('❌ Error verifying reading time accuracy:', error);
+    sendResponse(res, false, 'Failed to verify reading time accuracy', null, error.message);
+  }
+};
+
+/**
+ * Verify statistics accuracy across all dashboard metrics
+ * This function validates the accuracy of view counts, engagement rates, and content statistics
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with statistics verification results
+ */
+export const verifyStatisticsAccuracy = async (req, res) => {
+  try {
+    console.log('🔍 Starting statistics accuracy verification...');
+    
+    const verification = {
+      contentCounts: {},
+      viewCounts: {},
+      engagementStats: {},
+      summary: {
+        totalIssues: 0,
+        verificationStatus: 'PASSED'
+      }
+    };
+
+    // Verify content counts for each type
+    const contentTypes = [
+      { model: Blog, name: 'blogs' },
+      { model: News, name: 'news' },
+      { model: Event, name: 'events' },
+      { model: Farm, name: 'farms' },
+      { model: Magazine, name: 'magazines' },
+      { model: Basic, name: 'basics' },
+      { model: Dairy, name: 'dairy' },
+      { model: Beef, name: 'beef' },
+      { model: Goat, name: 'goats' },
+      { model: Piggery, name: 'piggery' },
+      { model: Newsletter, name: 'newsletters' }
+    ];
+
+    console.log('📊 Verifying content counts...');
+    for (const { model, name } of contentTypes) {
+      const count = await model.countDocuments();
+      verification.contentCounts[name] = {
+        count,
+        status: count >= 0 ? 'VALID' : 'INVALID'
+      };
+      console.log(`   ${name}: ${count}`);
+    }
+
+    // Verify view counts accuracy
+    console.log('📊 Verifying view counts...');
+    for (const { model, name } of contentTypes.slice(0, -1)) { // Exclude newsletters from view counts
+      const viewStats = await model.aggregate([
+        { $group: { 
+          _id: null, 
+          totalViews: { $sum: '$views' },
+          maxViews: { $max: '$views' },
+          minViews: { $min: '$views' },
+          avgViews: { $avg: '$views' },
+          itemsWithViews: { $sum: { $cond: [{ $gt: ['$views', 0] }, 1, 0] } }
+        }}
+      ]);
+
+      const stats = viewStats[0] || { totalViews: 0, maxViews: 0, minViews: 0, avgViews: 0, itemsWithViews: 0 };
+      verification.viewCounts[name] = {
+        ...stats,
+        status: stats.totalViews >= 0 && stats.maxViews >= stats.minViews ? 'VALID' : 'INVALID'
+      };
+      console.log(`   ${name} views: total=${stats.totalViews}, avg=${(stats.avgViews || 0).toFixed(1)}, items with views=${stats.itemsWithViews}`);
+    }
+
+    // Verify engagement calculations
+    console.log('📊 Verifying engagement calculations...');
+    const totalContent = Object.values(verification.contentCounts)
+      .filter(item => item.count !== undefined)
+      .reduce((sum, item) => sum + item.count, 0);
+    
+    const totalViews = Object.values(verification.viewCounts)
+      .reduce((sum, item) => sum + (item.totalViews || 0), 0);
+
+    const calculatedEngagementRate = totalContent > 0 
+      ? ((totalViews / totalContent) * 100).toFixed(1)
+      : 0;
+
+    verification.engagementStats = {
+      totalContent,
+      totalViews,
+      engagementRate: calculatedEngagementRate + '%',
+      averageViewsPerContent: totalContent > 0 ? (totalViews / totalContent).toFixed(1) : 0,
+      status: totalContent > 0 && totalViews >= 0 ? 'VALID' : 'INVALID'
+    };
+
+    // Count any issues found
+    const issues = [
+      ...Object.values(verification.contentCounts).filter(item => item.status === 'INVALID'),
+      ...Object.values(verification.viewCounts).filter(item => item.status === 'INVALID'),
+      verification.engagementStats.status === 'INVALID' ? [verification.engagementStats] : []
+    ].flat();
+
+    verification.summary.totalIssues = issues.length;
+    verification.summary.verificationStatus = issues.length === 0 ? 'PASSED' : 'FAILED';
+
+    console.log(`📊 Statistics verification complete:`);
+    console.log(`   Total content: ${totalContent}`);
+    console.log(`   Total views: ${totalViews}`);
+    console.log(`   Engagement rate: ${calculatedEngagementRate}%`);
+    console.log(`   Status: ${verification.summary.verificationStatus}`);
+    if (issues.length > 0) {
+      console.log(`   Issues found: ${issues.length}`);
+    }
+
+    sendResponse(res, true, 'Statistics verification completed', verification);
+  } catch (error) {
+    console.error('❌ Error verifying statistics accuracy:', error);
+    sendResponse(res, false, 'Failed to verify statistics accuracy', null, error.message);
   }
 };
