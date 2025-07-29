@@ -153,6 +153,11 @@ console.log('Node version:', process.version); // Log Node.js version for diagno
 const app = express();
 const server = createServer(app);
 
+// Trust proxy for Railway deployment (enables proper IP detection)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 /**
  * Service instances declaration
  * 
