@@ -405,13 +405,12 @@ connectDB()
         await runCriticalIndexes();
         console.log('✅ Critical database indexes deployed');
         
-        // Import and run code cleanup
+        // Import and run code ANALYSIS only (no file deletion in production)
         const cleanupModule = await import('./scripts/cleanupCode.js');
-        const { analyzeCodebaseHealth, removeUnusedFiles } = cleanupModule.default;
-        console.log('🧹 Running codebase cleanup...');
+        const { analyzeCodebaseHealth } = cleanupModule.default;
+        console.log('🧹 Running codebase analysis...');
         analyzeCodebaseHealth();
-        await removeUnusedFiles(false); // Execute cleanup with backups
-        console.log('✅ Codebase cleanup completed');
+        console.log('✅ Codebase analysis completed (files preserved)');
         
         // Set environment flag to prevent re-running
         process.env.DEPLOYMENT_SCRIPTS_EXECUTED = 'true';
