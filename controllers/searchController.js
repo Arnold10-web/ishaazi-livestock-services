@@ -20,6 +20,7 @@ import Goat from '../models/Goat.js';
 import Piggery from '../models/Piggery.js';
 import Beef from '../models/Beef.js';
 import mongoose from 'mongoose';
+import { optimizeSearchQuery } from '../middleware/searchOptimization.js';
 
 /**
  * @constant {mongoose.Schema} searchAnalyticsSchema
@@ -242,10 +243,15 @@ export const searchAll = async (req, res) => {
       sessionId: req.sessionID || 'anonymous'
     });
 
-    // Create search terms (original + fuzzy if enabled)
-    let searchTerms = [query];
+    // Optimize search query using search optimization middleware
+    const optimizedQuery = optimizeSearchQuery(query);
+    console.log('🔍 Original query:', query);
+    console.log('🔍 Optimized query:', optimizedQuery);
+
+    // Create search terms (optimized + fuzzy if enabled)
+    let searchTerms = [optimizedQuery || query];
     if (fuzzy) {
-      const fuzzyTerms = createFuzzyTerms(query);
+      const fuzzyTerms = createFuzzyTerms(optimizedQuery || query);
       searchTerms = [...searchTerms, ...fuzzyTerms];
       console.log('🔍 Fuzzy search terms:', fuzzyTerms);
     }
@@ -259,16 +265,16 @@ export const searchAll = async (req, res) => {
     const searchPromises = modelsToSearch.map(async (Model) => {
       const modelName = Model.modelName.toLowerCase();
       
-      // Create advanced search query
+      // Create advanced search query with optimization
       const searchQuery = {
         $and: [
           {
             $or: [
-              // Text search with MongoDB's text index if available
-              { $text: { $search: query } },
-              // Fallback regex search
-              { title: { $regex: query, $options: 'i' } },
-              { content: { $regex: query, $options: 'i' } },
+              // Optimized text search with MongoDB's text index if available
+              { $text: { $search: optimizedQuery || query } },
+              // Fallback regex search with optimized query
+              { title: { $regex: optimizedQuery || query, $options: 'i' } },
+              { content: { $regex: optimizedQuery || query, $options: 'i' } },
             ]
           },
           { published: true } // Only return published content

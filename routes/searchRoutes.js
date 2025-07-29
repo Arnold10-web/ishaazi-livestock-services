@@ -7,6 +7,11 @@ import {
   getPerformanceMetrics, 
   resetPerformanceMetrics 
 } from '../middleware/performanceMonitor.js';
+import { 
+  trackSearchPerformance,
+  searchCacheConfig,
+  getSearchMetrics
+} from '../middleware/searchOptimization.js';
 
 const router = express.Router();
 
@@ -31,28 +36,29 @@ const suggestionRateLimit = rateLimit({
   }
 });
 
-// Apply performance monitoring to all search routes
+// Apply performance monitoring and search optimization to all search routes
 router.use(searchPerformanceMiddleware);
+router.use(trackSearchPerformance);
 
 // Apply rate limiting to search routes
 router.use('/all', searchRateLimit);
 router.use('/filter', searchRateLimit);
 router.use('/suggestions', suggestionRateLimit);
 
-// Search across all content types
-router.get('/all', SearchController.searchAll);
+// Search across all content types with caching
+router.get('/all', searchCacheConfig.searchResults, SearchController.searchAll);
 
-// Filter content by specific criteria
-router.get('/filter', SearchController.filterContent);
+// Filter content by specific criteria with caching
+router.get('/filter', searchCacheConfig.searchResults, SearchController.filterContent);
 
-// Get categories for a specific content type
-router.get('/categories/:contentType', SearchController.getCategories);
+// Get categories for a specific content type with long-term caching
+router.get('/categories/:contentType', searchCacheConfig.metadata, SearchController.getCategories);
 
-// Get tags for a specific content type
-router.get('/tags/:contentType', SearchController.getTags);
+// Get tags for a specific content type with long-term caching
+router.get('/tags/:contentType', searchCacheConfig.metadata, SearchController.getTags);
 
-// Get search suggestions/autocomplete
-router.get('/suggestions', SearchController.getSearchSuggestions);
+// Get search suggestions/autocomplete with caching
+router.get('/suggestions', searchCacheConfig.suggestions, SearchController.getSearchSuggestions);
 
 // Track search analytics
 router.post('/analytics/track', SearchController.trackSearchAnalytics);
@@ -63,5 +69,22 @@ router.get('/analytics', SearchController.getSearchAnalytics);
 // Performance monitoring endpoints
 router.get('/performance/metrics', getPerformanceMetrics);
 router.post('/performance/reset', resetPerformanceMetrics);
+
+// Search optimization metrics endpoint
+router.get('/optimization/metrics', (req, res) => {
+  try {
+    const metrics = getSearchMetrics();
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve search optimization metrics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 export default router;
