@@ -1,15 +1,42 @@
-# Online Farming Magazine
+# 🌾 Ishaazi Livestock Services
 
-This is a full-stack web application for an online farming magazine. It includes a frontend built with React and a backend built with Node.js, Express.js, and MongoDB.
+**Production-Ready Agricultural Content Management Platform**
+
+This is a full-stack web application for an online farming magazine specializing in livestock content (beef, dairy, goats, piggery). The platform features comprehensive admin management, email systems, and real-time notifications.
+
+## 📖 Complete Documentation
+
+**📋 For all deployment, architecture, and optimization details:**
+**[COMPLETE_DOCUMENTATION.md](./COMPLETE_DOCUMENTATION.md)** - Complete guide with everything you need
+
+This consolidated document includes:
+- ⚡ Immediate deployment commands
+- 🔧 Critical fixes implemented  
+- 🏗️ Architecture overview
+- 📊 Performance monitoring
+- 🧹 Script cleanup strategy
+- ⚠️ Rollback procedures
+
+## 🚀 Quick Start
+
+### Production Deployment (Railway)
+```bash
+# Deploy critical optimizations
+node scripts/criticalIndexes.js
+node scripts/cleanupCode.js --execute
+
+# Clean up deployment scripts
+git rm scripts/criticalIndexes.js scripts/cleanupCode.js
+git commit -m "Remove deployment scripts" && git push
+```
 
 ## Technologies Used
 
 ### Frontend
-
-- React
-- HTML
-- CSS
-- JavaScript
+- React with modern hooks
+- Tailwind CSS for styling
+- Service Worker (PWA features)
+- Comprehensive Jest/RTL testing
 
 ### Backend
 

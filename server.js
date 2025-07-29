@@ -391,7 +391,38 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
 // Database connection
 connectDB()
-  .then(() => console.log("Connected to MongoDB"))
+  .then(async () => {
+    console.log("Connected to MongoDB");
+    
+    // 🚀 PRODUCTION DEPLOYMENT AUTOMATION
+    // Run critical optimizations once on production startup
+    if (process.env.NODE_ENV === 'production' && !process.env.DEPLOYMENT_SCRIPTS_EXECUTED) {
+      console.log('🔧 Running production deployment optimizations...');
+      
+      try {
+        // Import and run critical database indexes
+        const { runCriticalIndexes } = await import('./scripts/criticalIndexes.js');
+        await runCriticalIndexes();
+        console.log('✅ Critical database indexes deployed');
+        
+        // Import and run code cleanup
+        const cleanupModule = await import('./scripts/cleanupCode.js');
+        const { analyzeCodebaseHealth, removeUnusedFiles } = cleanupModule.default;
+        console.log('🧹 Running codebase cleanup...');
+        analyzeCodebaseHealth();
+        await removeUnusedFiles(false); // Execute cleanup with backups
+        console.log('✅ Codebase cleanup completed');
+        
+        // Set environment flag to prevent re-running
+        process.env.DEPLOYMENT_SCRIPTS_EXECUTED = 'true';
+        console.log('🎯 All deployment optimizations completed successfully');
+        
+      } catch (error) {
+        console.error('❌ Deployment optimization error:', error.message);
+        // Don't exit - let the server start even if optimizations fail
+      }
+    }
+  })
   .catch(err => {
     console.error('Database connection failed:', err.message);
     process.exit(1);
@@ -445,12 +476,21 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
 app.use('/api/files', fileRoutes); // File serving routes
-// Password-specific rate limiter
+// Password-specific rate limiter - ENHANCED SECURITY
 const passwordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // More restrictive for password operations
-  message: 'Too many password attempts, please try again later.',
-  skipSuccessfulRequests: true
+  max: 3, // CRITICAL: Reduced to 3 attempts
+  message: {
+    success: false,
+    message: 'Too many password setup attempts. Account temporarily locked.',
+    lockoutTime: 15 * 60 * 1000
+  },
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip + ':' + (req.body?.token || ''); // Rate limit per IP + token
+  }
 });
 
 app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
