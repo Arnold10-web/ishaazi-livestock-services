@@ -12,7 +12,8 @@
     "dev": "nodemon server.js",
     "build": "echo 'Backend only - no build step needed'",
     "lint": "eslint .",
-    "optimize:db": "node scripts/optimizeDatabase.js"
+    "optimize:db": "node scripts/optimizeDatabase.js",
+    "create:admin": "node scripts/createSystemAdmin.js"
   },
   "keywords": [],
   "author": "",

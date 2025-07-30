@@ -101,26 +101,6 @@ const UserSchema = new mongoose.Schema({
     },
     
     /**
-     * @property {String} companyEmail - Company email for editor role
-     */
-    companyEmail: {
-        type: String,
-        required: function() { return this.role === 'editor'; },
-        unique: true,
-        sparse: true,
-        trim: true,
-        lowercase: true,
-        validate: {
-            validator: function(email) {
-                if (!email && this.role !== 'editor') return true;
-                // Update with your actual company domain
-                return /^[a-zA-Z0-9._%+-]+@(ishaazilivestockservices\.com|farmingmagazine\.com)$/.test(email);
-            },
-            message: 'Must be a valid company email address (@ishaazilivestockservices.com or @farmingmagazine.com)'
-        }
-    },
-    
-    /**
      * @property {String} password - Hashed password
      */
     password: { 
@@ -134,7 +114,7 @@ const UserSchema = new mongoose.Schema({
      */
     role: { 
         type: String, 
-        enum: ['system_admin', 'editor', 'admin', 'superadmin'], // Include old roles for compatibility
+        enum: ['system_admin', 'editor'], // Only two roles allowed
         default: 'editor',
         required: true
     },
@@ -334,11 +314,6 @@ UserSchema.pre('save', function(next) {
         return next(new Error('Editor must have a company email'));
     }
     
-    // Migrate old admin roles
-    if (this.role === 'admin' || this.role === 'superadmin') {
-        this.role = 'editor'; // Backward compatibility
-    }
-    
     next();
 });
 
@@ -458,7 +433,7 @@ UserSchema.index({ lastLogin: -1 });
 // Pre-save middleware to validate role-specific requirements
 UserSchema.pre('save', function(next) {
     // System Admin validation
-    if (this.role === 'system_admin' || this.role === 'superadmin') {
+    if (this.role === 'system_admin') {
         if (!this.username) {
             return next(new Error('System admin must have a username'));
         }
@@ -466,9 +441,9 @@ UserSchema.pre('save', function(next) {
     }
     
     // Editor validation
-    if (this.role === 'editor' || this.role === 'admin') {
+    if (this.role === 'editor') {
         if (!this.companyEmail) {
-            return next(new Error('Editor/Admin must have a company email'));
+            return next(new Error('Editor must have a company email'));
         }
     }
 
@@ -500,15 +475,15 @@ UserSchema.statics.createEditor = async function(userData) {
 
 // Method to validate role-specific requirements
 UserSchema.methods.validateRoleRequirements = function() {
-    if (this.role === 'system_admin' || this.role === 'superadmin') {
+    if (this.role === 'system_admin') {
         if (!this.username) {
             throw new Error('System admin must have a username');
         }
     }
     
-    if (this.role === 'editor' || this.role === 'admin') {
+    if (this.role === 'editor') {
         if (!this.companyEmail) {
-            throw new Error('Editor/Admin must have a company email');
+            throw new Error('Editor must have a company email');
         }
     }
     
