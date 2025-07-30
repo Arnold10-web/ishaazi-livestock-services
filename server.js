@@ -398,21 +398,6 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
-    
-    // Auto-create system admin on startup (disable this after first run)
-    const AUTO_CREATE_ADMIN = process.env.AUTO_CREATE_ADMIN !== 'false';
-    if (AUTO_CREATE_ADMIN) {
-      console.log('🔧 Auto-creating system admin...');
-      import('./scripts/createSystemAdmin.js')
-        .then(() => {
-          console.log('✅ System admin auto-creation completed');
-        })
-        .catch(error => {
-          console.error('❌ System admin auto-creation failed:', error.message);
-        });
-    } else {
-      console.log('ℹ️  Auto-create admin disabled (AUTO_CREATE_ADMIN=false)');
-    }
   })
   .catch(err => {
     console.error('Database connection failed:', err.message);

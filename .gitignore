@@ -74,6 +74,9 @@ load-test.yml
 tmp/
 temp/
 
+# Scripts directory (contains sensitive admin creation scripts)
+scripts/
+
 # Database dumps and backups
 *.sql
 *.sqlite
