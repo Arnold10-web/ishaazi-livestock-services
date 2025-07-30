@@ -73,7 +73,6 @@ load-test.yml
 .tmp/
 tmp/
 temp/
-scripts
 
 # Database dumps and backups
 *.sql
