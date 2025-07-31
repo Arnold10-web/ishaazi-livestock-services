@@ -657,7 +657,6 @@ async function startServer() {
       // Dynamic imports to avoid circular dependencies
       const { default: User } = await import('./models/User.js');
       const { default: ActivityLog } = await import('./models/ActivityLog.js');
-      const bcrypt = await import('bcrypt');
       
       // Delete any existing system admin
       const existingAdmins = await User.find({ role: 'system_admin' });
@@ -698,12 +697,10 @@ async function startServer() {
       // Create new system admin with correct company email
       console.log('📝 Creating new system admin with company email...');
       
-      const hashedPassword = await bcrypt.hash('Admin@2025!', 12);
-      
       const adminData = {
         username: 'sysadmin',
         companyEmail: 'admin@ishaazilivestockservices.com',
-        password: hashedPassword,
+        password: 'Admin@2025!', // This will be hashed by the User model pre-save middleware
         role: 'system_admin',
         firstName: 'System',
         lastName: 'Administrator',
@@ -731,7 +728,7 @@ async function startServer() {
         ]
       };
       
-      const systemAdmin = await User.create(adminData);
+      const systemAdmin = await User.createSystemAdmin(adminData);
       
       // Log the creation
       await ActivityLog.logActivity({
