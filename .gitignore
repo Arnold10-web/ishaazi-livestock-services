@@ -84,8 +84,9 @@ temp/
 *.db
 dump.rdb
 *.dump
-*backup*
-*-backup*
+backup_*
+*_backup
+backups/
 
 # Personal configuration files
 .npmrc
