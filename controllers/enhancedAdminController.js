@@ -649,18 +649,18 @@ export const createAdminUser = async (req, res) => {
             .replace('{{supportEmail}}', process.env.SUPPORT_EMAIL.trim())
             .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/login`);
 
-        // Queue welcome email with high priority
-        await queueEmail({
-            to: email,
-            subject: 'Welcome to Ishaazi Livestock Services Admin Portal',
-            html: emailTemplate,
-            priority: 'high',
-            metadata: {
-                userId: user._id,
-                type: 'admin_welcome',
-                requestId
-            }
-        });
+        // Send welcome email
+        try {
+            await sendEmail({
+                to: email,
+                subject: 'Welcome to Ishaazi Livestock Services Admin Portal',
+                html: emailTemplate
+            });
+            console.log(`[SUCCESS] Welcome email sent to ${email}`);
+        } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Don't fail user creation if email fails
+        }
 
         logger.info('Admin user created successfully', { 
             requestId, 
