@@ -104,7 +104,7 @@ export const authenticateToken = async (req, res, next) => {
         if (user.isActive === false) {
             await ActivityLog.logActivity({
                 userId: user._id,
-                username: user.username || user.email || user.companyEmail,
+                username: user.username || user.companyEmail,
                 userRole: user.role,
                 action: 'login_failed',
                 resource: 'authentication',
@@ -299,7 +299,7 @@ function getUserIdentifier(user) {
         return user.companyEmail || 'Editor (No Company Email)';
     }
     
-    return user.email || user.companyEmail || user.username || 'Unknown User';
+    return user.companyEmail || user.username || 'Unknown User';
 }
 
 /**

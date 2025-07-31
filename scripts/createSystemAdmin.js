@@ -62,53 +62,50 @@ async function createSystemAdmin() {
         const existingAdmin = await User.findOne({ role: 'system_admin' });
         if (existingAdmin) {
             console.log('🗑️  Found existing system admin, deleting...');
-            console.log('📧 Old Email:', existingAdmin.email);
+            console.log('📧 Old Company Email:', existingAdmin.companyEmail);
             console.log('👤 Old Username:', existingAdmin.username);
             await User.deleteOne({ _id: existingAdmin._id });
             console.log('✅ Existing system admin deleted');
             console.log('');
         }
 
-        // System admin credentials
-        const adminData = {
+        // Default password for system admin
+        const defaultPassword = 'Admin@2025!';
+
+        // System admin configuration - using only companyEmail
+        const systemAdminData = {
             username: 'sysadmin',
-            companyEmail: 'admin@ishaazilivestockservices.com', // Primary company email
-            password: 'Admin@2025!',
+            companyEmail: 'admin@ishaazilivestockservices.com',
+            password: defaultPassword, // Will be hashed automatically by the User model
             role: 'system_admin',
-            firstName: 'System',
-            lastName: 'Administrator',
-            isActive: true,
             hasSetPassword: true,
-            permissions: [
-                'manage_users',
-                'manage_content', 
-                'manage_subscribers',
-                'manage_newsletters',
-                'manage_events',
-                'manage_auctions',
-                'view_analytics',
-                'manage_system_settings',
-                'manage_notifications',
-                'manage_push_subscriptions',
-                'manage_email_tracking',
-                'manage_activity_logs',
-                'manage_security',
-                'manage_backups',
-                'manage_files',
-                'export_data',
-                'system_monitoring',
-                'user_impersonation'
-            ]
+            isTemporaryPassword: false,
+            createdBy: null,
+            lastLogin: null,
+            permissions: {
+                canCreateUsers: true,
+                canEditUsers: true,
+                canDeleteUsers: true,
+                canViewAllUsers: true,
+                canManageSystem: true,
+                canAccessLogs: true,
+                canManageBackups: true,
+                canManageEmails: true,
+                canViewAnalytics: true,
+                canManageContent: true,
+                canManageSettings: true,
+                canViewAuditTrail: true
+            }
         };
 
         console.log('👤 Creating NEW system admin with the following details:');
-        console.log('🏢 Company Email:', adminData.companyEmail);
-        console.log('👤 Username:', adminData.username);
-        console.log('🔐 Password:', adminData.password);
+        console.log('🏢 Company Email:', systemAdminData.companyEmail);
+        console.log('👤 Username:', systemAdminData.username);
+        console.log('🔐 Password: Admin@2025!');
         console.log('');
 
         // Create the system admin user
-        const systemAdmin = await User.createSystemAdmin(adminData);
+        const systemAdmin = await User.createSystemAdmin(systemAdminData);
 
         console.log('✅ NEW System admin created successfully!');
         console.log('');
@@ -116,7 +113,7 @@ async function createSystemAdmin() {
         console.log('================');
         console.log('👤 Username:', systemAdmin.username);
         console.log('🏢 Company Email:', systemAdmin.companyEmail);
-        console.log('🔐 Password:', adminData.password);
+        console.log('🔐 Password: Admin@2025!');
         console.log('🌐 Login URL: https://ishaazilivestockservices.com/login');
         console.log('');
         console.log('⚠️  IMPORTANT SECURITY NOTES:');

@@ -50,45 +50,27 @@ const UserSchema = new mongoose.Schema({
     },
     
     /**
-     * @property {String} email - Required email field for all users including system_admin
-     */
-    email: { 
-        type: String, 
-        unique: true,
-        sparse: true,
-        trim: true,
-        lowercase: true,
-        required: true, // Email is now required for all roles including system_admin
-        validate: {
-            validator: function(v) {
-                return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-            },
-            message: 'Please enter a valid email address'
-        }
-    },
-
-    /**
-     * @property {String} companyEmail - Required for editor role
+     * @property {String} companyEmail - Required company email for all users
      */
     companyEmail: {
         type: String,
         unique: true,
-        sparse: true,
         trim: true,
         lowercase: true,
-        required: function() {
-            return this.role === 'editor' || this.role === 'admin';
-        },
+        required: true,
         validate: {
             validator: function(v) {
-                // Company email is required for editors and admins
-                if ((this.role === 'editor' || this.role === 'admin') && !v) {
+                // Must be a valid email with company domain
+                if (!v || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
                     return false;
                 }
-                // If provided, must be a valid email
-                return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+                // All users must use company domain
+                if (!v.endsWith('@ishaazilivestockservices.com')) {
+                    return false;
+                }
+                return true;
             },
-            message: 'Editor/Admin must have a valid company email address'
+            message: 'Must have a valid company email address (@ishaazilivestockservices.com)'
         }
     },
     
@@ -258,10 +240,10 @@ UserSchema.virtual('isLocked').get(function() {
 });
 
 /**
- * Virtual for getting login email (companyEmail for editors, email for others)
+ * Virtual for getting login email (always companyEmail)
  */
 UserSchema.virtual('loginEmail').get(function() {
-    return this.role === 'editor' ? this.companyEmail : this.email;
+    return this.companyEmail;
 });
 
 /**
@@ -302,19 +284,14 @@ UserSchema.pre('save', async function(next) {
  * Pre-save middleware for role-specific validation
  */
 UserSchema.pre('save', function(next) {
-    // Ensure system_admin has email (username is optional)
-    if (this.role === 'system_admin' && !this.email) {
-        return next(new Error('System admin must have an email address'));
-    }
-    
     // Auto-generate username for system_admin if not provided
     if (this.role === 'system_admin' && !this.username) {
-        this.username = this.email.split('@')[0] + '_admin';
+        this.username = this.companyEmail.split('@')[0] + '_admin';
     }
     
-    // Ensure editor has company email
-    if (this.role === 'editor' && !this.companyEmail) {
-        return next(new Error('Editor must have a company email'));
+    // All users must have company email (enforced by schema)
+    if (!this.companyEmail) {
+        return next(new Error('All users must have a company email'));
     }
     
     next();
@@ -387,13 +364,8 @@ UserSchema.statics.findByLoginCredentials = async function(identifier, password)
     
     let query = {};
     if (isEmail) {
-        // Check both email and companyEmail fields
-        query = {
-            $or: [
-                { email: identifier.toLowerCase() },
-                { companyEmail: identifier.toLowerCase() }
-            ]
-        };
+        // Check only companyEmail field
+        query = { companyEmail: identifier.toLowerCase() };
     } else {
         // Username login
         query = { username: identifier };
