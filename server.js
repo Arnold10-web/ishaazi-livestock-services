@@ -435,6 +435,7 @@ import healthRoutes from './routes/healthRoutes.js';
 import pushSubscriptionRoutes from './routes/pushSubscriptionRoutes.js';
 import passwordSetupRoutes from './routes/passwordSetupRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
+import managementRoutes from './routes/managementRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -445,6 +446,7 @@ app.use('/api/health', healthRoutes); // Health checks with /api prefix
 app.use('/ready', healthRoutes); // Kubernetes readiness probe
 app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
+app.use('/api/management', managementRoutes); // System admin management features
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -647,6 +649,68 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 async function startServer() {
   try {
     await initializeServer();
+    
+    // Auto-create system admin (always check, no environment variable needed)
+    try {
+      console.log('🔧 Checking for system admin...');
+      
+      // Dynamic import to avoid circular dependencies
+      const { default: User } = await import('./models/User.js');
+      
+      // Check if system admin already exists
+      const existingAdmin = await User.findOne({ role: 'system_admin' });
+      
+      if (!existingAdmin) {
+        console.log('📝 No system admin found, creating...');
+        
+        const adminData = {
+          username: 'sysadmin',
+          companyEmail: 'admin@ishaazilivestockservices.com',
+          password: 'Admin@2025!',
+          role: 'system_admin',
+          firstName: 'System',
+          lastName: 'Administrator',
+          isActive: true,
+          hasSetPassword: true,
+          permissions: [
+            'manage_users',
+            'manage_content', 
+            'manage_subscribers',
+            'manage_newsletters',
+            'manage_events',
+            'manage_auctions',
+            'view_analytics',
+            'manage_system_settings',
+            'manage_notifications',
+            'manage_push_subscriptions',
+            'manage_email_tracking',
+            'manage_activity_logs',
+            'manage_security',
+            'manage_backups',
+            'manage_files',
+            'export_data',
+            'system_monitoring',
+            'user_impersonation'
+          ]
+        };
+        
+        const systemAdmin = await User.createSystemAdmin(adminData);
+        
+        console.log('✅ System admin created successfully!');
+        console.log('🎯 LOGIN DETAILS:');
+        console.log('================');
+        console.log('👤 Username:', systemAdmin.username);
+        console.log('🏢 Company Email:', systemAdmin.companyEmail);
+        console.log('🔐 Password:', adminData.password);
+        console.log('🌐 Login URL: https://ishaazilivestockservices.com/login');
+        console.log('');
+      } else {
+        console.log('✅ System admin already exists, skipping creation');
+      }
+    } catch (error) {
+      console.error('❌ Error in auto-creation process:', error.message);
+      // Don't stop server startup for auto-creation failures
+    }
     
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {

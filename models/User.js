@@ -211,7 +211,10 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: [
             'manage_users', 'manage_content', 'manage_subscribers', 'manage_newsletters',
-            'manage_events', 'manage_auctions', 'view_analytics', 'manage_system_settings'
+            'manage_events', 'manage_auctions', 'view_analytics', 'manage_system_settings',
+            'manage_notifications', 'manage_push_subscriptions', 'manage_email_tracking',
+            'manage_activity_logs', 'manage_security', 'manage_backups', 'manage_files',
+            'export_data', 'system_monitoring', 'user_impersonation'
         ]
     }],
     
@@ -452,9 +455,18 @@ UserSchema.pre('save', function(next) {
 
 // Static method to create a system admin
 UserSchema.statics.createSystemAdmin = async function(userData) {
+    const defaultPermissions = [
+        'manage_users', 'manage_content', 'manage_subscribers', 'manage_newsletters',
+        'manage_events', 'manage_auctions', 'view_analytics', 'manage_system_settings',
+        'manage_notifications', 'manage_push_subscriptions', 'manage_email_tracking',
+        'manage_activity_logs', 'manage_security', 'manage_backups', 'manage_files',
+        'export_data', 'system_monitoring', 'user_impersonation'
+    ];
+    
     const user = new this({
         ...userData,
-        role: 'system_admin'
+        role: 'system_admin',
+        permissions: userData.permissions || defaultPermissions
     });
     await user.save();
     return user;

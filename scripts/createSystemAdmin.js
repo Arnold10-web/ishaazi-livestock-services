@@ -72,7 +72,7 @@ async function createSystemAdmin() {
         // System admin credentials
         const adminData = {
             username: 'sysadmin',
-            email: 'admin@ishaazilivestockservices.com',
+            companyEmail: 'admin@ishaazilivestockservices.com', // Primary company email
             password: 'Admin@2025!',
             role: 'system_admin',
             firstName: 'System',
@@ -87,12 +87,22 @@ async function createSystemAdmin() {
                 'manage_events',
                 'manage_auctions',
                 'view_analytics',
-                'manage_system_settings'
+                'manage_system_settings',
+                'manage_notifications',
+                'manage_push_subscriptions',
+                'manage_email_tracking',
+                'manage_activity_logs',
+                'manage_security',
+                'manage_backups',
+                'manage_files',
+                'export_data',
+                'system_monitoring',
+                'user_impersonation'
             ]
         };
 
         console.log('👤 Creating NEW system admin with the following details:');
-        console.log('📧 Email:', adminData.email);
+        console.log('🏢 Company Email:', adminData.companyEmail);
         console.log('👤 Username:', adminData.username);
         console.log('🔐 Password:', adminData.password);
         console.log('');
@@ -105,9 +115,9 @@ async function createSystemAdmin() {
         console.log('🎯 LOGIN DETAILS:');
         console.log('================');
         console.log('👤 Username:', systemAdmin.username);
-        console.log('📧 Email:', systemAdmin.email);
+        console.log('🏢 Company Email:', systemAdmin.companyEmail);
         console.log('🔐 Password:', adminData.password);
-        console.log('🌐 Login URL: https://ishaazilivestockservices.com/admin');
+        console.log('🌐 Login URL: https://ishaazilivestockservices.com/login');
         console.log('');
         console.log('⚠️  IMPORTANT SECURITY NOTES:');
         console.log('1. Change the default password immediately after first login');
