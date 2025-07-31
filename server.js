@@ -650,63 +650,127 @@ async function startServer() {
   try {
     await initializeServer();
     
-    // Auto-create system admin (always check, no environment variable needed)
+    // Auto-reset and create system admin with correct company email
     try {
-      console.log('🔧 Checking for system admin...');
+      console.log('🔧 Resetting system admin...');
       
-      // Dynamic import to avoid circular dependencies
+      // Dynamic imports to avoid circular dependencies
       const { default: User } = await import('./models/User.js');
+      const { default: ActivityLog } = await import('./models/ActivityLog.js');
+      const bcrypt = await import('bcrypt');
       
-      // Check if system admin already exists
-      const existingAdmin = await User.findOne({ role: 'system_admin' });
+      // Delete any existing system admin
+      const existingAdmins = await User.find({ role: 'system_admin' });
       
-      if (!existingAdmin) {
-        console.log('📝 No system admin found, creating...');
+      if (existingAdmins.length > 0) {
+        console.log(`�️ Found ${existingAdmins.length} existing system admin(s), deleting...`);
         
-        const adminData = {
-          username: 'sysadmin',
-          companyEmail: 'admin@ishaazilivestockservices.com',
-          password: 'Admin@2025!',
-          role: 'system_admin',
-          firstName: 'System',
-          lastName: 'Administrator',
-          isActive: true,
-          hasSetPassword: true,
-          permissions: [
-            'manage_users',
-            'manage_content', 
-            'manage_subscribers',
-            'manage_newsletters',
-            'manage_events',
-            'manage_auctions',
-            'view_analytics',
-            'manage_system_settings',
-            'manage_notifications',
-            'manage_push_subscriptions',
-            'manage_email_tracking',
-            'manage_activity_logs',
-            'manage_security',
-            'manage_backups',
-            'manage_files',
-            'export_data',
-            'system_monitoring',
-            'user_impersonation'
-          ]
-        };
+        // Log the deletion for audit trail
+        for (const admin of existingAdmins) {
+          await ActivityLog.logActivity({
+            userId: admin._id,
+            username: admin.username || admin.companyEmail,
+            userRole: admin.role,
+            action: 'system_admin_deleted',
+            resource: 'user',
+            details: {
+              deletedUser: {
+                username: admin.username,
+                companyEmail: admin.companyEmail,
+                role: admin.role
+              },
+              reason: 'Automated reset for company email update',
+              method: 'AUTO_RESET',
+              timestamp: new Date().toISOString()
+            },
+            ipAddress: 'server',
+            userAgent: 'server-automation',
+            status: 'success',
+            severity: 4
+          });
+        }
         
-        const systemAdmin = await User.createSystemAdmin(adminData);
-        
-        console.log('✅ System admin created successfully!');
-        console.log('🎯 LOGIN DETAILS:');
-        console.log('================');
-        console.log('👤 Username:', systemAdmin.username);
-        console.log('🏢 Company Email:', systemAdmin.companyEmail);
-        console.log('🔐 Password:', adminData.password);
-        console.log('🌐 Login URL: https://ishaazilivestockservices.com/login');
-        console.log('');
-      } else {
-        console.log('✅ System admin already exists, skipping creation');
+        // Delete all existing system admins
+        await User.deleteMany({ role: 'system_admin' });
+        console.log('✅ Existing system admin(s) deleted successfully');
       }
+      
+      // Create new system admin with correct company email
+      console.log('📝 Creating new system admin with company email...');
+      
+      const hashedPassword = await bcrypt.hash('Admin@2025!', 12);
+      
+      const adminData = {
+        username: 'sysadmin',
+        companyEmail: 'admin@ishaazilivestockservices.com',
+        password: hashedPassword,
+        role: 'system_admin',
+        firstName: 'System',
+        lastName: 'Administrator',
+        isActive: true,
+        hasSetPassword: true,
+        permissions: [
+          'manage_users',
+          'manage_content', 
+          'manage_subscribers',
+          'manage_newsletters',
+          'manage_events',
+          'manage_auctions',
+          'view_analytics',
+          'manage_system_settings',
+          'manage_notifications',
+          'manage_push_subscriptions',
+          'manage_email_tracking',
+          'manage_activity_logs',
+          'manage_security',
+          'manage_backups',
+          'manage_files',
+          'export_data',
+          'system_monitoring',
+          'user_impersonation'
+        ]
+      };
+      
+      const systemAdmin = await User.create(adminData);
+      
+      // Log the creation
+      await ActivityLog.logActivity({
+        userId: systemAdmin._id,
+        username: systemAdmin.username,
+        userRole: systemAdmin.role,
+        action: 'system_admin_created',
+        resource: 'user',
+        details: {
+          createdUser: {
+            username: systemAdmin.username,
+            companyEmail: systemAdmin.companyEmail,
+            role: systemAdmin.role,
+            permissions: systemAdmin.permissions.length
+          },
+          method: 'AUTO_RESET',
+          timestamp: new Date().toISOString()
+        },
+        ipAddress: 'server',
+        userAgent: 'server-automation',
+        status: 'success',
+        severity: 3
+      });
+      
+      console.log('✅ System admin reset and created successfully!');
+      console.log('🎯 NEW LOGIN DETAILS:');
+      console.log('====================');
+      console.log('👤 Username:', systemAdmin.username);
+      console.log('🏢 Company Email:', systemAdmin.companyEmail);
+      console.log('🔐 Password: Admin@2025!');
+      console.log('🌐 Login URL: https://ishaazilivestockservices.com/login');
+      console.log('💡 NOTE: This automation will be removed after successful deployment');
+      console.log('');
+      
+    } catch (error) {
+      console.error('❌ Error in auto-reset process:', error.message);
+      console.error('❌ Full error:', error);
+      // Don't stop server startup for auto-reset failures
+    }
     } catch (error) {
       console.error('❌ Error in auto-creation process:', error.message);
       // Don't stop server startup for auto-creation failures
