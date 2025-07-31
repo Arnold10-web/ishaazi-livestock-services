@@ -771,10 +771,6 @@ async function startServer() {
       console.error('❌ Full error:', error);
       // Don't stop server startup for auto-reset failures
     }
-    } catch (error) {
-      console.error('❌ Error in auto-creation process:', error.message);
-      // Don't stop server startup for auto-creation failures
-    }
     
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
