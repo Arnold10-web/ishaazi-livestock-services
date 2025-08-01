@@ -59,7 +59,8 @@ class EmailService {
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
         requireTLS: true,
         tls: {
-          rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : (process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : true)
+          rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : false,
+          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST
         },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
