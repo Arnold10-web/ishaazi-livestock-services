@@ -890,14 +890,19 @@ export const healthCheck = () => {
 };
 
 // Generic send email function
-export const sendEmail = (options) => {
+export const sendEmail = function(options, subject, html, additionalOptions) {
   // Handle both calling patterns:
   // 1. sendEmail({ to, subject, html, ... }) - object pattern
   // 2. sendEmail(to, subject, html, options) - parameter pattern (legacy)
   if (typeof options === 'string') {
     // Legacy pattern: sendEmail(to, subject, html, options)
-    const [to, subject, html, additionalOptions = {}] = arguments;
-    return emailService.sendEmail({ to, subject, html, ...additionalOptions });
+    const to = options;
+    return emailService.sendEmail({ 
+      to, 
+      subject, 
+      html, 
+      ...(additionalOptions || {}) 
+    });
   } else {
     // Modern pattern: sendEmail({ to, subject, html, ... })
     return emailService.sendEmail(options);
