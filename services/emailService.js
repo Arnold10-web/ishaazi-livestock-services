@@ -316,11 +316,33 @@ class EmailService {
   }
 
   async sendEmail(options) {
+    // Debug logging
+    console.log('[DEBUG] sendEmail called with options:', {
+      to: options.to,
+      subject: options.subject,
+      hasHtml: !!options.html,
+      optionsKeys: Object.keys(options)
+    });
+    
+    // Validate required fields
+    if (!options.to) {
+      const error = new Error('No recipients defined - "to" field is required');
+      console.error('[ERROR]', error.message);
+      throw error;
+    }
+    
     const mailOptions = {
       from: `${this.config.from.name} <${this.config.from.address}>`,
       replyTo: this.config.replyTo,
       ...options
     };
+
+    console.log('[DEBUG] Final mailOptions:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      hasHtml: !!mailOptions.html
+    });
 
     try {
       const result = await this.transporter.sendMail(mailOptions);
@@ -868,8 +890,18 @@ export const healthCheck = () => {
 };
 
 // Generic send email function
-export const sendEmail = (to, subject, html, options = {}) => {
-  return emailService.sendEmail(to, subject, html, options);
+export const sendEmail = (options) => {
+  // Handle both calling patterns:
+  // 1. sendEmail({ to, subject, html, ... }) - object pattern
+  // 2. sendEmail(to, subject, html, options) - parameter pattern (legacy)
+  if (typeof options === 'string') {
+    // Legacy pattern: sendEmail(to, subject, html, options)
+    const [to, subject, html, additionalOptions = {}] = arguments;
+    return emailService.sendEmail({ to, subject, html, ...additionalOptions });
+  } else {
+    // Modern pattern: sendEmail({ to, subject, html, ... })
+    return emailService.sendEmail(options);
+  }
 };
 
 // Export the class as default
