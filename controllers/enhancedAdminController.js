@@ -73,7 +73,7 @@ export const loginAdmin = async (req, res) => {
                 id: user._id, 
                 role: user.role,
                 username: user.username,
-                email: user.loginEmail || user.email
+                email: user.companyEmail  // Use companyEmail consistently
             },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
@@ -575,41 +575,42 @@ export const checkAuth = async (req, res) => {
  * Create a new admin user with enhanced validation and security
  */
 export const createAdminUser = async (req, res) => {
-    const requestId = req.id;
-    logger.info(`Starting admin user creation process`, { requestId });
-    
     try {
-        // Schema validation using Joi (handled by middleware)
-        await validateSchema(adminUserSchema)(req, res, () => {});
+        const { email, firstName, lastName, companyName } = req.body;
         
-        // Validate and sanitize input
-        const validation = validateAndSanitizeAdminUser(req.body);
-        if (!validation.isValid) {
-            logger.warn('Validation failed for admin user creation', { 
-                requestId, 
-                errors: validation.errors 
-            });
+        // Basic validation
+        if (!email || !firstName || !lastName) {
             return res.status(400).json({ 
-                message: 'Validation failed',
-                errors: validation.errors 
+                message: 'Email, first name, and last name are required' 
             });
         }
         
-        const { email, firstName, lastName, companyName } = validation.sanitized;
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ 
+                message: 'Please provide a valid email address' 
+            });
+        }
 
         // Check if user already exists
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ companyEmail: email });
         if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Create user without password
+        // Generate a temporary password
+        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+
+        // Create user with temporary password
         user = new User({
             companyEmail: email,  // Use companyEmail instead of email
             firstName,
             lastName,
             companyName,
             role: 'editor',  // Use 'editor' instead of 'admin'
+            password: tempPassword,  // Add required password field
+            isTemporaryPassword: true,  // Mark as temporary
             hasSetPassword: false
         });
         await user.save();
@@ -647,7 +648,7 @@ export const createAdminUser = async (req, res) => {
             )
             .replace('{{passwordSetupLink}}', passwordSetupLink)
             .replace('{{supportEmail}}', process.env.SUPPORT_EMAIL.trim())
-            .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/dashboard`);
+            .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/login`);
 
         // Send welcome email
         try {
@@ -662,35 +663,22 @@ export const createAdminUser = async (req, res) => {
             // Don't fail user creation if email fails
         }
 
-        logger.info('Admin user created successfully', { 
-            requestId, 
+        console.log('Admin user created successfully', { 
             userId: user._id 
         });
-
-        // Cache the new user data
-        await cache.set(`user:${user._id}`, {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            companyName: user.companyName
-        }, 3600); // Cache for 1 hour
 
         res.status(201).json({
             message: 'Admin user created successfully',
             user: {
                 id: user._id,
-                email: user.email,
+                companyEmail: user.companyEmail,  // Use companyEmail instead of email
                 firstName: user.firstName,
                 lastName: user.lastName,
                 companyName: user.companyName
             }
         });
     } catch (error) {
-        logger.error('Error creating admin user:', { 
-            requestId, 
-            error: error.message 
-        });
+        console.error('Error creating admin user:', error);
         
         // Handle specific error types
         if (error.message === 'Failed to load email template') {
