@@ -9,6 +9,7 @@
  */
 
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * @constant {mongoose.Schema} subscriberSchema
@@ -88,7 +89,7 @@ const subscriberSchema = new mongoose.Schema({
   /**
    * @property {String} unsubscribeToken - Unique token for unsubscribe links
    */
-  unsubscribeToken: { type: String, default: () => require('crypto').randomBytes(32).toString('hex') },
+  unsubscribeToken: { type: String, default: () => crypto.randomBytes(32).toString('hex') },
 
   /**
    * @property {Date} unsubscribedAt - Timestamp when user unsubscribed

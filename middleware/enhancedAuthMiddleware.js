@@ -80,7 +80,8 @@ export const authenticateToken = async (req, res, next) => {
         }
 
         // Check if user needs to set up password (skip for password setup routes)
-        if (!user.hasSetPassword && !req.path.startsWith('/password/setup')) {
+        // Allow dashboard access for users with temporary passwords
+        if (!user.hasSetPassword && !req.path.startsWith('/password/setup') && !req.path.includes('/dashboard')) {
             await ActivityLog.logActivity({
                 userId: user._id,
                 username: getUserIdentifier(user),
