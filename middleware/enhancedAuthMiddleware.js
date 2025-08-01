@@ -56,7 +56,7 @@ export const authenticateToken = async (req, res, next) => {
         }
 
         // Validate editor role requirements
-        if ((user.role === 'editor' || user.role === 'admin') && !user.companyEmail) {
+        if (user.role === 'editor' && !user.companyEmail) {
             await ActivityLog.logActivity({
                 userId: user._id,
                 username: getUserIdentifier(user),
@@ -198,17 +198,17 @@ export const requireRole = (allowedRoles = []) => {
 /**
  * System Admin only access
  */
-export const requireSystemAdmin = requireRole(['system_admin', 'superadmin']);
+export const requireSystemAdmin = requireRole(['system_admin']);
 
 /**
  * Editor or higher access
  */
-export const requireEditor = requireRole(['system_admin', 'superadmin', 'editor', 'admin']);
+export const requireEditor = requireRole(['system_admin', 'editor']);
 
 /**
  * Any admin access (backward compatibility)
  */
-export const requireAdmin = requireRole(['system_admin', 'superadmin', 'editor', 'admin']);
+export const requireAdmin = requireRole(['system_admin', 'editor']);
 
 /**
  * Activity logging middleware
@@ -291,11 +291,11 @@ function getSeverityFromStatusCode(statusCode) {
 function getUserIdentifier(user) {
     if (!user) return 'Unknown';
     
-    if (user.role === 'system_admin' || user.role === 'superadmin') {
+    if (user.role === 'system_admin') {
         return user.username || 'System Admin';
     }
     
-    if (user.role === 'editor' || user.role === 'admin') {
+    if (user.role === 'editor') {
         return user.companyEmail || 'Editor (No Company Email)';
     }
     

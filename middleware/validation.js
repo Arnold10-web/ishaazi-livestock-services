@@ -299,7 +299,7 @@ export const userSchemas = {
       'string.min': 'Password must be at least 8 characters long',
       'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'
     }),
-    role: Joi.string().valid('admin', 'editor', 'user').default('user')
+    role: Joi.string().valid('editor', 'system_admin').default('editor')
   }),
   
   login: Joi.object({

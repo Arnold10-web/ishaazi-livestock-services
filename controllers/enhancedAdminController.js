@@ -605,11 +605,11 @@ export const createAdminUser = async (req, res) => {
 
         // Create user without password
         user = new User({
-            email,
+            companyEmail: email,  // Use companyEmail instead of email
             firstName,
             lastName,
             companyName,
-            role: 'admin',
+            role: 'editor',  // Use 'editor' instead of 'admin'
             hasSetPassword: false
         });
         await user.save();
