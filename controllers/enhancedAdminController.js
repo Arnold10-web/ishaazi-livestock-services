@@ -611,7 +611,7 @@ export const createAdminUser = async (req, res) => {
             role: 'editor',  // Use 'editor' instead of 'admin'
             password: tempPassword,  // Add required password field
             isTemporaryPassword: true,  // Mark as temporary
-            hasSetPassword: false
+            hasSetPassword: true  // User has a password (even if temporary)
         });
         await user.save();
 
