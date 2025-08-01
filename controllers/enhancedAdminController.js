@@ -647,7 +647,7 @@ export const createAdminUser = async (req, res) => {
             )
             .replace('{{passwordSetupLink}}', passwordSetupLink)
             .replace('{{supportEmail}}', process.env.SUPPORT_EMAIL.trim())
-            .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/login`);
+            .replace('{{loginUrl}}', `${process.env.FRONTEND_URL.trim()}/dashboard`);
 
         // Send welcome email
         try {
