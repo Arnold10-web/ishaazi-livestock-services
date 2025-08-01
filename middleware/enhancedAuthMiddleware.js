@@ -14,7 +14,13 @@ import ActivityLog from '../models/ActivityLog.js';
 export const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
 
+    // Debug logging for token issues
+    console.log(`[AUTH DEBUG] ${req.method} ${req.path}`);
+    console.log(`[AUTH DEBUG] Authorization header:`, authHeader ? 'Present' : 'Missing');
+    console.log(`[AUTH DEBUG] Headers:`, Object.keys(req.headers));
+
     if (!authHeader) {
+        console.log(`[AUTH DEBUG] No auth header for ${req.path}`);
         return res.status(401).json({ 
             success: false,
             message: 'Access denied: No token provided' 
