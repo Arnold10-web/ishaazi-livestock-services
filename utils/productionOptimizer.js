@@ -142,7 +142,7 @@ class ProductionOptimizer {
    */
   validateProductionEnvironment() {
     const requiredEnvVars = [
-      'MONGODB_URI',
+      'MONGO_URI',
       'JWT_SECRET',
       'EMAIL_USER',
       'EMAIL_PASS'

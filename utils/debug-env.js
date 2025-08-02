@@ -25,7 +25,7 @@ if (process.env.NODE_ENV !== 'production') {
  */
 export const validateEnvironment = () => {
   const required = [
-    'MONGODB_URI',
+    'MONGO_URI',
     'JWT_SECRET',
     'PORT'
   ];

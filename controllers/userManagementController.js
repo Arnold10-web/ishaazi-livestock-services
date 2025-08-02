@@ -8,7 +8,7 @@ import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendEmail, sendWelcomeEmailToAdmin, sendPasswordResetEmail } from '../services/emailService.js';
+import { sendEmail } from '../services/emailService.js';
 
 /**
  * Create a new editor user (System Admin only)
@@ -71,7 +71,7 @@ export const createEditor = async (req, res) => {
         
         // Send welcome email with temporary password
         try {
-            await sendWelcomeEmailToAdmin(companyEmail, tempPassword, req.user.username || req.user.email);
+            await sendWelcomeEmail(companyEmail, tempPassword, req.user.username || req.user.email);
         } catch (emailError) {
             console.error('Failed to send welcome email:', emailError);
             // Continue with user creation even if email fails
@@ -607,4 +607,37 @@ function generateTempPassword() {
     return password;
 }
 
-// Local email functions removed - now using templated versions from emailService.js
+/**
+ * Send welcome email to new user
+ */
+async function sendWelcomeEmail(email, tempPassword, createdBy) {
+    const subject = 'Welcome to Farming Magazine Admin Portal';
+    const html = `
+        <h2>Welcome to Farming Magazine Admin Portal</h2>
+        <p>Your admin account has been created by ${createdBy}.</p>
+        <p><strong>Login Email:</strong> ${email}</p>
+        <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+        <p><strong>Login URL:</strong> <a href="${process.env.FRONTEND_URL}/admin/login">${process.env.FRONTEND_URL}/admin/login</a></p>
+        <p>Please log in and change your password immediately.</p>
+        <p><em>This is an automated message. Please do not reply.</em></p>
+    `;
+    
+    return sendEmail(email, subject, html);
+}
+
+/**
+ * Send password reset email
+ */
+async function sendPasswordResetEmail(email, tempPassword, resetBy) {
+    const subject = 'Admin Account Password Reset';
+    const html = `
+        <h2>Admin Account Password Reset</h2>
+        <p>Your password has been reset by ${resetBy}.</p>
+        <p><strong>New Temporary Password:</strong> ${tempPassword}</p>
+        <p><strong>Login URL:</strong> <a href="${process.env.FRONTEND_URL}/admin/login">${process.env.FRONTEND_URL}/admin/login</a></p>
+        <p>Please log in and change your password immediately.</p>
+        <p><em>This is an automated message. Please do not reply.</em></p>
+    `;
+    
+    return sendEmail(email, subject, html);
+}

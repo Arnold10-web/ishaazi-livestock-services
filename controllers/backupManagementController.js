@@ -68,7 +68,7 @@ export const createBackup = async (req, res) => {
         await fs.promises.mkdir(backupPath, { recursive: true });
         
         // Get MongoDB connection details
-        const mongoUri = process.env.MONGODB_URI;
+        const mongoUri = process.env.MONGO_URI;
         const dbName = mongoose.connection.name;
         
         if (!mongoUri) {

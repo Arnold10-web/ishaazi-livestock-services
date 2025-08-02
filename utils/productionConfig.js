@@ -117,7 +117,7 @@ export function getProductionMiddlewareConfig() {
  */
 export function validateProductionEnvironment() {
   const required = [
-    'MONGODB_URI',
+    'MONGO_URI',
     'JWT_SECRET',
     'EMAIL_USER',
     'EMAIL_PASS'
