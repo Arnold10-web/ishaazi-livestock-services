@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Registration Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #2d5a27; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background-color: #f8fdf6; border-left: 4px solid #2d5a27; padding: 15px; margin: 20px 0; }
+        .registration-box { background-color: #f8f9fa; border-left: 4px solid #6c757d; padding: 15px; margin: 20px 0; }
+        .button { display: inline-block; background-color: #2d5a27; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; }
+        .highlight { color: #2d5a27; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Event Registration Confirmed!</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Dear {{registrantName}},</h2>
+            
+            <p>Thank you for registering for our upcoming event. Your registration has been <span class="highlight">confirmed</span>!</p>
+            
+            <div class="info-box">
+                <h3>📅 Event Information</h3>
+                <p><strong>Event:</strong> {{eventTitle}}</p>
+                <p><strong>Date:</strong> {{eventDate}}</p>
+                <p><strong>Location:</strong> {{eventLocation}}</p>
+            </div>
+            
+            <div class="registration-box">
+                <h3>🎫 Your Registration Details</h3>
+                <p><strong>Registrant:</strong> {{registrantName}}</p>
+                <p><strong>Email:</strong> {{participantEmail}}</p>
+                <p><strong>Registration ID:</strong> {{registrationId}}</p>
+            </div>
+            
+            <div class="info-box">
+                <h3>📋 What's Next?</h3>
+                <ul>
+                    <li>Save this email for your records</li>
+                    <li>Mark your calendar for the event date</li>
+                    <li>We'll send you a reminder closer to the event date</li>
+                    <li>Arrive at the venue on time</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{websiteUrl}}" class="button">Visit Our Website</a>
+            </div>
+            
+            <p>If you have any questions about this event or need to make changes to your registration, please don't hesitate to contact us.</p>
+            
+            <p>We look forward to seeing you at the event!</p>
+            
+            <p>Best regards,<br>
+            <strong>{{companyName}} Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{companyName}}</strong></p>
+            <p>Contact: {{contactEmail}} | Phone: {{contactPhone}}</p>
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

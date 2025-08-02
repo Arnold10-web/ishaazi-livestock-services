@@ -443,7 +443,7 @@ class EmailService {
    * @param {Object} subscriberData - Subscriber information
    * @returns {Promise<Object>} Email send result
    */
-  async sendWelcomeEmail(subscriberEmail, subscriberData = {}) {
+  async sendWelcomeEmailToSubscriber(subscriberEmail, subscriberData = {}) {
     try {
       const subject = `Welcome to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} - You're All Set!`;
       
@@ -504,7 +504,7 @@ class EmailService {
    * @param {string} createdBy - Admin who created the account
    * @returns {Promise<Object>} Email send result
    */
-  async sendWelcomeEmail(companyEmail, tempPassword, createdBy) {
+  async sendWelcomeEmailToAdmin(companyEmail, tempPassword, createdBy) {
     try {
       const subject = 'Welcome to Farming Magazine Admin Portal';
       const template = this.templates.get('welcome-admin');
@@ -692,6 +692,235 @@ class EmailService {
   }
 
   /**
+   * Send event registration confirmation email
+   * @param {string} participantEmail - Participant's email address
+   * @param {Object} eventData - Event and registration information
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendEventRegistrationConfirmation(participantEmail, eventData) {
+    try {
+      const subject = `Event Registration Confirmed - ${eventData.eventTitle}`;
+      
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        participantEmail,
+        registrantName: eventData.registrantName,
+        eventTitle: eventData.eventTitle,
+        eventDate: eventData.eventDate,
+        eventLocation: eventData.eventLocation,
+        registrationId: eventData.registrationId,
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
+        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Ishaazi Livestock Services',
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        year: new Date().getFullYear()
+      };
+
+      // Use event-registration-confirmation template if available, otherwise use built-in template
+      const template = this.templates.get('event-registration-confirmation');
+      const html = template ? this.renderTemplate('event-registration-confirmation', templateData) : this.getEventRegistrationTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: participantEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`[SUCCESS] Event registration confirmation sent to: ${participantEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: participantEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send event registration confirmation:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: participantEmail
+      };
+    }
+  }
+
+  /**
+   * Send auction registration confirmation email
+   * @param {string} buyerEmail - Buyer's email address
+   * @param {Object} auctionData - Auction and registration information
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendAuctionRegistrationConfirmation(buyerEmail, auctionData) {
+    try {
+      const subject = `Auction Registration Confirmed - ${auctionData.auctionTitle}`;
+      
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        buyerEmail,
+        buyerName: auctionData.buyerName,
+        auctionTitle: auctionData.auctionTitle,
+        auctionDate: auctionData.auctionDate,
+        auctionLocation: auctionData.auctionLocation,
+        registrationId: auctionData.registrationId,
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
+        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Ishaazi Livestock Services',
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        year: new Date().getFullYear()
+      };
+
+      // Use auction-registration-confirmation template if available
+      const template = this.templates.get('auction-registration-confirmation');
+      const html = template ? this.renderTemplate('auction-registration-confirmation', templateData) : this.getAuctionRegistrationTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: buyerEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`[SUCCESS] Auction registration confirmation sent to: ${buyerEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: buyerEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send auction registration confirmation:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: buyerEmail
+      };
+    }
+  }
+
+  /**
+   * Send auction registration approval email
+   * @param {string} buyerEmail - Buyer's email address
+   * @param {Object} auctionData - Auction and registration information
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendAuctionRegistrationApproval(buyerEmail, auctionData) {
+    try {
+      const subject = `Auction Registration Approved - ${auctionData.auctionTitle}`;
+      
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        buyerEmail,
+        buyerName: auctionData.buyerName,
+        auctionTitle: auctionData.auctionTitle,
+        auctionDate: auctionData.auctionDate,
+        auctionLocation: auctionData.auctionLocation,
+        registrationId: auctionData.registrationId,
+        bidderNumber: auctionData.bidderNumber,
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
+        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Ishaazi Livestock Services',
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        year: new Date().getFullYear()
+      };
+
+      // Use auction-registration-approved template
+      const template = this.templates.get('auction-registration-approved');
+      const html = template ? this.renderTemplate('auction-registration-approved', templateData) : this.getAuctionApprovalTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: buyerEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`[SUCCESS] Auction registration approval sent to: ${buyerEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: buyerEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send auction registration approval:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: buyerEmail
+      };
+    }
+  }
+
+  /**
+   * Send auction registration rejection email
+   * @param {string} buyerEmail - Buyer's email address
+   * @param {Object} auctionData - Auction and registration information
+   * @returns {Promise<Object>} Email send result
+   */
+  async sendAuctionRegistrationRejection(buyerEmail, auctionData) {
+    try {
+      const subject = `Auction Registration Update - ${auctionData.auctionTitle}`;
+      
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        buyerEmail,
+        buyerName: auctionData.buyerName,
+        auctionTitle: auctionData.auctionTitle,
+        auctionDate: auctionData.auctionDate,
+        registrationId: auctionData.registrationId,
+        rejectionReason: auctionData.rejectionReason || 'Please contact us for more information',
+        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
+        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Ishaazi Livestock Services',
+        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        year: new Date().getFullYear()
+      };
+
+      // Use auction-registration-rejected template
+      const template = this.templates.get('auction-registration-rejected');
+      const html = template ? this.renderTemplate('auction-registration-rejected', templateData) : this.getAuctionRejectionTemplate(templateData);
+      
+      const mailOptions = {
+        from: `${process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        to: buyerEmail,
+        subject,
+        html,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log(`[SUCCESS] Auction registration rejection sent to: ${buyerEmail}`);
+      return {
+        success: true,
+        messageId: result.messageId,
+        recipient: buyerEmail
+      };
+
+    } catch (error) {
+      console.error('Failed to send auction registration rejection:', error);
+      return {
+        success: false,
+        error: error.message,
+        recipient: buyerEmail
+      };
+    }
+  }
+
+  /**
    * Get subscription frequency text based on type
    * @param {string} subscriptionType - Type of subscription
    * @returns {string} Frequency description
@@ -815,6 +1044,299 @@ class EmailService {
     `;
   }
 
+  /**
+   * Event registration confirmation email template
+   */
+  getEventRegistrationTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Event Registration Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .event-box { background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0; }
+          .registration-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; border-top: 1px solid #e0e0e0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div style="font-size: 36px; margin-bottom: 15px;">📅</div>
+            <h1>Event Registration Confirmed!</h1>
+            <p>You're all set for the event</p>
+          </div>
+          <div class="content">
+            <p>Dear ${data.registrantName},</p>
+            <p>Thank you for registering for our upcoming event. Your registration has been confirmed!</p>
+            
+            <div class="event-box">
+              <h2 style="color: #2d5a27; margin-bottom: 15px;">📅 Event Details</h2>
+              <p><strong>Event:</strong> ${data.eventTitle}</p>
+              <p><strong>Date:</strong> ${data.eventDate}</p>
+              <p><strong>Location:</strong> ${data.eventLocation}</p>
+            </div>
+            
+            <div class="registration-box">
+              <h3 style="color: #2d5a27; margin-bottom: 15px;">🎫 Registration Information</h3>
+              <p><strong>Registrant:</strong> ${data.registrantName}</p>
+              <p><strong>Email:</strong> ${data.participantEmail}</p>
+              <p><strong>Registration ID:</strong> ${data.registrationId}</p>
+            </div>
+            
+            <p><strong>What's Next?</strong></p>
+            <ul>
+              <li>Save this email for your records</li>
+              <li>Mark your calendar for the event date</li>
+              <li>We'll send you a reminder closer to the event date</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.websiteUrl}" class="button">Visit Our Website</a>
+            </div>
+            
+            <p>If you have any questions about this event, please don't hesitate to contact us.</p>
+            <p>We look forward to seeing you at the event!</p>
+            
+            <p>Best regards,<br>
+            <strong>${data.companyName}</strong></p>
+          </div>
+          <div class="footer">
+            <p><strong>${data.companyName}</strong></p>
+            <p>Contact: ${data.contactEmail} | Phone: ${data.contactPhone}</p>
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Auction registration confirmation email template
+   */
+  getAuctionRegistrationTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Auction Registration Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .auction-box { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0; }
+          .registration-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; border-top: 1px solid #e0e0e0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div style="font-size: 36px; margin-bottom: 15px;">🎉</div>
+            <h1>Auction Registration Confirmed!</h1>
+            <p>Your registration is being reviewed</p>
+          </div>
+          <div class="content">
+            <p>Dear ${data.buyerName},</p>
+            <p>Thank you for registering for our upcoming auction. Your registration has been received and is currently being reviewed.</p>
+            
+            <div class="auction-box">
+              <h2 style="color: #1f2937; margin-bottom: 15px;">📅 Auction Details</h2>
+              <p><strong>Auction:</strong> ${data.auctionTitle}</p>
+              <p><strong>Date:</strong> ${data.auctionDate}</p>
+              <p><strong>Location:</strong> ${data.auctionLocation}</p>
+            </div>
+            
+            <div class="registration-box">
+              <h3 style="color: #1f2937; margin-bottom: 15px;">🎫 Registration Information</h3>
+              <p><strong>Registrant:</strong> ${data.buyerName}</p>
+              <p><strong>Email:</strong> ${data.buyerEmail}</p>
+              <p><strong>Registration ID:</strong> ${data.registrationId}</p>
+            </div>
+            
+            <p><strong>What's Next?</strong></p>
+            <ul>
+              <li>Your registration will be reviewed within 24-48 hours</li>
+              <li>You'll receive a confirmation email once approved</li>
+              <li>Save this email for your records</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.websiteUrl}" class="button">Visit Our Website</a>
+            </div>
+            
+            <p>If you have any questions about this auction, please don't hesitate to contact us.</p>
+            
+            <p>Best regards,<br>
+            <strong>${data.companyName}</strong></p>
+          </div>
+          <div class="footer">
+            <p><strong>${data.companyName}</strong></p>
+            <p>Contact: ${data.contactEmail} | Phone: ${data.contactPhone}</p>
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Auction registration approval email template
+   */
+  getAuctionApprovalTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Auction Registration Approved</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .approval-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #16a34a; margin: 20px 0; }
+          .bidder-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; border-top: 1px solid #e0e0e0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div style="font-size: 36px; margin-bottom: 15px;">✅</div>
+            <h1>Registration Approved!</h1>
+            <p>You're all set to participate in the auction</p>
+          </div>
+          <div class="content">
+            <p>Dear ${data.buyerName},</p>
+            <p><strong>Congratulations!</strong> Your registration for the auction has been approved.</p>
+            
+            <div class="approval-box">
+              <h2 style="color: #16a34a; margin-bottom: 15px;">🎉 Registration Approved</h2>
+              <p>You are now registered to participate in <strong>${data.auctionTitle}</strong></p>
+              <p>Your bidder number is: <strong>${data.bidderNumber}</strong></p>
+            </div>
+            
+            <div class="bidder-box">
+              <h3 style="color: #16a34a; margin-bottom: 15px;">🎫 Your Bidder Information</h3>
+              <p><strong>Bidder Number:</strong> ${data.bidderNumber}</p>
+              <p><strong>Registration ID:</strong> ${data.registrationId}</p>
+              <p><strong>Auction Date:</strong> ${data.auctionDate}</p>
+              <p><strong>Location:</strong> ${data.auctionLocation}</p>
+            </div>
+            
+            <p><strong>Important Reminders:</strong></p>
+            <ul>
+              <li>Please arrive 30 minutes before the auction starts</li>
+              <li>Bring a valid ID and this confirmation email</li>
+              <li>Your bidder number will be required for all bids</li>
+              <li>Review auction terms and conditions on our website</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.websiteUrl}" class="button">View Auction Details</a>
+            </div>
+            
+            <p>We look forward to seeing you at the auction!</p>
+            
+            <p>Best regards,<br>
+            <strong>${data.companyName}</strong></p>
+          </div>
+          <div class="footer">
+            <p><strong>${data.companyName}</strong></p>
+            <p>Contact: ${data.contactEmail} | Phone: ${data.contactPhone}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Auction registration rejection email template
+   */
+  getAuctionRejectionTemplate(data) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Auction Registration Update</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .rejection-box { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 20px 0; }
+          .reason-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #374151 0%, #4b5563 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; border-top: 1px solid #e0e0e0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div style="font-size: 36px; margin-bottom: 15px;">📋</div>
+            <h1>Registration Update</h1>
+            <p>Regarding your auction registration</p>
+          </div>
+          <div class="content">
+            <p>Dear ${data.buyerName},</p>
+            <p>Thank you for your interest in participating in our auction.</p>
+            
+            <div class="rejection-box">
+              <h2 style="color: #dc2626; margin-bottom: 15px;">Registration Status Update</h2>
+              <p>We regret to inform you that your registration for <strong>${data.auctionTitle}</strong> cannot be processed at this time.</p>
+            </div>
+            
+            <div class="reason-box">
+              <h3 style="color: #374151; margin-bottom: 15px;">📝 Additional Information</h3>
+              <p><strong>Registration ID:</strong> ${data.registrationId}</p>
+              <p><strong>Reason:</strong> ${data.rejectionReason}</p>
+            </div>
+            
+            <p><strong>Next Steps:</strong></p>
+            <ul>
+              <li>Please contact our team for clarification</li>
+              <li>You may reapply with updated information if applicable</li>
+              <li>Check our website for future auction opportunities</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.websiteUrl}" class="button">Contact Us</a>
+            </div>
+            
+            <p>If you have any questions or would like to discuss this further, please don't hesitate to contact us.</p>
+            
+            <p>Thank you for your understanding,<br>
+            <strong>${data.companyName}</strong></p>
+          </div>
+          <div class="footer">
+            <p><strong>${data.companyName}</strong></p>
+            <p>Contact: ${data.contactEmail} | Phone: ${data.contactPhone}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   // Mock email sending for development/testing
   mockSendMail(options) {
     console.log('[MOCK] Mock Email Sent:');
@@ -856,16 +1378,25 @@ export const sendNewsletter = (subscribers, newsletterData) => {
 };
 
 export const sendWelcomeEmail = (userEmail, userData = {}) => {
-  return emailService.sendWelcomeEmail(userEmail, userData);
+  return emailService.sendWelcomeEmailToSubscriber(userEmail, userData);
+};
+
+// Dedicated functions for clarity
+export const sendWelcomeEmailToSubscriber = (subscriberEmail, subscriberData = {}) => {
+  return emailService.sendWelcomeEmailToSubscriber(subscriberEmail, subscriberData);
+};
+
+export const sendWelcomeEmailToAdmin = (companyEmail, tempPassword, createdBy) => {
+  return emailService.sendWelcomeEmailToAdmin(companyEmail, tempPassword, createdBy);
 };
 
 export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken, subscriberData = {}) => {
   return emailService.sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData);
 };
 
-// Export new company email functions
+// Legacy company email functions (use new names above)
 export const sendWelcomeEmailToEditor = (companyEmail, tempPassword, createdBy) => {
-  return emailService.sendWelcomeEmail(companyEmail, tempPassword, createdBy);
+  return emailService.sendWelcomeEmailToAdmin(companyEmail, tempPassword, createdBy);
 };
 
 export const sendPasswordResetEmail = (companyEmail, tempPassword, resetBy) => {
@@ -878,6 +1409,22 @@ export const sendAccountStatusEmail = (companyEmail, isActive, changedBy) => {
 
 export const validateCompanyEmail = (email) => {
   return emailService.validateCompanyEmail(email);
+};
+
+export const sendEventRegistrationConfirmation = (participantEmail, eventData) => {
+  return emailService.sendEventRegistrationConfirmation(participantEmail, eventData);
+};
+
+export const sendAuctionRegistrationConfirmation = (buyerEmail, auctionData) => {
+  return emailService.sendAuctionRegistrationConfirmation(buyerEmail, auctionData);
+};
+
+export const sendAuctionRegistrationApproval = (buyerEmail, auctionData) => {
+  return emailService.sendAuctionRegistrationApproval(buyerEmail, auctionData);
+};
+
+export const sendAuctionRegistrationRejection = (buyerEmail, auctionData) => {
+  return emailService.sendAuctionRegistrationRejection(buyerEmail, auctionData);
 };
 
 // Email service statistics and health

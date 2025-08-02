@@ -5,9 +5,15 @@ node_modules/
 
 # Frontend directory (deployed separately)
 farming-magazine-frontend/
+farming-magazine-frontend/public/
+farming-magazine-frontend/build/
+farming-magazine-frontend/dist/
+farming-magazine-frontend/node_modules/
 
-# Ignore all markdown files
+# Ignore all markdown files except README.md
 *.md
+!README.md
+
 
 # Environment files & sensitive information
 .env

@@ -447,4 +447,33 @@ router.use((error, req, res, next) => {
     });
 });
 
+// ========================================
+// Security Statistics Routes
+// ========================================
+
+/**
+ * @route GET /api/admin/security-stats
+ * @desc Get security statistics in expected format for SecurityDashboard component
+ * @access Private (System Admin Only)
+ */
+router.get('/security-stats', 
+    authenticateToken, 
+    requireSystemAdmin, 
+    logActivity('security_stats_accessed', 'security'), 
+    async (req, res) => {
+        try {
+            // Import security controller function
+            const { getSecurityStats } = await import('../controllers/securityController.js');
+            await getSecurityStats(req, res);
+        } catch (error) {
+            console.error('Error in security stats route:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch security statistics',
+                error: error.message
+            });
+        }
+    }
+);
+
 export default router;

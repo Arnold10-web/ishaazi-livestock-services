@@ -28,7 +28,7 @@ import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
 import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
 /**
@@ -2480,7 +2480,7 @@ export const createSubscriber = async (req, res) => {
 
         // Send welcome back email (don't let email errors block reactivation)
         try {
-          const emailResult = await sendWelcomeEmail(email, { subscriptionType });
+          const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
           if (!emailResult || !emailResult.success) {
             console.error('Failed to send welcome back email:', emailResult?.error || 'Unknown email error');
           }
@@ -2506,7 +2506,7 @@ export const createSubscriber = async (req, res) => {
 
     // Send welcome email (don't let email errors block subscription)
     try {
-      const emailResult = await sendWelcomeEmail(email, { subscriptionType });
+      const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
       if (!emailResult || !emailResult.success) {
         console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
       }
@@ -3383,6 +3383,27 @@ export const registerForEvent = async (req, res) => {
     // Populate event details for response
     await savedRegistration.populate('eventId', 'title startDate location');
 
+    // Send event registration confirmation email
+    try {
+      const { sendEventRegistrationConfirmation } = await import('../services/emailService.js');
+      const emailResult = await sendEventRegistrationConfirmation(email, {
+        eventTitle: event.title,
+        eventDate: new Date(event.startDate).toLocaleDateString(),
+        eventLocation: event.location || 'Location TBD',
+        registrantName: name,
+        registrationId: savedRegistration._id.toString()
+      });
+      
+      if (!emailResult || !emailResult.success) {
+        console.error('Failed to send event registration confirmation email:', emailResult?.error || 'Unknown email error');
+      } else {
+        console.log(`[SUCCESS] Event registration confirmation sent to: ${email}`);
+      }
+    } catch (emailError) {
+      console.error('Event registration confirmation email error:', emailError.message);
+      // Log but don't fail the registration
+    }
+
     sendResponse(res, true, 'Successfully registered for event', {
       registration: savedRegistration,
       event: {
@@ -3822,7 +3843,7 @@ export const confirmSubscription = async (req, res) => {
 
     // Send welcome email
     try {
-      await sendWelcomeEmail(subscriber.email, { subscriptionType: subscriber.subscriptionType });
+      await sendWelcomeEmailToSubscriber(subscriber.email, { subscriptionType: subscriber.subscriptionType });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
