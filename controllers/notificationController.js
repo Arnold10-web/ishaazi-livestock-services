@@ -305,10 +305,69 @@ export const resendNotification = async (req, res) => {
   }
 };
 
+/**
+ * @function updateNotification
+ * @description Updates an existing notification
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Route parameters
+ * @param {string} req.params.id - Notification ID
+ * @param {Object} req.body - Request body with update data
+ * @param {string} [req.body.title] - Updated notification title
+ * @param {string} [req.body.message] - Updated notification message
+ * @param {string} [req.body.status] - Updated notification status
+ * @param {string} [req.body.priority] - Updated notification priority
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with updated notification data
+ */
+export const updateNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, message, status, priority, contentType } = req.body;
+
+    // Find the notification
+    const notification = await Notification.findById(id);
+    
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
+    // Update fields if provided
+    if (title !== undefined) notification.title = title;
+    if (message !== undefined) notification.message = message;
+    if (status !== undefined) notification.status = status;
+    if (priority !== undefined) notification.priority = priority;
+    if (contentType !== undefined) notification.contentType = contentType;
+
+    // Update timestamp
+    notification.updatedAt = new Date();
+
+    // Save the updated notification
+    const updatedNotification = await notification.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification updated successfully',
+      data: { notification: updatedNotification }
+    });
+
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update notification',
+      error: error.message
+    });
+  }
+};
+
 export default {
   getNotifications,
   getNotificationAnalytics,
   triggerNotification,
   deleteNotification,
-  resendNotification
+  resendNotification,
+  updateNotification
 };

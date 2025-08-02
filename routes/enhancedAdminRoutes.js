@@ -20,14 +20,9 @@ import {
 } from '../controllers/enhancedAdminController.js';
 
 // Import the original dashboard controller for comprehensive stats
-import { getDashboardStats } from '../controllers/dashboardController.js';
-
-// Import dashboard cleanup utilities for statistics accuracy
-import {
-    getCleanDashboardStats,
-    validateViewCounts,
-    resetDevelopmentViews
-} from '../controllers/dashboardCleanupController.js';
+import { 
+    getDashboardStats
+} from '../controllers/dashboardController.js';
 
 import {
     createEditor,
@@ -157,22 +152,6 @@ router.get('/dashboard', authenticateToken, requireEditor, logActivity('dashboar
  * @desc Get cleaned dashboard statistics (comment-free, validated)
  * @access Private (Editor+)
  */
-router.get('/dashboard/clean', authenticateToken, requireEditor, logActivity('clean_dashboard_accessed', 'dashboard'), getCleanDashboardStats);
-
-/**
- * @route GET /api/admin/dashboard/validate-views
- * @desc Validate and audit view count accuracy
- * @access Private (Editor+)
- */
-router.get('/dashboard/validate-views', authenticateToken, requireEditor, logActivity('view_validation', 'dashboard'), validateViewCounts);
-
-/**
- * @route POST /api/admin/dashboard/reset-dev-views
- * @desc Reset development view counts (use with caution)
- * @access Private (System Admin Only)
- */
-router.post('/dashboard/reset-dev-views', authenticateToken, requireSystemAdmin, logActivity('dev_views_reset', 'system'), resetDevelopmentViews);
-
 // ========================================
 // User Management Routes (System Admin Only)
 // ========================================

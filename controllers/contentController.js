@@ -3751,6 +3751,60 @@ export const deleteEventRegistration = async (req, res) => {
   }
 };
 
+// Update event registration (admin function)
+export const updateEventRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      organization, 
+      status, 
+      specialRequirements,
+      emergencyContact 
+    } = req.body;
+
+    // Find the registration
+    const registration = await EventRegistration.findById(id);
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event registration not found'
+      });
+    }
+
+    // Update fields if provided
+    if (firstName !== undefined) registration.firstName = firstName;
+    if (lastName !== undefined) registration.lastName = lastName;
+    if (email !== undefined) registration.email = email;
+    if (phone !== undefined) registration.phone = phone;
+    if (organization !== undefined) registration.organization = organization;
+    if (status !== undefined) registration.status = status;
+    if (specialRequirements !== undefined) registration.specialRequirements = specialRequirements;
+    if (emergencyContact !== undefined) registration.emergencyContact = emergencyContact;
+
+    // Save the updated registration
+    const updatedRegistration = await registration.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Event registration updated successfully',
+      data: { registration: updatedRegistration }
+    });
+
+  } catch (error) {
+    console.error('Error updating event registration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update event registration',
+      error: error.message
+    });
+  }
+};
+
 // ----- EMAIL AUTOMATION FUNCTIONS -----
 
 /**

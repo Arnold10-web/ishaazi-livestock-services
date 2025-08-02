@@ -5,7 +5,7 @@ import {
     getCleanDashboardStats, 
     validateViewCounts, 
     resetDevelopmentViews 
-} from '../controllers/mergedDashboardController.js';
+} from '../controllers/dashboardController.js';
 import { authenticateAdmin } from '../middleware/enhancedAuthMiddleware.js';
 
 const router = express.Router();
