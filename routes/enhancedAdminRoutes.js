@@ -19,15 +19,13 @@ import {
     createAdminUser
 } from '../controllers/enhancedAdminController.js';
 
-// Import the original dashboard controller for comprehensive stats
-import { getDashboardStats } from '../controllers/dashboardController.js';
-
-// Import dashboard cleanup utilities for statistics accuracy
-import {
+// Import the merged dashboard controller for comprehensive stats and cleanup utilities
+import { 
+    getDashboardStats,
     getCleanDashboardStats,
     validateViewCounts,
     resetDevelopmentViews
-} from '../controllers/dashboardCleanupController.js';
+} from '../controllers/mergedDashboardController.js';
 
 import {
     createEditor,

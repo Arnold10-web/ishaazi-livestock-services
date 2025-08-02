@@ -1,13 +1,11 @@
 import express from 'express';
 import { 
     getDashboardStats, 
-    resetViewCounts 
-} from '../controllers/dashboardController.js';
-import { 
+    resetViewCounts,
     getCleanDashboardStats, 
     validateViewCounts, 
     resetDevelopmentViews 
-} from '../controllers/dashboardCleanupController.js';
+} from '../controllers/mergedDashboardController.js';
 import { authenticateAdmin } from '../middleware/enhancedAuthMiddleware.js';
 
 const router = express.Router();

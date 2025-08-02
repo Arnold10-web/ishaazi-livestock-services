@@ -1,45 +1,30 @@
 import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// Import responsive utilities
 import { useResponsive } from '../utils/responsiveUtils';
+import PasswordChangeModal from '../components/PasswordChangeModal';
 
-const ContentManagement = lazy(() => import('./ContentManagement'));
-// Enhanced dashboard component with improved UI and accurate statistics
+// Lazy load sections
 const EnhancedOverview = lazy(() => import('../components/EnhancedOverview'));
+const ContentManagement = lazy(() => import('./ContentManagement'));
 
-function getIconForTab(tab) {
-  const icons = {
-    overview: 'chart-pie',
-    blogs: 'file-alt',
-    news: 'newspaper',
-    basics: 'photo-video',
-    magazines: 'book',
-    farms: 'tractor',
-    goats: 'paw',
-    dairies: 'cheese',
-    beefs: 'drumstick-bite',
-    piggeries: 'piggy-bank',
-    newsletters: 'envelope',
-    subscribers: 'users',
-    events: 'calendar-alt',
-    registrations: 'user-plus'
-  };
-  return icons[tab] || 'cog';
-}
-
+/**
+ * Enhanced Editor Dashboard with Feature-Section Organization
+ * Preserves all original functionality while providing better organization
+ */
 const EditorDashboard = () => {
-  // Set default tab to overview
-  const [activeTab, setActiveTab] = useState('overview');
+  // Main navigation state
+  const [activeSection, setActiveSection] = useState('overview');
+  const [activeContentTab, setActiveContentTab] = useState('blogs');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  // Add dark mode state
   const [darkMode, setDarkMode] = useState(false);
   const [actionToTrigger, setActionToTrigger] = useState(null);
+  
+  // Modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Add responsive utilities
-  const { isMobile, isMinBreakpoint } = useResponsive();
-  const isLargeScreen = isMinBreakpoint('lg');
+  const { isMobile } = useResponsive();
 
   // Auto-collapse sidebar on mobile
   useEffect(() => {
@@ -52,7 +37,7 @@ const EditorDashboard = () => {
     const token = localStorage.getItem('myAppAdminToken');
     if (!token) navigate('/login');
     
-    // Check for saved dark mode preference
+    // Dark mode preference
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
     if (savedDarkMode) {
@@ -60,17 +45,85 @@ const EditorDashboard = () => {
     }
   }, [navigate]);
 
-  // Handle navigation from quick actions
+  // Handle navigation from quick actions (preserve original functionality)
   useEffect(() => {
     if (location.state?.activeTab && location.state?.from === 'quickAction') {
-      setActiveTab(location.state.activeTab);
-      setActionToTrigger(location.state.action);
+      // Map old tab structure to new sections
+      const tabToSectionMap = {
+        'blogs': { section: 'content', tab: 'blogs' },
+        'news': { section: 'content', tab: 'news' },
+        'magazines': { section: 'content', tab: 'magazines' },
+        'farms': { section: 'content', tab: 'farms' },
+        'goats': { section: 'content', tab: 'goats' },
+        'dairies': { section: 'content', tab: 'dairies' },
+        'beefs': { section: 'content', tab: 'beefs' },
+        'piggeries': { section: 'content', tab: 'piggeries' },
+        'basics': { section: 'content', tab: 'basics' },
+        'auctions': { section: 'content', tab: 'auctions' },
+        'subscribers': { section: 'community', tab: 'subscribers' },
+        'newsletters': { section: 'community', tab: 'newsletters' },
+        'events': { section: 'community', tab: 'events' },
+        'registrations': { section: 'community', tab: 'registrations' }
+      };
+      
+      const mapping = tabToSectionMap[location.state.activeTab];
+      if (mapping) {
+        setActiveSection(mapping.section);
+        setActiveContentTab(mapping.tab);
+        setActionToTrigger(location.state.action);
+      }
+      
       // Clear the state to prevent issues with browser back/forward
       navigate('/dashboard', { replace: true });
     }
   }, [location.state, navigate]);
 
-  // Toggle dark mode
+  // Dashboard sections configuration
+  const sections = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: 'chart-pie',
+      description: 'Dashboard statistics and quick actions'
+    },
+    {
+      id: 'content',
+      label: 'Content Management',
+      icon: 'edit',
+      description: 'Manage all content types',
+      subsections: [
+        { id: 'blogs', label: 'Blogs', icon: 'file-alt' },
+        { id: 'news', label: 'News', icon: 'newspaper' },
+        { id: 'magazines', label: 'Magazines', icon: 'book' },
+        { id: 'farms', label: 'Farms', icon: 'tractor' },
+        { id: 'goats', label: 'Goats', icon: 'paw' },
+        { id: 'dairies', label: 'Dairies', icon: 'cheese' },
+        { id: 'beefs', label: 'Beef', icon: 'drumstick-bite' },
+        { id: 'piggeries', label: 'Piggery', icon: 'piggy-bank' },
+        { id: 'basics', label: 'Basics', icon: 'photo-video' },
+        { id: 'auctions', label: 'Auctions', icon: 'gavel' }
+      ]
+    },
+    {
+      id: 'community',
+      label: 'Community',
+      icon: 'users',
+      description: 'Manage subscribers and events',
+      subsections: [
+        { id: 'subscribers', label: 'Subscribers', icon: 'user-plus' },
+        { id: 'newsletters', label: 'Newsletters', icon: 'envelope' },
+        { id: 'events', label: 'Events', icon: 'calendar-alt' },
+        { id: 'registrations', label: 'Event Registrations', icon: 'user-check' }
+      ]
+    },
+    {
+      id: 'profile',
+      label: 'Profile & Settings',
+      icon: 'user-cog',
+      description: 'Account settings and preferences'
+    }
+  ];
+
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
@@ -88,231 +141,330 @@ const EditorDashboard = () => {
     navigate('/login');
   };
 
-  // Close sidebar when clicking on a tab (mobile behavior)
-  const handleTabClick = (tabId) => {
-    setActiveTab(tabId);
+  const handleSectionClick = (sectionId) => {
+    setActiveSection(sectionId);
     if (isMobile) {
       setSidebarCollapsed(true);
     }
   };
 
-  // Add overview tab
-  const tabs = [
-    { id: 'overview', label: 'Dashboard Overview' },
-    { id: 'blogs', label: 'Blogs' },
-    { id: 'news', label: 'News' },
-    { id: 'basics', label: 'Basics' },
-    { id: 'magazines', label: 'Magazines' },
-    { id: 'farms', label: 'Farms' },
-    { id: 'goats', label: 'Goats' },
-    { id: 'dairies', label: 'Dairies' },
-    { id: 'beefs', label: 'Beef' },
-    { id: 'piggeries', label: 'Piggery' },
-    { id: 'newsletters', label: 'Newsletters' },
-    { id: 'subscribers', label: 'Subscribers' },
-    { id: 'events', label: 'Events' },
-    { id: 'registrations', label: 'Event Registrations' },
-  ];
+  const handlePasswordChangeSuccess = (message) => {
+    // Show success notification
+    alert(message); // Replace with proper toast notification
+  };
 
-  // Generate breadcrumb based on active tab
+  // Generate breadcrumb
   const getBreadcrumb = () => {
-    const currentTab = tabs.find(tab => tab.id === activeTab);
-    return (
-      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
-        <span className="hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer transition">Dashboard</span>
-        <i className="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
-        <span className="text-teal-600 dark:text-teal-400 font-medium">{currentTab?.label}</span>
-      </div>
-    );
+    const currentSection = sections.find(section => section.id === activeSection);
+    let breadcrumb = `Dashboard / ${currentSection?.label}`;
+    
+    if (activeSection === 'content' || activeSection === 'community') {
+      const currentContent = currentSection.subsections.find(sub => sub.id === activeContentTab);
+      breadcrumb += ` / ${currentContent?.label}`;
+    }
+    
+    return breadcrumb;
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} flex flex-col font-sans transition-colors duration-300`}>
-      {/* Header - Enhanced responsive design */}
-      <header className={`${darkMode 
-        ? 'bg-gray-800 border-gray-700' 
-        : 'bg-white border-gray-200'} 
-        border-b px-3 sm:px-6 py-3 sm:py-4 shadow-sm flex justify-between items-center transition-colors duration-300`}>
-        <div className="flex items-center min-w-0 flex-1">
-          <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`p-2 mr-2 sm:mr-3 rounded-full ${darkMode 
-              ? 'hover:bg-gray-700 text-gray-300' 
-              : 'hover:bg-gray-100 text-gray-700'} 
-              lg:hidden transition duration-200`}
-          >
-            <i className={`fas fa-${sidebarCollapsed ? 'bars' : 'times'}`}></i>
-          </button>
-          <h1 className={`text-lg sm:text-2xl font-bold tracking-tight flex items-center min-w-0 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            <i className="fas fa-tractor mr-1 sm:mr-2 text-teal-600 text-sm sm:text-xl"></i>
-            <span className="hidden sm:inline truncate">Ishaazi Livestock Services</span>
-            <span className="sm:hidden truncate">Ishaazi</span>
-          </h1>
-        </div>
-        <div className="flex items-center space-x-1 sm:space-x-3 ml-2">
-          {/* Notifications */}
-          <button className={`relative p-2 rounded-full ${darkMode 
-            ? 'hover:bg-gray-700 text-gray-300' 
-            : 'hover:bg-gray-100 text-gray-700'} transition duration-200`}>
-            <i className="fas fa-bell text-sm sm:text-base"></i>
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
-          {/* Dark mode toggle */}
-          <button 
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-full ${darkMode 
-              ? 'hover:bg-gray-700 text-yellow-300' 
-              : 'hover:bg-gray-100 text-gray-700'} transition duration-200`}
-          >
-            <i className={`fas fa-${darkMode ? 'sun' : 'moon'} text-sm sm:text-base`}></i>
-          </button>
-          
-          <div className={`hidden md:block ${darkMode 
-            ? 'bg-gray-700 text-gray-200' 
-            : 'bg-teal-50 text-teal-700'} 
-            px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium`}>
-            <i className="fas fa-user-edit mr-1"></i>
-            <span className="hidden lg:inline">Editor Panel</span>
-            <span className="lg:hidden">Editor</span>
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} flex transition-colors duration-300`}>
+      
+      {/* Sidebar */}
+      <aside className={`
+        ${sidebarCollapsed ? (isMobile ? '-translate-x-full' : 'w-16') : 'w-64'} 
+        ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} 
+        border-r flex-shrink-0 transform transition-all duration-300 ease-in-out
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50' : 'relative'}
+      `}>
+        
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Editor</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Content Management</p>
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <i className={`fas fa-${sidebarCollapsed ? 'chevron-right' : 'chevron-left'} text-gray-600 dark:text-gray-400`}></i>
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className={`bg-red-500 hover:bg-red-600 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-4 rounded-md shadow transition duration-200 flex items-center text-sm`}
-          >
-            <i className="fas fa-sign-out-alt mr-1 sm:mr-2"></i> 
-            <span className="hidden sm:inline">Logout</span>
-          </button>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Navigation Sidebar - Enhanced responsive behavior */}
-        <nav className={`${
-          sidebarCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'
-        } fixed lg:relative ${isLargeScreen ? 'lg:w-64' : 'w-64'} h-screen ${darkMode 
-          ? 'bg-gray-800 border-gray-700' 
-          : 'bg-white border-gray-200'} 
-        border-r transition-transform duration-300 ease-in-out z-30 flex flex-col`}>
-          <div className={`p-3 sm:p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium py-2 px-2 text-sm`}>
-              <i className="fas fa-th-large mr-2"></i>
-              NAVIGATION
-            </div>
-          </div>
-          
-          {/* Scrollable tabs container - Enhanced mobile scrolling */}
-          <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-1">
-            {tabs.map((tab) => (
+        {/* Navigation Sections */}
+        <nav className="flex-1 p-4 space-y-2">
+          {sections.map((section) => (
+            <div key={section.id}>
               <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className={`flex items-center w-full py-2.5 sm:py-3 px-2 sm:px-4 rounded-md transition-all duration-200 text-left text-sm sm:text-base ${
-                  activeTab === tab.id 
-                    ? darkMode 
-                      ? 'bg-teal-800 bg-opacity-30 text-teal-400 font-medium' 
-                      : 'bg-teal-50 text-teal-700 font-medium' 
-                    : darkMode
-                      ? 'hover:bg-gray-700 text-gray-300' 
-                      : 'hover:bg-gray-100 text-gray-700'
-                }`}
+                onClick={() => handleSectionClick(section.id)}
+                className={`
+                  w-full flex items-center p-3 rounded-lg text-left transition-colors
+                  ${activeSection === section.id 
+                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }
+                `}
               >
-                <i className={`fas fa-${getIconForTab(tab.id)} mr-2 sm:mr-3 w-4 sm:w-5 text-center text-sm ${
-                  activeTab === tab.id 
-                    ? 'text-teal-500' 
-                    : darkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}></i>
-                <span className="truncate">{tab.label}</span>
-                {activeTab === tab.id && (
-                  <i className="fas fa-chevron-right ml-auto text-xs text-teal-500"></i>
+                <i className={`fas fa-${section.icon} w-5 text-center`}></i>
+                {!sidebarCollapsed && (
+                  <div className="ml-3">
+                    <div className="font-medium">{section.label}</div>
+                    {section.description && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {section.description}
+                      </div>
+                    )}
+                  </div>
                 )}
               </button>
-            ))}
-          </div>
-          
-          {/* Footer stays at bottom - Responsive text sizing */}
-          <div className={`p-3 sm:p-4 border-t ${darkMode 
-            ? 'border-gray-700 bg-gray-800' 
-            : 'border-gray-200 bg-gray-50'}`}>
-            <div className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-xs text-center`}>
-              <p>© 2025 Ishaazi Livestock Services</p>
-              <p>Version 2.0</p>
+
+              {/* Content Management Subsections */}
+              {!sidebarCollapsed && activeSection === 'content' && section.id === 'content' && (
+                <div className="ml-6 mt-2 space-y-1">
+                  {section.subsections.map((subsection) => (
+                    <button
+                      key={subsection.id}
+                      onClick={() => setActiveContentTab(subsection.id)}
+                      className={`
+                        w-full flex items-center p-2 rounded-md text-sm transition-colors
+                        ${activeContentTab === subsection.id
+                          ? 'bg-teal-50 text-teal-600 dark:bg-teal-800 dark:text-teal-200'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }
+                      `}
+                    >
+                      <i className={`fas fa-${subsection.icon} w-4 text-center mr-2`}></i>
+                      {subsection.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Community Subsections */}
+              {!sidebarCollapsed && activeSection === 'community' && section.id === 'community' && (
+                <div className="ml-6 mt-2 space-y-1">
+                  {section.subsections.map((subsection) => (
+                    <button
+                      key={subsection.id}
+                      onClick={() => setActiveContentTab(subsection.id)}
+                      className={`
+                        w-full flex items-center p-2 rounded-md text-sm transition-colors
+                        ${activeContentTab === subsection.id
+                          ? 'bg-teal-50 text-teal-600 dark:bg-teal-800 dark:text-teal-200'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }
+                      `}
+                    >
+                      <i className={`fas fa-${subsection.icon} w-4 text-center mr-2`}></i>
+                      {subsection.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          ))}
         </nav>
 
-        {/* Content Area - Enhanced responsive design */}
-        <div className="flex-1 overflow-auto">
-          {/* Backdrop for mobile sidebar */}
-          {!sidebarCollapsed && (
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-              onClick={() => setSidebarCollapsed(true)}
-            ></div>
-          )}
-          
-          {/* Tab Content - Responsive padding */}
-          <div className={`p-3 sm:p-6 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-            {/* Breadcrumb */}
-            {getBreadcrumb()}
-            
-            <div className="mb-4 sm:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-0">
-              <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-2 md:mb-0`}>
-                <i className={`fas fa-${getIconForTab(activeTab)} mr-2 text-teal-500 text-lg sm:text-xl`}></i>
-                <span className="break-words">{tabs.find(tab => tab.id === activeTab)?.label}</span>
-              </h2>
-              <div className={`${darkMode 
-                ? 'bg-gray-700 text-gray-300' 
-                : 'bg-gray-100 text-gray-600'} 
-                rounded-lg p-2 sm:p-3 text-xs sm:text-sm flex items-center transition-colors duration-300`}>
-                <i className="fas fa-clock mr-1 sm:mr-2"></i> 
-                <span className="hidden sm:inline">Last updated: </span>
-                <span className="sm:hidden">Updated: </span>
-                <span className="break-all">{new Date().toLocaleString()}</span>
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Toggle dark mode"
+                >
+                  <i className={`fas fa-${darkMode ? 'sun' : 'moon'} text-gray-600 dark:text-gray-400`}></i>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-500"
+                  title="Logout"
+                >
+                  <i className="fas fa-sign-out-alt"></i>
+                </button>
               </div>
-            </div>
-
-            {/* Content container - Responsive design */}
-            <div className={`${darkMode 
-              ? 'bg-gray-800 border-gray-700' 
-              : 'bg-white border-gray-100'} 
-              rounded-xl shadow-sm border p-3 sm:p-6 transition-all duration-300 overflow-hidden`}>
-              <Suspense
-                fallback={
-                  <div className="flex justify-center items-center h-32 sm:h-64">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 relative">
-                      <div className={`w-12 h-12 sm:w-16 sm:h-16 border-4 ${darkMode 
-                        ? 'border-gray-700' 
-                        : 'border-teal-100'} border-dashed rounded-full animate-spin`}></div>
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-t-teal-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin absolute top-0"></div>
-                    </div>
-                  </div>
-                }
-              >
-                {activeTab === 'overview' ? (
-                  <EnhancedOverview darkMode={darkMode} />
-                ) : (
-                  <>
-                    {activeTab === 'subscribers' && <SendPushNotificationButton darkMode={darkMode} />}
-                    <ContentManagement 
-                      activeTab={activeTab} 
-                      darkMode={darkMode} 
-                      actionToTrigger={actionToTrigger}
-                      onActionHandled={() => setActionToTrigger(null)}
-                    />
-                  </>
-                )}
-              </Suspense>
-            </div>
+            )}
           </div>
         </div>
-      </div>
+      </aside>
+
+      {/* Mobile Overlay */}
+      {isMobile && !sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className={`
+          ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} 
+          border-b px-6 py-4 flex justify-between items-center
+        `}>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+              Ishaazi Livestock Services
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {getBreadcrumb()}
+            </p>
+          </div>
+          
+          {/* Header Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Notifications */}
+            <button className={`relative p-2 rounded-full ${darkMode 
+              ? 'hover:bg-gray-700 text-gray-300' 
+              : 'hover:bg-gray-100 text-gray-700'} transition duration-200`}>
+              <i className="fas fa-bell"></i>
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            
+            {/* Editor Panel Badge */}
+            <div className={`hidden md:block ${darkMode 
+              ? 'bg-gray-700 text-gray-200' 
+              : 'bg-teal-50 text-teal-700'} 
+              px-3 py-1 rounded-full text-sm font-medium`}>
+              <i className="fas fa-user-edit mr-1"></i>
+              <span className="hidden lg:inline">Editor Panel</span>
+              <span className="lg:hidden">Editor</span>
+            </div>
+            
+            {isMobile && (
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <i className="fas fa-bars text-gray-600 dark:text-gray-400"></i>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="p-6">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            </div>
+          }>
+            {/* Overview Section */}
+            {activeSection === 'overview' && (
+              <EnhancedOverview darkMode={darkMode} />
+            )}
+
+            {/* Content Management Section */}
+            {activeSection === 'content' && (
+              <ContentManagement 
+                activeTab={activeContentTab} 
+                darkMode={darkMode} 
+                actionToTrigger={actionToTrigger}
+                onActionHandled={() => setActionToTrigger(null)}
+              />
+            )}
+
+            {/* Community Section */}
+            {activeSection === 'community' && (
+              <div>
+                {activeContentTab === 'subscribers' && <SendPushNotificationButton darkMode={darkMode} />}
+                <ContentManagement 
+                  activeTab={activeContentTab} 
+                  darkMode={darkMode} 
+                  actionToTrigger={actionToTrigger}
+                  onActionHandled={() => setActionToTrigger(null)}
+                />
+              </div>
+            )}
+
+            {/* Profile Section */}
+            {activeSection === 'profile' && (
+              <div className="max-w-4xl">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-6">
+                    Profile & Settings
+                  </h2>
+                  
+                  <div className="space-y-6">
+                    {/* Password Change Section */}
+                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+                      <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-3">
+                        Security
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">
+                            Change your account password
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                            Ensure your account stays secure with a strong password
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowPasswordModal(true)}
+                          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center"
+                        >
+                          <i className="fas fa-lock mr-2"></i>
+                          Change Password
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Theme Settings */}
+                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+                      <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-3">
+                        Appearance
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">
+                            Dark mode
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                            Toggle between light and dark themes
+                          </p>
+                        </div>
+                        <button
+                          onClick={toggleDarkMode}
+                          className={`
+                            relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                            ${darkMode ? 'bg-teal-600' : 'bg-gray-300'}
+                          `}
+                        >
+                          <span className={`
+                            inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                            ${darkMode ? 'translate-x-6' : 'translate-x-1'}
+                          `} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Suspense>
+        </div>
+      </main>
+
+      {/* Password Change Modal */}
+      <PasswordChangeModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={handlePasswordChangeSuccess}
+      />
     </div>
   );
 };
 
-function SendPushNotificationButton() {
+// Send Push Notification Component (preserved from original)
+function SendPushNotificationButton({ darkMode }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -344,21 +496,76 @@ function SendPushNotificationButton() {
   };
 
   return (
-    <div style={{ margin: '1rem 0' }}>
-      <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded shadow">
-        {showForm ? 'Cancel' : 'Send Push Notification'}
+    <div className="mb-6">
+      <button 
+        onClick={() => setShowForm(!showForm)} 
+        className={`px-4 py-2 rounded-lg shadow transition-colors ${
+          darkMode 
+            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+            : 'bg-blue-600 hover:bg-blue-700 text-white'
+        }`}
+      >
+        <i className="fas fa-bell mr-2"></i>
+        {showForm ? 'Cancel Notification' : 'Send Push Notification'}
       </button>
+      
       {showForm && (
-        <form onSubmit={handleSend} style={{ marginTop: 12 }}>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" required className="block mb-2 p-2 border rounded w-full" />
-          <input value={body} onChange={e => setBody(e.target.value)} placeholder="Body" required className="block mb-2 p-2 border rounded w-full" />
-          <input value={url} onChange={e => setUrl(e.target.value)} placeholder="URL (optional)" className="block mb-2 p-2 border rounded w-full" />
-          <button type="submit" disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded">
-            {loading ? 'Sending...' : 'Send'}
-          </button>
+        <form onSubmit={handleSend} className={`mt-4 p-4 rounded-lg ${
+          darkMode ? 'bg-gray-700' : 'bg-gray-50'
+        }`}>
+          <div className="space-y-4">
+            <input 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+              placeholder="Notification Title" 
+              required 
+              className={`w-full p-3 border rounded-lg ${
+                darkMode 
+                  ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-800'
+              }`}
+            />
+            <input 
+              value={body} 
+              onChange={e => setBody(e.target.value)} 
+              placeholder="Notification Body" 
+              required 
+              className={`w-full p-3 border rounded-lg ${
+                darkMode 
+                  ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-800'
+              }`}
+            />
+            <input 
+              value={url} 
+              onChange={e => setUrl(e.target.value)} 
+              placeholder="URL (optional)" 
+              className={`w-full p-3 border rounded-lg ${
+                darkMode 
+                  ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-gray-800'
+              }`}
+            />
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+            >
+              {loading ? 'Sending...' : 'Send Notification'}
+            </button>
+          </div>
         </form>
       )}
-      {status && <div style={{ color: status.includes('fail') ? 'red' : 'green', marginTop: 8 }}>{status}</div>}
+      
+      {status && (
+        <div className={`mt-3 p-3 rounded-lg ${
+          status.includes('fail') || status.includes('Failed') 
+            ? 'bg-red-100 text-red-700 border border-red-300' 
+            : 'bg-green-100 text-green-700 border border-green-300'
+        }`}>
+          {status}
+        </div>
+      )}
     </div>
   );
 }

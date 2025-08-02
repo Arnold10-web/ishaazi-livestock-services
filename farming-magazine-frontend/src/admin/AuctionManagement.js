@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import apiConfig from '../config/apiConfig';
+import axios from 'axios';
+import API_ENDPOINTS from '../config/apiConfig';
+import { getAuthHeader } from '../utils/auth';
 
 const AuctionManagement = () => {
   const [auctions, setAuctions] = useState([]);
@@ -28,15 +30,12 @@ const AuctionManagement = () => {
   const fetchAuctions = async () => {
     try {
       setLoading(true);
-      const response = await fetch(apiConfig.auctions.getAdminAuctions, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('myAppAdminToken')}`
-        }
+      const response = await axios.get(API_ENDPOINTS.GET_ADMIN_AUCTIONS, {
+        headers: getAuthHeader()
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setAuctions(data.data || []);
+      if (response.data && response.data.success) {
+        setAuctions(response.data.auctions || []);
       } else {
         setError('Failed to fetch auctions');
       }
@@ -58,27 +57,28 @@ const AuctionManagement = () => {
       });
 
       const url = editingAuction 
-        ? apiConfig.auctions.updateAuction.replace(':id', editingAuction._id)
-        : apiConfig.auctions.createAuction;
+        ? API_ENDPOINTS.UPDATE_AUCTION(editingAuction._id)
+        : API_ENDPOINTS.CREATE_AUCTION;
       
       const method = editingAuction ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await axios({
         method,
+        url,
+        data: formDataToSend,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('myAppAdminToken')}`
-        },
-        body: formDataToSend
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.ok) {
+      if (response.data && response.data.success) {
         await fetchAuctions();
         resetForm();
         setShowCreateModal(false);
         setEditingAuction(null);
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to save auction');
+        setError('Failed to save auction');
       }
     } catch (err) {
       setError('Error saving auction: ' + err.message);
@@ -89,14 +89,11 @@ const AuctionManagement = () => {
     if (!window.confirm('Are you sure you want to delete this auction?')) return;
     
     try {
-      const response = await fetch(apiConfig.auctions.deleteAuction.replace(':id', id), {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('myAppAdminToken')}`
-        }
+      const response = await axios.delete(API_ENDPOINTS.DELETE_AUCTION(id), {
+        headers: getAuthHeader()
       });
 
-      if (response.ok) {
+      if (response.data && response.data.success) {
         await fetchAuctions();
       } else {
         setError('Failed to delete auction');

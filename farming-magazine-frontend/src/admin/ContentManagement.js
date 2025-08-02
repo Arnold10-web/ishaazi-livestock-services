@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import BlogForm from '../components/BlogForm';
@@ -42,6 +42,7 @@ const DELETE_ENDPOINTS = {
   subscribers: 'DELETE_SUBSCRIBER',
   events: 'DELETE_EVENT',
   registrations: 'DELETE_EVENT_REGISTRATION',
+  auctions: 'DELETE_AUCTION',
 };
 
 const ContentStats = ({ activeTab, content, darkMode }) => {
@@ -874,6 +875,16 @@ const ContentManagement = ({ activeTab, darkMode, actionToTrigger, onActionHandl
                 onClose={handleFormClose}
               />
             );
+          case 'auctions':
+            // Import AuctionManagement component dynamically
+            const AuctionManagement = lazy(() => import('./AuctionManagement'));
+            return (
+              <Suspense fallback={<div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
+              </div>}>
+                <AuctionManagement darkMode={darkMode} />
+              </Suspense>
+            );
         case 'newsletters':
           return (
             <NewsletterForm
@@ -914,6 +925,16 @@ const ContentManagement = ({ activeTab, darkMode, actionToTrigger, onActionHandl
           return <GoatList goats={filteredAndSortedContent} {...commonProps} />;
         case 'events':
             return <EventList events={filteredAndSortedContent} {...commonProps} />;
+        case 'auctions':
+          // For auctions, we'll show the full management interface instead of a simple list
+          const AuctionManagement = lazy(() => import('./AuctionManagement'));
+          return (
+            <Suspense fallback={<div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
+            </div>}>
+              <AuctionManagement darkMode={darkMode} />
+            </Suspense>
+          );
         case 'beefs':
           return <BeefList beefs={filteredAndSortedContent} {...commonProps} />;
         case 'newsletters':

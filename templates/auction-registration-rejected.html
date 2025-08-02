@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Registration Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #ef4444; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; }
+        .contact-box { background-color: #f8fafc; border-left: 4px solid #6b7280; padding: 15px; margin: 20px 0; }
+        .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Registration Update</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Dear {{buyerName}},</h2>
+            
+            <p>We have reviewed your registration for the upcoming auction and unfortunately, we are unable to approve your registration at this time.</p>
+            
+            <div class="info-box">
+                <h3>📅 Auction Details</h3>
+                <p><strong>Auction:</strong> {{auctionTitle}}</p>
+                {{#if reason}}
+                <p><strong>Reason:</strong> {{reason}}</p>
+                {{/if}}
+            </div>
+            
+            <div class="contact-box">
+                <h3>📞 Next Steps</h3>
+                <p>If you believe this decision was made in error or if you have additional information that might change our review, please contact us:</p>
+                <p><strong>Email:</strong> auctions@ishaazilivestockservices.com</p>
+                <p><strong>Phone:</strong> +1 (555) 123-4567</p>
+                <p><strong>Office Hours:</strong> Monday - Friday, 8:00 AM - 5:00 PM</p>
+            </div>
+            
+            <p>We appreciate your interest in our auction and apologize for any inconvenience this may cause.</p>
+            
+            <p>If you have any questions about this decision or future auction opportunities, please don't hesitate to reach out to our team.</p>
+            
+            <p>Thank you for your understanding.</p>
+            
+            <p>Sincerely,<br>
+            <strong>Ishaazi Livestock Services Auction Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>For questions, contact us at: auctions@ishaazilivestockservices.com</p>
+        </div>
+    </div>
+</body>
+</html>

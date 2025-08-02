@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Registration Approved</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #10b981; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; }
+        .warning-box { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+        .button { display: inline-block; background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; }
+        .highlight { color: #10b981; font-weight: bold; font-size: 18px; }
+        .bidder-number { background-color: #10b981; color: white; padding: 10px; border-radius: 5px; text-align: center; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Registration Approved!</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Congratulations {{buyerName}}!</h2>
+            
+            <p>Your registration for the auction has been <span class="highlight">APPROVED</span>. You are now registered to participate in the upcoming auction.</p>
+            
+            <div class="bidder-number">
+                <h3>Your Bidder Number: {{bidderNumber}}</h3>
+                <p>Please remember this number for auction day</p>
+            </div>
+            
+            <div class="info-box">
+                <h3>📅 Auction Information</h3>
+                <p><strong>Auction:</strong> {{auctionTitle}}</p>
+                <p><strong>Date:</strong> {{auctionDate}}</p>
+                <p><strong>Location:</strong> {{auctionLocation}}</p>
+                <p><strong>Your Bidder Number:</strong> {{bidderNumber}}</p>
+            </div>
+            
+            <div class="warning-box">
+                <h3>⚠️ Important Reminders</h3>
+                <ul>
+                    <li><strong>Arrive Early:</strong> Please arrive at least 30 minutes before the auction starts</li>
+                    <li><strong>Bring ID:</strong> Bring a valid government-issued photo ID</li>
+                    <li><strong>Payment Methods:</strong> Bring approved payment methods (cash, certified check, or approved credit)</li>
+                    <li><strong>Bidder Number:</strong> Your bidder number is <strong>{{bidderNumber}}</strong> - memorize it!</li>
+                </ul>
+            </div>
+            
+            <div class="info-box">
+                <h3>📋 What to Expect</h3>
+                <ol>
+                    <li><strong>Check-in:</strong> Present your ID and receive your bidder paddle</li>
+                    <li><strong>Preview:</strong> Inspect livestock before bidding begins</li>
+                    <li><strong>Bidding:</strong> Raise your paddle to bid on items of interest</li>
+                    <li><strong>Payment:</strong> Successful bidders must pay immediately after the auction</li>
+                    <li><strong>Pickup:</strong> Arrange for pickup/transport of purchased livestock</li>
+                </ol>
+            </div>
+            
+            <div class="info-box">
+                <h3>📞 Contact Information</h3>
+                <p>If you have any questions or need to make changes to your registration:</p>
+                <p><strong>Email:</strong> auctions@ishaazilivestockservices.com</p>
+                <p><strong>Phone:</strong> +1 (555) 123-4567</p>
+            </div>
+            
+            <p>We're excited to have you participate in our auction. Good luck with your bidding!</p>
+            
+            <p>Best regards,<br>
+            <strong>Ishaazi Livestock Services Auction Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>For questions, contact us at: auctions@ishaazilivestockservices.com</p>
+        </div>
+    </div>
+</body>
+</html>

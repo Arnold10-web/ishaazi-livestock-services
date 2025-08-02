@@ -126,6 +126,104 @@ const auctionSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
+  }],
+  registrations: [{
+    buyerName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    buyerEmail: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true
+    },
+    buyerPhone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    buyerCompany: {
+      type: String,
+      trim: true
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'check', 'bank_transfer', 'credit_card'],
+      default: 'cash'
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'refunded'],
+      default: 'pending'
+    },
+    specialRequirements: {
+      type: String,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    registeredAt: {
+      type: Date,
+      default: Date.now
+    },
+    approvedAt: Date,
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectedAt: Date,
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectionReason: String,
+    bidderNumber: String
+  }],
+  items: [{
+    lotNumber: {
+      type: Number,
+      required: true
+    },
+    description: {
+      type: String,
+      required: true
+    },
+    category: {
+      type: String,
+      required: true,
+      enum: ['cattle', 'dairy', 'beef', 'goats', 'sheep', 'pigs', 'poultry', 'equipment', 'other']
+    },
+    breed: String,
+    age: String,
+    weight: Number,
+    condition: String,
+    startingPrice: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    reservePrice: {
+      type: Number,
+      min: 0
+    },
+    finalPrice: {
+      type: Number,
+      min: 0
+    },
+    winningBidder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    sold: {
+      type: Boolean,
+      default: false
+    },
+    notes: String
   }]
 }, {
   timestamps: true

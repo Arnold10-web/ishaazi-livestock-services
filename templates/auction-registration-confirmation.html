@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Registration Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #1f2937; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
+        .button { display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; }
+        .highlight { color: #3b82f6; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Registration Confirmed!</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Dear {{buyerName}},</h2>
+            
+            <p>Thank you for registering for our upcoming auction. Your registration has been received and is currently being reviewed.</p>
+            
+            <div class="info-box">
+                <h3>📅 Auction Details</h3>
+                <p><strong>Auction:</strong> {{auctionTitle}}</p>
+                <p><strong>Date:</strong> {{auctionDate}}</p>
+                <p><strong>Location:</strong> {{auctionLocation}}</p>
+                {{#if registrationFee}}
+                <p><strong>Registration Fee:</strong> ${{registrationFee}}</p>
+                {{/if}}
+            </div>
+            
+            <div class="info-box">
+                <h3>📋 Next Steps</h3>
+                <ol>
+                    <li>Your registration will be reviewed within 24-48 hours</li>
+                    <li>You will receive an approval notification once reviewed</li>
+                    {{#if registrationFee}}
+                    <li>Payment instructions will be included in your approval email</li>
+                    {{/if}}
+                    <li>Arrive 30 minutes early on auction day for check-in</li>
+                </ol>
+            </div>
+            
+            <div class="info-box">
+                <h3>🔍 Registration Reference</h3>
+                <p><strong>Reference ID:</strong> <span class="highlight">{{registrationId}}</span></p>
+                <p>Please keep this reference number for your records.</p>
+            </div>
+            
+            <p>If you have any questions, please don't hesitate to contact us at any time.</p>
+            
+            <p>We look forward to seeing you at the auction!</p>
+            
+            <p>Best regards,<br>
+            <strong>Ishaazi Livestock Services</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>For questions, contact us at: support@ishaazilivestockservices.com</p>
+        </div>
+    </div>
+</body>
+</html>

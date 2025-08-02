@@ -441,6 +441,7 @@ import pushSubscriptionRoutes from './routes/pushSubscriptionRoutes.js';
 import passwordSetupRoutes from './routes/passwordSetupRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import managementRoutes from './routes/managementRoutes.js';
+import auctionRegistrationRoutes from './routes/auctionRegistrationRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -459,6 +460,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
 app.use('/api/files', fileRoutes); // File serving routes
+app.use('/api', auctionRegistrationRoutes); // Auction registration API endpoints
 // Password-specific rate limiter - ENHANCED SECURITY
 const passwordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
