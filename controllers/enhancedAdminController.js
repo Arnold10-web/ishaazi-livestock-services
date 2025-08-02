@@ -244,7 +244,15 @@ export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         
+        console.log('[DEBUG] Password change attempt:', {
+            userId: req.user._id,
+            hasCurrentPassword: !!currentPassword,
+            hasNewPassword: !!newPassword,
+            newPasswordLength: newPassword?.length
+        });
+        
         if (!currentPassword || !newPassword) {
+            console.log('[ERROR] Missing required fields');
             return res.status(400).json({
                 success: false,
                 message: 'Current password and new password are required'
@@ -253,6 +261,7 @@ export const changePassword = async (req, res) => {
         
         // Validate new password strength
         if (newPassword.length < 6) {
+            console.log('[ERROR] Password too short');
             return res.status(400).json({
                 success: false,
                 message: 'New password must be at least 6 characters long'
@@ -261,25 +270,35 @@ export const changePassword = async (req, res) => {
         
         const user = await User.findById(req.user._id);
         if (!user) {
+            console.log('[ERROR] User not found:', req.user._id);
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
         
+        console.log('[DEBUG] User found, checking current password...');
+        
         // Verify current password
         const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+        console.log('[DEBUG] Current password validation result:', isCurrentPasswordValid);
+        
         if (!isCurrentPasswordValid) {
+            console.log('[ERROR] Current password invalid');
             return res.status(400).json({
                 success: false,
                 message: 'Current password is incorrect'
             });
         }
         
+        console.log('[DEBUG] Updating password...');
+        
         // Update password
         user.password = newPassword;
         user.isTemporaryPassword = false;
         await user.save();
+        
+        console.log('[SUCCESS] Password updated successfully');
         
         // Log activity
         await ActivityLog.logActivity({
@@ -302,15 +321,35 @@ export const changePassword = async (req, res) => {
         
         res.json({
             success: true,
-            message: 'Password changed successfully'
+            message: 'Password changed successfully',
+            requirePasswordChange: false
         });
         
     } catch (error) {
         console.error('Password change error:', error);
+        
+        // Log the failed attempt
+        await ActivityLog.logActivity({
+            userId: req.user?._id || null,
+            username: req.user?.username || req.user?.email || 'unknown',
+            userRole: req.user?.role || 'unknown',
+            action: 'password_change_failed',
+            resource: 'user',
+            details: {
+                errorMessage: error.message,
+                method: req.method,
+                path: req.path
+            },
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            status: 'failure',
+            severity: 3
+        });
+        
         res.status(500).json({
             success: false,
             message: 'Failed to change password',
-            error: error.message
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
         });
     }
 };
@@ -544,6 +583,27 @@ export const checkAuth = async (req, res) => {
             });
         }
         
+        // Get additional user statistics if system admin
+        let userStats = null;
+        if (user.role === 'system_admin') {
+            try {
+                const [totalUsers, activeUsers, inactiveUsers] = await Promise.all([
+                    User.countDocuments(),
+                    User.countDocuments({ isActive: true }),
+                    User.countDocuments({ isActive: false })
+                ]);
+                
+                userStats = {
+                    total: totalUsers,
+                    active: activeUsers,
+                    inactive: inactiveUsers
+                };
+            } catch (statsError) {
+                console.error('Error fetching user stats:', statsError);
+                // Don't fail auth check if stats fail
+            }
+        }
+        
         res.json({
             success: true,
             authenticated: true,
@@ -555,8 +615,17 @@ export const checkAuth = async (req, res) => {
                 role: user.role,
                 isTemporaryPassword: user.isTemporaryPassword,
                 lastLogin: user.lastLogin,
-                preferences: user.preferences
-            }
+                preferences: user.preferences,
+                isActive: user.isActive,
+                createdAt: user.createdAt,
+                // Additional display fields
+                displayName: user.username || user.companyEmail || user.email || 'Admin User',
+                roleText: user.role === 'system_admin' ? 'System Administrator' : 'Editor',
+                statusText: user.isActive ? 'Active' : 'Inactive',
+                statusColor: user.isActive ? 'green' : 'red'
+            },
+            // Include user stats for system admin
+            ...(userStats && { userStats })
         });
         
     } catch (error) {

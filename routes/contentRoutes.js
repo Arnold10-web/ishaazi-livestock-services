@@ -82,8 +82,10 @@ import {
   updateEvent,
   deleteEvent,
   // Event Registration functions
+  registerForEvent,
   getAdminRegistrations,
   getAllEventRegistrations,
+  updateEventRegistration,
   deleteEventRegistration,
   createAuction,
   getAuctions,
@@ -328,9 +330,13 @@ router.get('/events/:id', getEventById);
 router.put('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), ...storeInGridFS('image', ['image/*'], { optional: true }), updateEvent);
 router.delete('/events/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEvent);
 
+// Public Event Registration Route (no authentication required)
+router.post('/events/:eventId/register', registerForEvent);
+
 // Event Registration Routes
 router.get('/event-registrations/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminRegistrations);
 router.get('/event-registrations', authenticateToken, requireRole(['system_admin', 'editor']), getAllEventRegistrations);
+router.put('/event-registrations/:id', authenticateToken, requireRole(['system_admin', 'editor']), updateEventRegistration);
 router.delete('/event-registrations/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteEventRegistration);
 
 // Auction Routes

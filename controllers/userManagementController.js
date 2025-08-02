@@ -30,7 +30,7 @@ export const createEditor = async (req, res) => {
         if (!emailRegex.test(companyEmail)) {
             return res.status(400).json({
                 success: false,
-                message: 'Must be a valid company email address from ishaazilivestockservices.com or farmingmagazine.com'
+                message: 'Must be a valid company email address from ishaazilivestockservices.com'
             });
         }
         
@@ -167,13 +167,39 @@ export const getAllUsers = async (req, res) => {
         // Execute query
         const [users, totalUsers] = await Promise.all([
             User.find(query)
-                .select('-password')
+                .select('-password -passwordHistory -sessions')
                 .populate('createdBy', 'username email companyEmail')
                 .sort(sortOptions)
                 .skip(skip)
                 .limit(parseInt(limit)),
             User.countDocuments(query)
         ]);
+
+        // Enhance user data with additional status info
+        const enhancedUsers = users.map(user => {
+            const userObj = user.toObject();
+            return {
+                ...userObj,
+                status: userObj.isActive ? 'active' : 'inactive',
+                statusColor: userObj.isActive ? 'green' : 'red',
+                statusText: userObj.isActive ? 'Active' : 'Inactive',
+                lastLoginText: userObj.lastLogin ? 
+                    new Date(userObj.lastLogin).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : 'Never',
+                createdText: new Date(userObj.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                }),
+                roleText: userObj.role === 'system_admin' ? 'System Admin' : 'Editor',
+                displayName: userObj.fullName || userObj.username || userObj.companyEmail || 'Unknown User'
+            };
+        });
         
         // Calculate pagination info
         const totalPages = Math.ceil(totalUsers / parseInt(limit));
@@ -182,7 +208,7 @@ export const getAllUsers = async (req, res) => {
         
         res.json({
             success: true,
-            users,
+            users: enhancedUsers,
             pagination: {
                 currentPage: parseInt(page),
                 totalPages,
@@ -470,7 +496,10 @@ export const toggleUserStatus = async (req, res) => {
                 _id: user._id,
                 isActive: user.isActive,
                 updatedAt: user.updatedAt
-            }
+            },
+            // Add refresh signal for real-time updates
+            requiresRefresh: true,
+            action: user.isActive ? 'user_activated' : 'user_deactivated'
         });
         
     } catch (error) {
@@ -534,7 +563,18 @@ export const deleteUser = async (req, res) => {
         
         res.json({
             success: true,
-            message: 'User deleted successfully'
+            message: 'User deleted successfully',
+            deletedUserId: id,
+            deletedUser: {
+                _id: user._id,
+                username: user.username,
+                companyEmail: user.companyEmail,
+                role: user.role
+            },
+            timestamp: new Date().toISOString(),
+            // Add refresh signal for real-time updates
+            requiresRefresh: true,
+            action: 'user_deleted'
         });
         
     } catch (error) {
@@ -611,33 +651,62 @@ function generateTempPassword() {
  * Send welcome email to new user
  */
 async function sendWelcomeEmail(email, tempPassword, createdBy) {
-    const subject = 'Welcome to Farming Magazine Admin Portal';
-    const html = `
-        <h2>Welcome to Farming Magazine Admin Portal</h2>
-        <p>Your admin account has been created by ${createdBy}.</p>
-        <p><strong>Login Email:</strong> ${email}</p>
-        <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-        <p><strong>Login URL:</strong> <a href="${process.env.FRONTEND_URL}/admin/login">${process.env.FRONTEND_URL}/admin/login</a></p>
-        <p>Please log in and change your password immediately.</p>
-        <p><em>This is an automated message. Please do not reply.</em></p>
-    `;
-    
-    return sendEmail(email, subject, html);
+    try {
+        // Use the proper welcome template with template data
+        await sendEmail({
+            to: email,
+            subject: 'Welcome to Ishaazi Livestock Services Admin Portal',
+            templateName: 'welcome-admin',
+            templateData: {
+                companyEmail: email,
+                createdBy: createdBy,
+                companyName: 'Ishaazi Livestock Services',
+                passwordSetupLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/setup-password?email=${encodeURIComponent(email)}&temp=${encodeURIComponent(tempPassword)}`,
+                loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+                tempPassword: tempPassword
+            }
+        });
+        
+        console.log(`Welcome email sent to: ${email}`);
+        return true;
+    } catch (error) {
+        console.error('Error sending welcome email:', error);
+        return false;
+    }
 }
 
 /**
  * Send password reset email
  */
 async function sendPasswordResetEmail(email, tempPassword, resetBy) {
-    const subject = 'Admin Account Password Reset';
-    const html = `
-        <h2>Admin Account Password Reset</h2>
-        <p>Your password has been reset by ${resetBy}.</p>
-        <p><strong>New Temporary Password:</strong> ${tempPassword}</p>
-        <p><strong>Login URL:</strong> <a href="${process.env.FRONTEND_URL}/admin/login">${process.env.FRONTEND_URL}/admin/login</a></p>
-        <p>Please log in and change your password immediately.</p>
-        <p><em>This is an automated message. Please do not reply.</em></p>
-    `;
-    
-    return sendEmail(email, subject, html);
+    try {
+        // Use the proper password reset template
+        await sendEmail({
+            to: email,
+            subject: 'Admin Account Password Reset',
+            templateName: 'password-reset-admin',
+            templateData: {
+                companyEmail: email,
+                tempPassword: tempPassword,
+                resetBy: resetBy,
+                companyName: 'Ishaazi Livestock Services',
+                resetDate: new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+                supportEmail: process.env.SUPPORT_EMAIL || 'support@ishaazilivestockservices.com'
+            }
+        });
+        
+        console.log(`Password reset email sent to: ${email}`);
+        return true;
+    } catch (error) {
+        console.error('Error sending password reset email:', error);
+        return false;
+    }
 }

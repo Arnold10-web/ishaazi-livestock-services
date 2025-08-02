@@ -892,7 +892,7 @@ export const healthCheck = () => {
 // Generic send email function
 export const sendEmail = function(options, subject, html, additionalOptions) {
   // Handle both calling patterns:
-  // 1. sendEmail({ to, subject, html, ... }) - object pattern
+  // 1. sendEmail({ to, subject, html, templateName, templateData, ... }) - object pattern
   // 2. sendEmail(to, subject, html, options) - parameter pattern (legacy)
   if (typeof options === 'string') {
     // Legacy pattern: sendEmail(to, subject, html, options)
@@ -904,8 +904,22 @@ export const sendEmail = function(options, subject, html, additionalOptions) {
       ...(additionalOptions || {}) 
     });
   } else {
-    // Modern pattern: sendEmail({ to, subject, html, ... })
-    return emailService.sendEmail(options);
+    // Modern pattern: sendEmail({ to, subject, html, templateName, templateData, ... })
+    if (options.templateName && options.templateData) {
+      // Render template with data
+      try {
+        const renderedHtml = emailService.renderTemplate(options.templateName, options.templateData);
+        return emailService.sendEmail({
+          ...options,
+          html: renderedHtml
+        });
+      } catch (error) {
+        console.error(`[ERROR] Failed to render template "${options.templateName}":`, error);
+        throw error;
+      }
+    } else {
+      return emailService.sendEmail(options);
+    }
   }
 };
 
