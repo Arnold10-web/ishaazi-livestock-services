@@ -9,11 +9,17 @@
   },
   "scripts": {
     "start": "node server.js",
+    "start:production": "NODE_ENV=production node --max-old-space-size=450 server.js",
+    "start:optimized": "node scripts/startOptimized.js",
     "dev": "nodemon server.js",
     "build": "echo 'Backend only - no build step needed'",
     "lint": "eslint .",
     "optimize:db": "node scripts/optimizeDatabase.js",
-    "create:admin": "node scripts/createSystemAdmin.js"
+    "create:admin": "node scripts/createSystemAdmin.js",
+    "monitor:performance": "node scripts/performanceMonitor.js",
+    "optimize:production": "node -e \"import('./utils/productionOptimization.js').then(m => m.cleanupFileSystem()).then(r => console.log('Cleanup results:', r))\"",
+    "deploy:check": "npm run lint && echo 'Deployment ready'",
+    "health:check": "curl -f http://localhost:$PORT/health || exit 1"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +29,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
+    "cron-parser": "^5.3.0",
     "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
     "exceljs": "^4.4.0",

@@ -1,24 +1,42 @@
 /**
  * GridFS Storage Implementation
- * Using native MongoDB GridFS support
+ * Using existing mongoose connection
  */
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
+import { GridFSBucket } from 'mongodb';
 import { Readable } from 'stream';
 import crypto from 'crypto';
 
 export class GridFSStorage {
-  constructor(mongoUrl, dbName) {
-    this.mongoUrl = mongoUrl;
-    this.dbName = dbName;
+  constructor() {
     this.bucket = null;
-    this.client = null;
   }
 
   async connect() {
-    if (!this.client) {
-      this.client = await MongoClient.connect(this.mongoUrl);
-      const db = this.client.db(this.dbName);
-      this.bucket = new db.GridFSBucket({
+    if (!this.bucket) {
+      // Wait for mongoose connection if it's in connecting state
+      if (mongoose.connection.readyState === 2) { // connecting
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
+          mongoose.connection.once('connected', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+          mongoose.connection.once('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }
+      
+      if (mongoose.connection.readyState !== 1) {
+        throw new Error('Mongoose connection not ready. Current state: ' + mongoose.connection.readyState);
+      }
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database not connected. Ensure mongoose is connected first.');
+      }
+      this.bucket = new GridFSBucket(db, {
         bucketName: 'uploads'
       });
     }
@@ -74,19 +92,8 @@ export class GridFSStorage {
       await bucket.delete(file._id);
     }
   }
-
-  async close() {
-    if (this.client) {
-      await this.client.close();
-      this.client = null;
-      this.bucket = null;
-    }
-  }
 }
 
-const gridFSStorage = new GridFSStorage(
-  process.env.MONGODB_URI,
-  process.env.MONGODB_DB_NAME || 'ishaazi-livestock'
-);
+const gridFSStorage = new GridFSStorage();
 
 export default gridFSStorage;

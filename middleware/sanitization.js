@@ -127,23 +127,30 @@ export const isValidObjectId = (id) => {
 /**
  * @constant {Object} sensitiveOperationLimiter
  * @description Rate limiting middleware for sensitive operations
- * - Limits requests to 5 per IP address over 15 minutes
+ * - Production: 100 requests per 15 minutes per IP
+ * - Development: 1000 requests per 15 minutes per IP (higher limit)
  * - Provides customized error messages
- * - Skips rate limiting in test environment
+ * - Enhanced security headers and monitoring
  */
-// FIXED: Rate limiter with higher limits for development
 export const sensitiveOperationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Much higher limit for development
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
   message: {
     success: false,
-    message: 'Too many sensitive operations from this IP, please try again later.'
+    message: 'Too many sensitive operations from this IP, please try again later.',
+    retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Enhanced skip logic for development
   skip: (req) => {
-    // Skip rate limiting in test environment or development
-    return process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
+    // Skip rate limiting in development environment
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // Also skip for localhost in development
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    
+    return isDevelopment && isLocalhost;
   }
 });
 

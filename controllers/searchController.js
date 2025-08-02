@@ -189,12 +189,6 @@ function highlightSearchTerms(text, searchTerms) {
  */
 export const searchAll = async (req, res) => {
   try {
-    console.log('🔍 SEARCH DEBUG - Full request object keys:', Object.keys(req));
-    console.log('🔍 SEARCH DEBUG - req.query:', req.query);
-    console.log('🔍 SEARCH DEBUG - req.params:', req.params);
-    console.log('🔍 SEARCH DEBUG - req.body:', req.body);
-    console.log('🔍 SEARCH DEBUG - req.url:', req.url);
-    
     const { 
       query, 
       page = 1, 
@@ -211,11 +205,6 @@ export const searchAll = async (req, res) => {
     
     const parsedLimit = parseInt(limit);
     const skip = (parseInt(page) - 1) * parsedLimit;
-    
-    // Debug: Log the received query parameters
-    console.log('🔍 Received query params:', req.query);
-    console.log('🔍 Query value:', query);
-    console.log('🔍 Query type:', typeof query);
     
     // Validate that we have a search query
     if (!query) {

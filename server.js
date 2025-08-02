@@ -4,6 +4,7 @@
 import dotenv from 'dotenv';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { existsSync } from 'fs';
 
 // Get directory name in ES modules
@@ -40,7 +41,6 @@ if (!vapidPublic || !vapidPrivate) {
     const vapidKeys = webpush.generateVAPIDKeys();
     
     // Append to .env file
-    const fs = await import('fs');
     const newEnvContent = `\n# Push Notification VAPID Keys
 PUSH_NOTIFICATION_VAPID_PUBLIC=${vapidKeys.publicKey}
 PUSH_NOTIFICATION_VAPID_PRIVATE=${vapidKeys.privateKey}`;
@@ -57,13 +57,6 @@ PUSH_NOTIFICATION_VAPID_PRIVATE=${vapidKeys.privateKey}`;
 }
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-
-// Environment check
-import fs from 'fs';
-if (process.env.NODE_ENV !== 'production') {
-  console.log('DEBUG: Environment setup completed');
-  console.log('DEBUG: NODE_ENV:', process.env.NODE_ENV);
-}
 
 /**
  * @file server.js
@@ -96,6 +89,7 @@ import { createServer } from 'http';
 import connectDB from './config/db.js';
 import { sanitizeInput, securityHeaders } from './middleware/sanitization.js';
 import { requestLogger, errorLogger, logSecurityEvent } from './utils/logger.js';
+import productionOptimizer from './utils/productionOptimizer.js';
 // import { setupSwagger } from './config/swagger.js';
 
 /**
@@ -133,7 +127,6 @@ async function initializeServices() {
  * 
  * Sets default environment and creates necessary ES module compatibility shims
  */
-process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 console.log('Node version:', process.version); // Log Node.js version for diagnostics
 
 /**
@@ -235,6 +228,15 @@ async function initializeServer() {
         errorTracker.trackError(error);
       }
     });
+    
+    // Initialize backup directory
+    try {
+        const { initializeBackupDirectory } = await import('./controllers/backupManagementController.js');
+        await initializeBackupDirectory();
+        console.log('✅ Backup directory initialized');
+    } catch (error) {
+        console.warn('⚠️ Failed to initialize backup directory:', error.message);
+    }
     
     console.log('✅ Services initialized successfully');
   } catch (error) {
@@ -388,6 +390,9 @@ app.use(sanitizeInput);
 // Request logging
 app.use(requestLogger);
 
+// Production performance optimization (auto-enabled in production)
+app.use(productionOptimizer.trackRequest());
+
 // Static cache headers (performance monitor will be added after initialization)
 import { staticCacheHeaders } from './middleware/performanceMetrics.js';
 import { httpCacheHeaders } from './middleware/enhancedCache.js';
@@ -527,6 +532,25 @@ if (existsSync(frontendBuildPath)) {
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Production metrics endpoint (for monitoring tools)
+app.get('/api/production/metrics', (req, res) => {
+  try {
+    const metrics = productionOptimizer.getMetrics();
+    res.status(200).json({
+      success: true,
+      platform: 'Production',
+      timestamp: new Date().toISOString(),
+      metrics
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve metrics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 // Error logging middleware

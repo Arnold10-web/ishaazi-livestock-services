@@ -284,16 +284,26 @@ UserSchema.pre('save', async function(next) {
  * Pre-save middleware for role-specific validation
  */
 UserSchema.pre('save', function(next) {
-    // Auto-generate username for system_admin if not provided
-    if (this.role === 'system_admin' && !this.username) {
-        this.username = this.companyEmail.split('@')[0] + '_admin';
+    // System Admin validation
+    if (this.role === 'system_admin') {
+        if (!this.username) {
+            // Auto-generate username if not provided
+            if (this.companyEmail) {
+                this.username = this.companyEmail.split('@')[0] + '_admin';
+            } else {
+                return next(new Error('System admin must have either a username or company email for username generation'));
+            }
+        }
+        // Company email is not required for system admin but username is
     }
     
-    // All users must have company email (enforced by schema)
-    if (!this.companyEmail) {
-        return next(new Error('All users must have a company email'));
+    // Editor validation
+    if (this.role === 'editor') {
+        if (!this.companyEmail) {
+            return next(new Error('Editor must have a company email'));
+        }
     }
-    
+
     next();
 });
 
@@ -405,28 +415,12 @@ UserSchema.index({ createdAt: 1 });
 UserSchema.index({ 'loginHistory.timestamp': -1 });
 UserSchema.index({ lastLogin: -1 });
 
-// Pre-save middleware to validate role-specific requirements
-UserSchema.pre('save', function(next) {
-    // System Admin validation
-    if (this.role === 'system_admin') {
-        if (!this.username) {
-            return next(new Error('System admin must have a username'));
-        }
-        // Company email is not required for system admin
-    }
-    
-    // Editor validation
-    if (this.role === 'editor') {
-        if (!this.companyEmail) {
-            return next(new Error('Editor must have a company email'));
-        }
-    }
-
-    next();
-});
-
 // Static method to create a system admin
 UserSchema.statics.createSystemAdmin = async function(userData) {
+    if (!userData.username && !userData.companyEmail) {
+        throw new Error('Username or company email is required for system admin accounts');
+    }
+    
     const defaultPermissions = [
         'manage_users', 'manage_content', 'manage_subscribers', 'manage_newsletters',
         'manage_events', 'manage_auctions', 'view_analytics', 'manage_system_settings',

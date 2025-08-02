@@ -10,21 +10,30 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cronParser from 'cron-parser';
 import ActivityLog from '../models/ActivityLog.js';
 import User from '../models/User.js';
 import { promisify } from 'util';
+
+const { parseExpression } = cronParser;
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Backup storage directory
-const BACKUP_DIR = path.resolve(__dirname, '../backups');
+// Backup storage directory - configurable via environment variable
+const BACKUP_DIR = process.env.BACKUP_DIR || path.resolve(__dirname, '../backups');
 
-// Ensure backup directory exists
-if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
+// Initialize backup directory asynchronously
+export const initializeBackupDirectory = async () => {
+    try {
+        await fs.promises.mkdir(BACKUP_DIR, { recursive: true });
+    } catch (error) {
+        if (error.code !== 'EEXIST') {
+            throw error;
+        }
+    }
+};
 
 /**
  * Create database backup
@@ -56,7 +65,7 @@ export const createBackup = async (req, res) => {
         const backupPath = path.join(BACKUP_DIR, backupName);
         
         // Create backup directory
-        fs.mkdirSync(backupPath, { recursive: true });
+        await fs.promises.mkdir(backupPath, { recursive: true });
         
         // Get MongoDB connection details
         const mongoUri = process.env.MONGODB_URI;
@@ -95,23 +104,24 @@ export const createBackup = async (req, res) => {
         const duration = endTime - startTime;
         
         // Get backup size
-        const getDirectorySize = (dirPath) => {
+        const getDirectorySize = async (dirPath) => {
             let totalSize = 0;
-            const files = fs.readdirSync(dirPath, { withFileTypes: true });
+            const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
             
             for (const file of files) {
                 const filePath = path.join(dirPath, file.name);
                 if (file.isDirectory()) {
-                    totalSize += getDirectorySize(filePath);
+                    totalSize += await getDirectorySize(filePath);
                 } else {
-                    totalSize += fs.statSync(filePath).size;
+                    const stats = await fs.promises.stat(filePath);
+                    totalSize += stats.size;
                 }
             }
             
             return totalSize;
         };
         
-        const backupSize = getDirectorySize(dumpPath);
+        const backupSize = await getDirectorySize(dumpPath);
         
         // Create backup metadata
         const metadata = {
@@ -128,7 +138,7 @@ export const createBackup = async (req, res) => {
         };
         
         // Save metadata file
-        fs.writeFileSync(
+        await fs.promises.writeFile(
             path.join(backupPath, 'metadata.json'),
             JSON.stringify(metadata, null, 2)
         );
@@ -202,7 +212,7 @@ export const getBackups = async (req, res) => {
         const { page = 1, limit = 20, type } = req.query;
         
         // Read backup directories
-        const backupDirs = fs.readdirSync(BACKUP_DIR, { withFileTypes: true })
+        const backupDirs = (await fs.promises.readdir(BACKUP_DIR, { withFileTypes: true }))
             .filter(dirent => dirent.isDirectory())
             .map(dirent => dirent.name);
         
@@ -211,19 +221,19 @@ export const getBackups = async (req, res) => {
         for (const backupDir of backupDirs) {
             const metadataPath = path.join(BACKUP_DIR, backupDir, 'metadata.json');
             
-            if (fs.existsSync(metadataPath)) {
-                try {
-                    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-                    
-                    // Apply type filter
-                    if (!type || metadata.type === type) {
-                        backups.push({
-                            ...metadata,
-                            sizeFormatted: formatSize(metadata.size),
-                            durationFormatted: formatDuration(metadata.duration)
-                        });
-                    }
-                } catch (error) {
+            try {
+                const metadata = JSON.parse(await fs.promises.readFile(metadataPath, 'utf8'));
+                
+                // Apply type filter
+                if (!type || metadata.type === type) {
+                    backups.push({
+                        ...metadata,
+                        sizeFormatted: formatSize(metadata.size),
+                        durationFormatted: formatDuration(metadata.duration)
+                    });
+                }
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
                     console.error(`Error reading metadata for ${backupDir}:`, error);
                 }
             }
@@ -293,7 +303,10 @@ export const deleteBackup = async (req, res) => {
             });
         }
         
-        if (!fs.existsSync(backupPath)) {
+        // Check if backup exists
+        try {
+            await fs.promises.access(backupPath);
+        } catch (error) {
             return res.status(404).json({
                 success: false,
                 message: 'Backup not found'
@@ -304,12 +317,14 @@ export const deleteBackup = async (req, res) => {
         const metadataPath = path.join(backupPath, 'metadata.json');
         let metadata = {};
         
-        if (fs.existsSync(metadataPath)) {
-            metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        try {
+            metadata = JSON.parse(await fs.promises.readFile(metadataPath, 'utf8'));
+        } catch (error) {
+            // Metadata file might not exist, continue with deletion
         }
         
         // Delete backup directory recursively
-        fs.rmSync(backupPath, { recursive: true, force: true });
+        await fs.promises.rm(backupPath, { recursive: true, force: true });
         
         // Log deletion activity
         await ActivityLog.logActivity({
@@ -383,33 +398,37 @@ export const getBackupDetails = async (req, res) => {
         
         const metadataPath = path.join(backupPath, 'metadata.json');
         
-        if (!fs.existsSync(backupPath) || !fs.existsSync(metadataPath)) {
+        // Check if backup and metadata exist
+        try {
+            await fs.promises.access(backupPath);
+            await fs.promises.access(metadataPath);
+        } catch (error) {
             return res.status(404).json({
                 success: false,
                 message: 'Backup not found'
             });
         }
         
-        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        const metadata = JSON.parse(await fs.promises.readFile(metadataPath, 'utf8'));
         
         // Get backup contents
         const dumpPath = path.join(backupPath, 'dump');
         const collections = [];
         
-        if (fs.existsSync(dumpPath)) {
-            const dbDirs = fs.readdirSync(dumpPath, { withFileTypes: true })
+        try {
+            const dbDirs = (await fs.promises.readdir(dumpPath, { withFileTypes: true }))
                 .filter(dirent => dirent.isDirectory());
             
             for (const dbDir of dbDirs) {
                 const dbPath = path.join(dumpPath, dbDir.name);
-                const files = fs.readdirSync(dbPath);
+                const files = await fs.promises.readdir(dbPath);
                 
                 const collectionFiles = files.filter(file => file.endsWith('.bson'));
                 
                 for (const file of collectionFiles) {
                     const collectionName = file.replace('.bson', '');
                     const filePath = path.join(dbPath, file);
-                    const stats = fs.statSync(filePath);
+                    const stats = await fs.promises.stat(filePath);
                     
                     collections.push({
                         name: collectionName,
@@ -418,6 +437,9 @@ export const getBackupDetails = async (req, res) => {
                     });
                 }
             }
+        } catch (error) {
+            // Dump directory might not exist or be accessible
+            console.error('Error reading backup contents:', error);
         }
         
         res.json({
@@ -446,7 +468,7 @@ export const getBackupDetails = async (req, res) => {
 export const getBackupStats = async (req, res) => {
     try {
         // Read all backup metadata
-        const backupDirs = fs.readdirSync(BACKUP_DIR, { withFileTypes: true })
+        const backupDirs = (await fs.promises.readdir(BACKUP_DIR, { withFileTypes: true }))
             .filter(dirent => dirent.isDirectory())
             .map(dirent => dirent.name);
         
@@ -456,12 +478,12 @@ export const getBackupStats = async (req, res) => {
         for (const backupDir of backupDirs) {
             const metadataPath = path.join(BACKUP_DIR, backupDir, 'metadata.json');
             
-            if (fs.existsSync(metadataPath)) {
-                try {
-                    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-                    backups.push(metadata);
-                    totalSize += metadata.size || 0;
-                } catch (error) {
+            try {
+                const metadata = JSON.parse(await fs.promises.readFile(metadataPath, 'utf8'));
+                backups.push(metadata);
+                totalSize += metadata.size || 0;
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
                     console.error(`Error reading metadata for ${backupDir}:`, error);
                 }
             }
@@ -531,11 +553,23 @@ export const scheduleBackup = async (req, res) => {
     try {
         const { schedule, description, enabled = true } = req.body;
         
-        // Security: Validate cron expression format
-        if (!schedule || typeof schedule !== 'string' || !isValidCronExpression(schedule)) {
+        // Validate cron expression
+        if (!schedule || typeof schedule !== 'string') {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid cron schedule format'
+                message: 'Schedule is required and must be a valid cron expression'
+            });
+        }
+
+        // Validate cron expression format using cron-parser
+        let nextRun;
+        try {
+            const interval = parseExpression(schedule);
+            nextRun = interval.next().toISOString();
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid cron expression: ${error.message}`
             });
         }
         
@@ -543,7 +577,7 @@ export const scheduleBackup = async (req, res) => {
         if (description && (typeof description !== 'string' || description.length > 500)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid description'
+                message: 'Invalid description. Must be a string under 500 characters.'
             });
         }
         
@@ -557,7 +591,8 @@ export const scheduleBackup = async (req, res) => {
             enabled: Boolean(enabled),
             createdBy: req.user._id,
             createdAt: new Date().toISOString(),
-            nextRun: calculateNextRun(schedule)
+            nextRun,
+            isValid: true // Mark as validated
         };
         
         // Log scheduling activity
@@ -596,7 +631,88 @@ export const scheduleBackup = async (req, res) => {
     }
 };
 
-// Helper functions
+/**
+ * Validate cron expression
+ */
+export const validateCronExpression = async (req, res) => {
+    try {
+        const { expression } = req.body;
+        
+        if (!expression || typeof expression !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cron expression is required'
+            });
+        }
+        
+        try {
+            const interval = parseExpression(expression);
+            const nextRuns = [];
+            
+            // Get next 5 execution times
+            for (let i = 0; i < 5; i++) {
+                nextRuns.push({
+                    date: interval.next().toDate(),
+                    formatted: interval.prev().toDate().toLocaleString()
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Cron expression is valid',
+                data: {
+                    expression,
+                    isValid: true,
+                    nextExecutions: nextRuns,
+                    description: getCronDescription(expression)
+                }
+            });
+            
+        } catch (error) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid cron expression',
+                error: error.message,
+                data: {
+                    expression,
+                    isValid: false,
+                    suggestions: [
+                        '0 2 * * * - Daily at 2:00 AM',
+                        '0 2 * * 0 - Weekly on Sunday at 2:00 AM',
+                        '0 2 1 * * - Monthly on 1st at 2:00 AM',
+                        '0 */6 * * * - Every 6 hours'
+                    ]
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error validating cron expression:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to validate cron expression',
+            error: error.message
+        });
+    }
+};
+
+// Helper function to provide human-readable cron descriptions
+function getCronDescription(cronExpression) {
+    const parts = cronExpression.trim().split(/\s+/);
+    if (parts.length !== 5) return 'Custom schedule';
+    
+    const [minute, hour, day, month, dayOfWeek] = parts;
+    
+    // Simple descriptions for common patterns
+    if (cronExpression === '0 2 * * *') return 'Daily at 2:00 AM';
+    if (cronExpression === '0 2 * * 0') return 'Weekly on Sunday at 2:00 AM';
+    if (cronExpression === '0 2 1 * *') return 'Monthly on the 1st at 2:00 AM';
+    if (cronExpression === '0 */6 * * *') return 'Every 6 hours';
+    if (cronExpression === '0 */12 * * *') return 'Every 12 hours';
+    if (cronExpression === '*/30 * * * *') return 'Every 30 minutes';
+    
+    return `Custom: ${minute} ${hour} ${day} ${month} ${dayOfWeek}`;
+}
 function formatSize(bytes) {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -620,22 +736,27 @@ function formatDuration(ms) {
 }
 
 function calculateNextRun(cronExpression) {
-    // Placeholder for cron calculation
-    // In a real implementation, use a cron parser library
-    return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // Next day
+    try {
+        const interval = parseExpression(cronExpression);
+        return interval.next().toISOString();
+    } catch (error) {
+        throw new Error(`Invalid cron expression: ${error.message}`);
+    }
 }
 
-// Security helper function to validate cron expressions
+// Enhanced cron validation using cron-parser
 function isValidCronExpression(cron) {
-    // Basic cron validation (5 or 6 fields)
-    const cronRegex = /^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\*\/([1-9]|1[0-9]|2[0-9]|3[0-1])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/;
-    
     if (!cron || typeof cron !== 'string') return false;
-    
-    const parts = cron.trim().split(/\s+/);
-    if (parts.length !== 5 && parts.length !== 6) return false;
     
     // Additional validation to prevent injection
     const safeChars = /^[0-9\*\/\-\,\s]+$/;
-    return safeChars.test(cron) && cron.length <= 50;
+    if (!safeChars.test(cron) || cron.length > 50) return false;
+    
+    // Use cron-parser for actual validation
+    try {
+        parseExpression(cron);
+        return true;
+    } catch (error) {
+        return false;
+    }
 }

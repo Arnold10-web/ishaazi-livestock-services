@@ -3,6 +3,7 @@
  * Using GridFS for secure file storage
  */
 import multer from 'multer';
+import mongoose from 'mongoose';
 import path from 'path';
 import sharp from 'sharp';
 import gridFSStorage from '../utils/gridfsStorage.js';
@@ -74,6 +75,26 @@ export const uploadMedia = multer({
   }
 });
 
+// Helper function for image optimization
+const optimizeImage = async (file) => {
+  if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/gif') {
+    // Skip optimization for very large files to prevent memory issues
+    if (file.buffer.length > 5 * 1024 * 1024) { // 5MB threshold
+      console.warn(`Skipping optimization for large image: ${file.originalname}`);
+    } else {
+      const optimized = await sharp(file.buffer)
+        .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+      
+      file.buffer = optimized;
+      file.mimetype = 'image/webp';
+      file.originalname = file.originalname.replace(/\.[^/.]+$/, '.webp');
+    }
+  }
+  return file;
+};
+
 // GridFS storage middleware (after multer processing)
 const gridFSStorageMiddleware = async (req, res, next) => {
   try {
@@ -86,15 +107,7 @@ const gridFSStorageMiddleware = async (req, res, next) => {
 
     for (const file of files.filter(Boolean)) {
       // For images, optimize before storing
-      if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/gif') {
-        const optimized = await sharp(file.buffer)
-          .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 85 })
-          .toBuffer();
-        
-        file.buffer = optimized;
-        file.mimetype = 'image/webp';
-      }
+      await optimizeImage(file);
 
       const stored = await gridFSStorage.store(file);
       storedFiles.push(stored);
@@ -142,27 +155,69 @@ export const storeInGridFS = (fieldName, allowedMimeTypes = [], options = {}) =>
       cb(null, true);
     },
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
+      fileSize: (options.maxFileSize && options.maxFileSize > 0) ? options.maxFileSize : 10 * 1024 * 1024, // 10MB default limit
       files: 5
     }
   });
 
-  // If optional is true, wrap the upload middleware to handle no file gracefully
-  const uploadMiddleware = options.optional 
-    ? (req, res, next) => {
-        uploadInstance.single(fieldName)(req, res, (err) => {
-          // If no file provided and it's optional, just continue
-          if (err && err.message.includes('Unexpected field')) {
-            return next();
-          }
-          if (err) return next(err);
-          next();
-        });
+  // Enhanced upload middleware that handles optional files
+  const uploadMiddleware = (req, res, next) => {
+    uploadInstance.single(fieldName)(req, res, (err) => {
+      // If no file provided and it's optional, just continue
+      if (err && err.code === 'LIMIT_UNEXPECTED_FILE' && options.optional) {
+        return next();
       }
-    : uploadInstance.single(fieldName);
+      // Handle multer errors
+      if (err) {
+        return next(err);
+      }
+      next();
+    });
+  };
+
+  // Enhanced GridFS storage middleware with better error handling
+  const enhancedGridFSMiddleware = async (req, res, next) => {
+    try {
+      // If no file uploaded, continue (especially for optional uploads)
+      if (!req.file && !req.files) {
+        return next();
+      }
+
+      // Check if mongoose is connected (readyState === 1)
+      if (mongoose.connection.readyState !== 1) {
+        throw new Error('Database not connected');
+      }
+
+      const files = req.files ? Object.values(req.files).flat() : [req.file];
+      const storedFiles = [];
+
+      for (const file of files.filter(Boolean)) {
+        // For images, optimize before storing
+        await optimizeImage(file);
+
+        const stored = await gridFSStorage.store(file);
+        storedFiles.push(stored);
+      }
+
+      // Attach stored file info to request
+      if (req.file) {
+        req.file.gridFS = storedFiles[0];
+        req.uploadedFiles = [storedFiles[0]];
+      }
+      if (req.files) {
+        req.files.gridFS = storedFiles;
+        req.uploadedFiles = storedFiles;
+      }
+
+      next();
+    } catch (error) {
+      console.error('GridFS Storage Error:', error);
+      next(error);
+    }
+  };
 
   // Return middleware chain: multer upload + GridFS storage
-  return [uploadMiddleware, gridFSStorageMiddleware];
+  return [uploadMiddleware, enhancedGridFSMiddleware];
 };
 
 export default upload;

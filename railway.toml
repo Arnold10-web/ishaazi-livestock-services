@@ -1,0 +1,67 @@
+# Railway Configuration for Ishaazi Livestock Services
+# This file optimizes the application for Railway's infrastructure
+
+# Specify Node.js version for Railway
+engines:
+  node: ">=20.0.0"
+
+# Build settings
+build:
+  builder: nodejs
+  buildCommand: "npm run deploy:check"
+
+# Runtime settings optimized for Railway
+deploy:
+  startCommand: "npm run start:production"
+  healthcheckPath: "/health"
+  healthcheckTimeout: 10s
+  restartPolicy: "on-failure"
+
+# Environment-specific settings
+environments:
+  production:
+    NODE_ENV: "production"
+    # Memory optimization for Railway's 512MB limit
+    NODE_OPTIONS: "--max-old-space-size=450 --expose-gc"
+    UV_THREADPOOL_SIZE: "8"
+    
+# Service configuration
+service:
+  # Optimize for Railway's ephemeral containers
+  enableLogging: true
+  logLevel: "info"
+  
+  # Health check configuration
+  healthCheck:
+    enabled: true
+    path: "/health"
+    intervalSeconds: 30
+    timeoutSeconds: 10
+    
+  # Resource limits (Railway automatically applies these)
+  resources:
+    memory: "512Mi"
+    cpu: "0.5"
+
+# Networking (Railway handles this automatically)
+networking:
+  allowedOutbound:
+    - "smtp.gmail.com:587"
+    - "mail.ishaazilivestockservices.com:587"
+    - "mongodb.net:27017"
+    
+# Additional Railway optimizations
+railway:
+  # Enable Railway's built-in monitoring
+  monitoring: true
+  
+  # Automatic SSL/TLS
+  ssl: true
+  
+  # Enable Railway's CDN for static assets
+  cdn: true
+  
+  # Automatic backups (if using Railway's database)
+  backups:
+    enabled: true
+    schedule: "0 2 * * *" # Daily at 2 AM UTC

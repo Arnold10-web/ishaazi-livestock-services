@@ -458,9 +458,6 @@ export const getDashboardStats = async (req, res) => {
   } catch (error) {
     console.log('Dashboard stats error:', error);
     
-    // Also log what we found for debugging
-    console.log('Debug: All blogs with views:', await Blog.find().select('title views').sort({ views: -1 }));
-    
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard statistics',

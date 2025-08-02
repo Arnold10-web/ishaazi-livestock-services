@@ -60,6 +60,7 @@ router.delete('/backups/:id', requireSystemAdmin, backupManagementController.del
 router.get('/backups/:id', requireSystemAdmin, backupManagementController.getBackupDetails);
 router.get('/backups/stats/overview', requireSystemAdmin, backupManagementController.getBackupStats);
 router.post('/backups/schedule', requireSystemAdmin, backupManagementController.scheduleBackup);
+router.post('/backups/validate-cron', requireSystemAdmin, backupManagementController.validateCronExpression);
 
 // Data Export Routes
 router.get('/export/users', requireSystemAdmin, dataExportController.exportUsers);
