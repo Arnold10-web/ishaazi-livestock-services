@@ -661,9 +661,12 @@ async function sendWelcomeEmail(email, tempPassword, createdBy) {
                 companyEmail: email,
                 createdBy: createdBy,
                 companyName: 'Ishaazi Livestock Services',
-                passwordSetupLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/setup-password?email=${encodeURIComponent(email)}&temp=${encodeURIComponent(tempPassword)}`,
-                loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
-                tempPassword: tempPassword
+                // Fix the password setup link to match frontend routing
+                passwordSetupLink: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/login?setup=true&email=${encodeURIComponent(email)}`,
+                loginUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/login`,
+                tempPassword: tempPassword,
+                // Add formatted temporary password for display
+                temporaryPassword: tempPassword
             }
         });
         
@@ -698,7 +701,7 @@ async function sendPasswordResetEmail(email, tempPassword, resetBy) {
                     hour: '2-digit',
                     minute: '2-digit'
                 }),
-                loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
+                loginUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/login`,
                 supportEmail: process.env.SUPPORT_EMAIL || 'support@ishaazilivestockservices.com'
             }
         });

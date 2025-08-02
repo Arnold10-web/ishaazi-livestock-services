@@ -28,7 +28,7 @@ import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
 import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation } from '../services/emailService.js';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation, sendEmail } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
 /**
@@ -3352,6 +3352,37 @@ export const registerForEvent = async (req, res) => {
 
     // Populate event details for response
     await savedRegistration.populate('eventId', 'title startDate location');
+
+    // Send confirmation email
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Event Registration Confirmation - ${event.title}`,
+        templateName: 'event-registration-confirmation',
+        templateData: {
+          registrantName: name,
+          participantEmail: email,
+          eventTitle: event.title,
+          eventDate: new Date(event.startDate).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          eventLocation: event.location || 'To be announced',
+          registrationId: savedRegistration._id.toString().slice(-8).toUpperCase(),
+          companyName: 'Ishaazi Livestock Services',
+          contactEmail: process.env.SUPPORT_EMAIL || 'events@ishaazilivestockservices.com'
+        }
+      });
+      
+      console.log(`Event registration confirmation email sent to: ${email}`);
+    } catch (emailError) {
+      console.error('Failed to send event registration confirmation email:', emailError);
+      // Don't fail the registration if email fails
+    }
 
     sendResponse(res, true, 'Successfully registered for event', {
       registration: savedRegistration,
