@@ -181,25 +181,8 @@ export const getDashboardStats = async (req, res) => {
     const total = Object.values(totalContent).reduce((sum, count) => sum + count, 0);
     const currentMonthTotal = Object.values(currentMonthContent).reduce((sum, count) => sum + count, 0);
     const previousMonthTotal = Object.values(previousMonthContent).reduce((sum, count) => sum + count, 0);
-      news: await News.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      events: await Event.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      farms: await Farm.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      magazines: await Magazine.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      newsletters: await Newsletter.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      basics: await Basic.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      dairy: await Dairy.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      beef: await Beef.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      goats: await Goat.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      piggery: await Piggery.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      auctions: await Auction.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      eventRegistrations: await EventRegistration.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
-      notifications: await Notification.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } })
-    };
 
-    const previousMonthTotal = Object.values(previousMonthContent).reduce((sum, count) => sum + count, 0);
-
-    // 4. SUBSCRIBER METRICS
-    const totalSubscribers = await Subscriber.countDocuments();
+    // 4. SUBSCRIBER METRICS (totalSubscribers already available from parallel query)
     const currentMonthSubscribers = await Subscriber.countDocuments({ 
       createdAt: { $gte: startOfMonth, $lte: endOfMonth } 
     });
