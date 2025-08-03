@@ -2,7 +2,8 @@ import express from 'express';
 import { streamFile } from '../controllers/fileController.js';
 import { authenticateToken } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware } from '../middleware/cache.js';
-import { enhancedFileServing, performanceMonitor } from '../middleware/enhancedFileServing.js';
+import { enhancedFileServing } from '../middleware/enhancedFileServing.js';
+import { performanceMonitor } from '../utils/unifiedPerformance.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();

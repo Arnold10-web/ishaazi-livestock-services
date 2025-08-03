@@ -5,89 +5,26 @@
  */
 
 import mongoose from 'mongoose';
+import NodeCache from 'node-cache';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Performance cache with TTL using built-in Map (Railway-optimized)
-class PerformanceCache {
-  constructor(stdTTL = 300, checkperiod = 60) {
-    this.cache = new Map();
-    this.stdTTL = stdTTL * 1000; // Convert to milliseconds
-    this.hits = 0;
-    this.misses = 0;
-    this.keys_count = 0;
-    
-    // Cleanup expired entries periodically
-    setInterval(() => {
-      const now = Date.now();
-      for (const [key, value] of this.cache.entries()) {
-        if (now > value.expires) {
-          this.cache.delete(key);
-        }
-      }
-      this.keys_count = this.cache.size;
-    }, checkperiod * 1000);
-  }
-  
-  set(key, value, ttl) {
-    const expirationTime = ttl ? (ttl * 1000) : this.stdTTL;
-    this.cache.set(key, {
-      data: value,
-      expires: Date.now() + expirationTime
-    });
-    this.keys_count = this.cache.size;
-  }
-  
-  get(key) {
-    const item = this.cache.get(key);
-    if (!item) {
-      this.misses++;
-      return undefined;
-    }
-    
-    if (Date.now() > item.expires) {
-      this.cache.delete(key);
-      this.keys_count = this.cache.size;
-      this.misses++;
-      return undefined;
-    }
-    
-    this.hits++;
-    return item.data;
-  }
-  
-  del(key) {
-    const deleted = this.cache.delete(key);
-    this.keys_count = this.cache.size;
-    return deleted;
-  }
-  
-  flushAll() {
-    this.cache.clear();
-    this.keys_count = 0;
-    this.hits = 0;
-    this.misses = 0;
-  }
-  
-  keys() {
-    return Array.from(this.cache.keys());
-  }
-  
-  getStats() {
-    return {
-      hits: this.hits,
-      misses: this.misses,
-      keys: this.keys_count,
-      ksize: this.cache.size,
-      vsize: this.cache.size
-    };
-  }
-}
+// Performance cache with TTL
+const performanceCache = new NodeCache({ 
+  stdTTL: 300, // 5 minutes default TTL
+  checkperiod: 60, // Check for expired keys every 60 seconds
+  useClones: false // Better performance for Railway
+});
 
-// Initialize performance cache
-const performanceCache = new PerformanceCache(300, 60); // 5 minutes default, check every 60 seconds
+// Cache statistics for monitoring
+const cacheStats = {
+  hits: 0,
+  misses: 0,
+  gets: 0,
+  sets: 0
+};
 
 /**
  * Railway-optimized file serving with enhanced performance
@@ -269,6 +206,52 @@ export const forceContentRefresh = () => {
       next(); // Continue even if refresh fails
     }
   };
+};
+
+/**
+ * Manual content cache refresh endpoint handler
+ * Railway-optimized for admin-triggered cache clearing
+ */
+export const refreshContent = async (req, res) => {
+  try {
+    const { types } = req.body;
+    const contentTypes = types || ['blogs', 'news', 'magazines', 'events', 'farms', 'piggeries', 'dairies', 'beefs', 'goats'];
+    
+    // Clear performance cache
+    performanceCache.flushAll();
+    console.log('✅ Performance cache cleared');
+    
+    // Clear enhanced cache if available
+    try {
+      const { invalidateCache } = await import('../middleware/enhancedCache.js');
+      await invalidateCache(contentTypes);
+      console.log('✅ Enhanced cache cleared for types:', contentTypes);
+    } catch (cacheError) {
+      console.warn('⚠️ Enhanced cache warning:', cacheError.message);
+    }
+    
+    // Clear global memory cache if available
+    if (global.memoryCache) {
+      global.memoryCache.flushAll();
+      console.log('✅ Memory cache cleared');
+    }
+    
+    res.json({
+      success: true,
+      message: 'Content cache refreshed successfully',
+      timestamp: Date.now(),
+      clearedTypes: contentTypes,
+      cacheStats: performanceCache.getStats()
+    });
+    
+  } catch (error) {
+    console.error('❌ Content refresh error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error refreshing content cache',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 /**

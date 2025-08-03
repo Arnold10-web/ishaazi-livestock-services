@@ -3,7 +3,7 @@ import { storeInGridFS } from '../middleware/enhancedFileUpload.js';
 import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 import { cacheProfiles } from '../middleware/enhancedCache.js';
-import { forceContentRefresh } from '../utils/performanceFix.js';
+import { forceContentRefresh } from '../utils/unifiedPerformance.js';
 import { validate, blogSchemas, newsSchemas, magazineSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import processFormData from '../middleware/formDataCompatibility.js';
@@ -375,7 +375,7 @@ router.get('/verify/statistics', verifyStatisticsAccuracy);
 // Manual content cache refresh endpoint
 router.post('/refresh-cache', authenticateToken, requireRole(['system_admin', 'editor']), async (req, res) => {
   try {
-    const { refreshContent } = await import('../utils/performanceFix.js');
+    const { refreshContent } = await import('../utils/unifiedPerformance.js');
     await refreshContent(req, res);
   } catch (error) {
     console.error('Cache refresh error:', error);

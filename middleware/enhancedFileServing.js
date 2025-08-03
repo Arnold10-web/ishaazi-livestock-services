@@ -3,7 +3,7 @@
  * Optimized for cloud deployment with better error handling and performance
  */
 
-import { getGridFS } from '../utils/gridfsStorage.js';
+import gridFSStorage from '../utils/gridfsStorage.js';
 import mongoose from 'mongoose';
 
 /**
@@ -21,7 +21,8 @@ export const enhancedFileServing = async (req, res, next) => {
             });
         }
 
-        const gfs = await getGridFS();
+        await gridFSStorage.connect();
+        const gfs = gridFSStorage.bucket;
         
         // Find file metadata first
         const files = await gfs.find({ _id: new mongoose.Types.ObjectId(id) }).toArray();
@@ -94,22 +95,6 @@ export const enhancedFileServing = async (req, res, next) => {
             });
         }
     }
-};
-
-/**
- * Performance monitoring for slow file requests
- */
-export const performanceMonitor = (req, res, next) => {
-    const start = Date.now();
-    
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        if (duration > 1000) { // Log requests taking more than 1 second
-            console.warn(`🐌 Slow file request: ${req.method} ${req.originalUrl} - ${duration}ms`);
-        }
-    });
-    
-    next();
 };
 
 export default enhancedFileServing;
