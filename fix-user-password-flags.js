@@ -23,23 +23,48 @@ async function fixUserPasswordFlags() {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
-        // Find users who have set their password but still have isTemporaryPassword = true
-        const usersToFix = await User.find({
+        // Case 1: Users with hasSetPassword=true but isTemporaryPassword=true
+        const usersCase1 = await User.find({
             hasSetPassword: true,
             isTemporaryPassword: true
         });
 
-        console.log(`Found ${usersToFix.length} users to fix:`);
+        // Case 2: Users with hasSetPassword=false but have a real password and are not temporary
+        // These users completed password setup but flags weren't updated properly
+        const usersCase2 = await User.find({
+            hasSetPassword: false,
+            isTemporaryPassword: false,
+            password: { $exists: true, $ne: null },
+            // Exclude users with actual temporary passwords
+            passwordChangedAt: { $exists: true }
+        });
 
-        for (const user of usersToFix) {
-            console.log(`- Fixing user: ${user.companyEmail || user.username} (${user.role})`);
+        const allUsersToFix = [...usersCase1, ...usersCase2];
+        console.log(`Found ${allUsersToFix.length} users to fix:`);
+        console.log(`- Case 1 (hasSetPassword=true, isTemporaryPassword=true): ${usersCase1.length} users`);
+        console.log(`- Case 2 (hasSetPassword=false but have real password): ${usersCase2.length} users`);
+
+        // Fix Case 1 users
+        for (const user of usersCase1) {
+            console.log(`- Fixing Case 1 user: ${user.companyEmail || user.username} (${user.role})`);
             
-            // Update the user to clear the temporary password flag
             await User.findByIdAndUpdate(user._id, {
                 isTemporaryPassword: false
             });
             
-            console.log(`  ✓ Updated user ${user.companyEmail || user.username}`);
+            console.log(`  ✓ Cleared isTemporaryPassword flag for ${user.companyEmail || user.username}`);
+        }
+
+        // Fix Case 2 users
+        for (const user of usersCase2) {
+            console.log(`- Fixing Case 2 user: ${user.companyEmail || user.username} (${user.role})`);
+            
+            await User.findByIdAndUpdate(user._id, {
+                hasSetPassword: true,
+                isTemporaryPassword: false
+            });
+            
+            console.log(`  ✓ Set hasSetPassword=true for ${user.companyEmail || user.username}`);
         }
 
         console.log('\n✅ All users have been fixed!');

@@ -10,9 +10,9 @@ class MigrationManager {
     constructor() {
         this.migrations = [
             {
-                id: 'fix-temporary-password-flags-v1',
-                description: 'Fix users who completed password setup but still have isTemporaryPassword=true',
-                version: '1.0.0',
+                id: 'fix-temporary-password-flags-v2',
+                description: 'Fix users with incorrect password setup flags (both hasSetPassword and isTemporaryPassword)',
+                version: '2.0.0',
                 run: this.fixTemporaryPasswordFlags
             }
         ];
@@ -46,30 +46,55 @@ class MigrationManager {
     }
 
     /**
-     * Fix users who have hasSetPassword=true but isTemporaryPassword=true
+     * Fix users who have password but incorrect flags
+     * Cases:
+     * 1. hasSetPassword=true but isTemporaryPassword=true
+     * 2. hasSetPassword=false but have a real password (not temporary)
      */
     async fixTemporaryPasswordFlags() {
-        const usersToFix = await User.find({
+        // Case 1: Users with hasSetPassword=true but isTemporaryPassword=true
+        const usersCase1 = await User.find({
             hasSetPassword: true,
             isTemporaryPassword: true
         });
 
-        if (usersToFix.length === 0) {
+        // Case 2: Users with hasSetPassword=false but have a real password and are not temporary
+        // These users completed password setup but flags weren't updated properly
+        const usersCase2 = await User.find({
+            hasSetPassword: false,
+            isTemporaryPassword: false,
+            password: { $exists: true, $ne: null },
+            // Exclude users with actual temporary passwords
+            passwordChangedAt: { $exists: true }
+        });
+
+        const allUsersToFix = [...usersCase1, ...usersCase2];
+
+        if (allUsersToFix.length === 0) {
             logger.info('🎯 No users need password flag fixes');
             return;
         }
 
-        logger.info(`🔧 Fixing password flags for ${usersToFix.length} users`);
+        logger.info(`🔧 Fixing password flags for ${allUsersToFix.length} users`);
 
-        for (const user of usersToFix) {
+        for (const user of usersCase1) {
             await User.findByIdAndUpdate(user._id, {
                 isTemporaryPassword: false
             });
             
-            logger.info(`✅ Fixed password flags for user: ${user.companyEmail || user.username} (${user.role})`);
+            logger.info(`✅ Fixed Case 1 - cleared isTemporaryPassword for user: ${user.companyEmail || user.username} (${user.role})`);
         }
 
-        logger.info(`🎉 Successfully fixed password flags for ${usersToFix.length} users`);
+        for (const user of usersCase2) {
+            await User.findByIdAndUpdate(user._id, {
+                hasSetPassword: true,
+                isTemporaryPassword: false
+            });
+            
+            logger.info(`✅ Fixed Case 2 - set hasSetPassword=true for user: ${user.companyEmail || user.username} (${user.role})`);
+        }
+
+        logger.info(`🎉 Successfully fixed password flags for ${allUsersToFix.length} users`);
     }
 
     /**
