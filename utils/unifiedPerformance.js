@@ -5,18 +5,89 @@
  */
 
 import mongoose from 'mongoose';
-import NodeCache from 'node-cache';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Performance cache with TTL using built-in Map (Railway-optimized)
+class PerformanceCache {
+  constructor(stdTTL = 300, checkperiod = 60) {
+    this.cache = new Map();
+    this.stdTTL = stdTTL * 1000; // Convert to milliseconds
+    this.hits = 0;
+    this.misses = 0;
+    this.keys_count = 0;
+    
+    // Cleanup expired entries periodically
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, value] of this.cache.entries()) {
+        if (now > value.expires) {
+          this.cache.delete(key);
+        }
+      }
+      this.keys_count = this.cache.size;
+    }, checkperiod * 1000);
+  }
+  
+  set(key, value, ttl) {
+    const expirationTime = ttl ? (ttl * 1000) : this.stdTTL;
+    this.cache.set(key, {
+      data: value,
+      expires: Date.now() + expirationTime
+    });
+    this.keys_count = this.cache.size;
+  }
+  
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) {
+      this.misses++;
+      return undefined;
+    }
+    
+    if (Date.now() > item.expires) {
+      this.cache.delete(key);
+      this.keys_count = this.cache.size;
+      this.misses++;
+      return undefined;
+    }
+    
+    this.hits++;
+    return item.data;
+  }
+  
+  del(key) {
+    const deleted = this.cache.delete(key);
+    this.keys_count = this.cache.size;
+    return deleted;
+  }
+  
+  flushAll() {
+    this.cache.clear();
+    this.keys_count = 0;
+    this.hits = 0;
+    this.misses = 0;
+  }
+  
+  keys() {
+    return Array.from(this.cache.keys());
+  }
+  
+  getStats() {
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      keys: this.keys_count,
+      ksize: this.cache.size,
+      vsize: this.cache.size
+    };
+  }
+}
+
 // Initialize performance cache
-const performanceCache = new NodeCache({ 
-  stdTTL: 300, // 5 minutes default
-  checkperiod: 60, // Check for expired keys every 60 seconds
-  useClones: false // Better performance, but be careful with object mutations
-});
+const performanceCache = new PerformanceCache(300, 60); // 5 minutes default, check every 60 seconds
 
 /**
  * Railway-optimized file serving with enhanced performance
