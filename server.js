@@ -401,8 +401,16 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
 // Database connection
 connectDB()
-  .then(() => {
+  .then(async () => {
     console.log("Connected to MongoDB");
+    
+    // Run database migrations after successful connection
+    try {
+      const migrationManager = (await import('./utils/migrationManager.js')).default;
+      await migrationManager.runMigrations();
+    } catch (error) {
+      console.error('Migration error (non-fatal):', error.message);
+    }
   })
   .catch(err => {
     console.error('Database connection failed:', err.message);
@@ -442,6 +450,7 @@ import passwordSetupRoutes from './routes/passwordSetupRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import managementRoutes from './routes/managementRoutes.js';
 import auctionRegistrationRoutes from './routes/auctionRegistrationRoutes.js';
+import migrationRoutes from './routes/migrationRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -453,6 +462,7 @@ app.use('/ready', healthRoutes); // Kubernetes readiness probe
 app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
 app.use('/api/management', managementRoutes); // System admin management features
+app.use('/api/migrations', migrationRoutes); // Database migration management
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationRoutes);

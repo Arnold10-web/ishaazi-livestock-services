@@ -88,6 +88,7 @@ export const setupPassword = async (req, res) => {
 
         user.password = hashedPassword;
         user.hasSetPassword = true;
+        user.isTemporaryPassword = false; // Clear temporary password flag
         await user.save();
 
         // Mark token as used
