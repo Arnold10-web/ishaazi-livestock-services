@@ -452,7 +452,6 @@ import managementRoutes from './routes/managementRoutes.js';
 import auctionRegistrationRoutes from './routes/auctionRegistrationRoutes.js';
 import migrationRoutes from './routes/migrationRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
-import { initializeAutoDeployment } from './utils/autoDeployment.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -693,10 +692,9 @@ async function startServer() {
     server.listen(PORT, async () => {
       console.log(`🚀 Server started successfully in ${process.env.NODE_ENV} mode`);
       
-      // Initialize auto-deployment for Railway
+      // Performance optimizations are active (no auto-deployment)
       if (process.env.NODE_ENV === 'production') {
-        console.log('🚀 Initializing Railway auto-deployment...');
-        await initializeAutoDeployment();
+        console.log('⚡ Railway performance optimizations active');
       }
       
       // Log startup performance
@@ -704,7 +702,7 @@ async function startServer() {
         port: PORT,
         environment: process.env.NODE_ENV,
         nodeVersion: process.version,
-        autoDeployment: process.env.NODE_ENV === 'production',
+        performanceOptimized: true,
         memory: {
           heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
           heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB'

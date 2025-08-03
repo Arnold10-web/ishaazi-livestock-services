@@ -6,7 +6,6 @@
 
 import express from 'express';
 import { requireRole } from '../middleware/enhancedAuthMiddleware.js';
-import { triggerManualDeployment, getDeploymentStatus } from '../utils/autoDeployment.js';
 import { getPerformanceStats } from '../utils/unifiedPerformance.js';
 
 const router = express.Router();
@@ -57,7 +56,6 @@ router.post('/cache/refresh', async (req, res) => {
 router.get('/diagnostics', async (req, res) => {
   try {
     const performanceStats = getPerformanceStats();
-    const deploymentStatus = await getDeploymentStatus();
     
     const diagnostics = {
       timestamp: new Date().toISOString(),
@@ -74,12 +72,11 @@ router.get('/diagnostics', async (req, res) => {
       },
       cache: performanceStats.cache,
       slowRequests: performanceStats.slowRequests,
-      deployment: deploymentStatus,
       services: {
         email: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
         database: true, // If we're responding, DB is connected
         gridfs: true,
-        autoDeployment: process.env.NODE_ENV === 'production'
+        performanceOptimized: true
       }
     };
     
@@ -91,38 +88,6 @@ router.get('/diagnostics', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get diagnostics',
-      error: error.message
-    });
-  }
-});
-
-/**
- * Manual Railway deployment trigger
- */
-router.post('/deploy', async (req, res) => {
-  try {
-    console.log('🔧 Manual Railway deployment triggered by admin');
-    
-    const success = await triggerManualDeployment();
-    
-    if (success) {
-      res.json({
-        success: true,
-        message: 'Railway deployment triggered successfully',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Railway deployment failed',
-        timestamp: new Date().toISOString()
-      });
-    }
-  } catch (error) {
-    console.error('❌ Manual deployment error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to trigger deployment',
       error: error.message
     });
   }
