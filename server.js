@@ -451,6 +451,8 @@ import fileRoutes from './routes/fileRoutes.js';
 import managementRoutes from './routes/managementRoutes.js';
 import auctionRegistrationRoutes from './routes/auctionRegistrationRoutes.js';
 import migrationRoutes from './routes/migrationRoutes.js';
+import performanceRoutes from './routes/performanceRoutes.js';
+import { initializeAutoDeployment } from './utils/autoDeployment.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -462,6 +464,7 @@ app.use('/ready', healthRoutes); // Kubernetes readiness probe
 app.use('/live', healthRoutes); // Kubernetes liveness probe
 app.use('/api/admin', enhancedAdminRoutes); // Enhanced admin routes
 app.use('/api/management', managementRoutes); // System admin management features
+app.use('/api/performance', performanceRoutes); // Railway performance monitoring
 app.use('/api/migrations', migrationRoutes); // Database migration management
 app.use('/api/content', contentRoutes);
 app.use('/api/search', searchRoutes);
@@ -687,14 +690,21 @@ async function startServer() {
     await initializeServer();
     
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
+    server.listen(PORT, async () => {
       console.log(`🚀 Server started successfully in ${process.env.NODE_ENV} mode`);
+      
+      // Initialize auto-deployment for Railway
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🚀 Initializing Railway auto-deployment...');
+        await initializeAutoDeployment();
+      }
       
       // Log startup performance
       logger.info('Server started successfully', {
         port: PORT,
         environment: process.env.NODE_ENV,
         nodeVersion: process.version,
+        autoDeployment: process.env.NODE_ENV === 'production',
         memory: {
           heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
           heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB'

@@ -720,6 +720,20 @@ export const deleteBlog = async (req, res) => {
     // Delete the blog from the database
     await Blog.findByIdAndDelete(id);
 
+    // Enhanced cache invalidation for immediate refresh on Railway
+    try {
+      // Force cache clear for content lists
+      if (global.memoryCache) {
+        global.memoryCache.flushAll();
+      }
+      
+      // Clear any other cache layers
+      const { invalidateCache } = await import('../middleware/enhancedCache.js');
+      await invalidateCache(['blogs', 'content', 'dashboard', 'search']);
+    } catch (cacheError) {
+      console.warn('Cache invalidation warning:', cacheError.message);
+    }
+
     res.json({ message: 'Blog deleted successfully' });
   } catch (error) {
     console.error('Error deleting blog:', error);

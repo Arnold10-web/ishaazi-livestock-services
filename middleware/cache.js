@@ -250,7 +250,7 @@ export const cacheMiddleware = (ttlSeconds = 300) => {
 /**
  * @function invalidateCache
  * @description Middleware that invalidates cache entries after successful operations
- * @param {Array<string>} patterns - Cache key patterns to invalidate (not currently used)
+ * @param {Array<string>} patterns - Cache key patterns to invalidate
  * @returns {Function} Express middleware function
  */
 export const invalidateCache = (patterns = []) => {
@@ -262,6 +262,11 @@ export const invalidateCache = (patterns = []) => {
     // Override response methods to invalidate cache after successful operations
     const invalidatePatterns = async () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
+        // Set headers to prevent browser caching of stale data
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        
         for (const pattern of patterns) {
           try {
             // For simplicity, we'll flush all cache

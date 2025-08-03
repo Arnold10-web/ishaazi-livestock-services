@@ -45,6 +45,8 @@ import Notification from '../models/Notification.js';
  */
 export const getDashboardStats = async (req, res) => {
   try {
+    console.time('Dashboard Stats');
+    
     // Get current month and previous month for comparison
     const currentDate = new Date();
     const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -55,49 +57,130 @@ export const getDashboardStats = async (req, res) => {
     const startOfMonth = currentMonth;
     const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-    // 1. TOTAL CONTENT COUNT (DYNAMIC) - Including newsletters
+    // Run all database queries in parallel for better performance
+    const [
+      totalContentResults,
+      currentMonthResults,
+      previousMonthResults,
+      totalSubscribers,
+      activeSubscribers,
+      newslettersSent
+    ] = await Promise.all([
+      // 1. Total content counts - parallel execution
+      Promise.all([
+        Blog.countDocuments(),
+        News.countDocuments(),
+        Event.countDocuments(),
+        Farm.countDocuments(),
+        Magazine.countDocuments(),
+        Newsletter.countDocuments(),
+        Basic.countDocuments(),
+        Dairy.countDocuments(),
+        Beef.countDocuments(),
+        Goat.countDocuments(),
+        Piggery.countDocuments(),
+        Auction.countDocuments(),
+        EventRegistration.countDocuments(),
+        Notification.countDocuments()
+      ]),
+      
+      // 2. Current month content counts - parallel execution
+      Promise.all([
+        Blog.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        News.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Event.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Farm.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Magazine.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Newsletter.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Basic.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Dairy.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Beef.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Goat.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Piggery.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Auction.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        EventRegistration.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+        Notification.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } })
+      ]),
+      
+      // 3. Previous month content counts - parallel execution  
+      Promise.all([
+        Blog.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        News.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Event.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Farm.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Magazine.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Newsletter.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Basic.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Dairy.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Beef.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Goat.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Piggery.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Auction.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        EventRegistration.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+        Notification.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } })
+      ]),
+      
+      // 4. Subscriber data
+      Subscriber.countDocuments(),
+      Subscriber.countDocuments({ isActive: true }),
+      Newsletter.countDocuments({ sentAt: { $gte: startOfMonth, $lte: endOfMonth } })
+    ]);
+
+    // Map results to objects
     const totalContent = {
-      blogs: await Blog.countDocuments(),
-      news: await News.countDocuments(),
-      events: await Event.countDocuments(),
-      farms: await Farm.countDocuments(),
-      magazines: await Magazine.countDocuments(),
-      newsletters: await Newsletter.countDocuments(),
-      basics: await Basic.countDocuments(),
-      dairy: await Dairy.countDocuments(),
-      beef: await Beef.countDocuments(),
-      goats: await Goat.countDocuments(),
-      piggery: await Piggery.countDocuments(),
-      auctions: await Auction.countDocuments(),
-      eventRegistrations: await EventRegistration.countDocuments(),
-      notifications: await Notification.countDocuments()
+      blogs: totalContentResults[0],
+      news: totalContentResults[1],
+      events: totalContentResults[2],
+      farms: totalContentResults[3],
+      magazines: totalContentResults[4],
+      newsletters: totalContentResults[5],
+      basics: totalContentResults[6],
+      dairy: totalContentResults[7],
+      beef: totalContentResults[8],
+      goats: totalContentResults[9],
+      piggery: totalContentResults[10],
+      auctions: totalContentResults[11],
+      eventRegistrations: totalContentResults[12],
+      notifications: totalContentResults[13]
+    };
+
+    const currentMonthContent = {
+      blogs: currentMonthResults[0],
+      news: currentMonthResults[1],
+      events: currentMonthResults[2],
+      farms: currentMonthResults[3],
+      magazines: currentMonthResults[4],
+      newsletters: currentMonthResults[5],
+      basics: currentMonthResults[6],
+      dairy: currentMonthResults[7],
+      beef: currentMonthResults[8],
+      goats: currentMonthResults[9],
+      piggery: currentMonthResults[10],
+      auctions: currentMonthResults[11],
+      eventRegistrations: currentMonthResults[12],
+      notifications: currentMonthResults[13]
+    };
+
+    const previousMonthContent = {
+      blogs: previousMonthResults[0],
+      news: previousMonthResults[1],
+      events: previousMonthResults[2],
+      farms: previousMonthResults[3],
+      magazines: previousMonthResults[4],
+      newsletters: previousMonthResults[5],
+      basics: previousMonthResults[6],
+      dairy: previousMonthResults[7],
+      beef: previousMonthResults[8],
+      goats: previousMonthResults[9],
+      piggery: previousMonthResults[10],
+      auctions: previousMonthResults[11],
+      eventRegistrations: previousMonthResults[12],
+      notifications: previousMonthResults[13]
     };
 
     const total = Object.values(totalContent).reduce((sum, count) => sum + count, 0);
-
-    // 2. CURRENT MONTH CONTENT COUNT
-    const currentMonthContent = {
-      blogs: await Blog.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      news: await News.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      events: await Event.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      farms: await Farm.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      magazines: await Magazine.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      newsletters: await Newsletter.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      basics: await Basic.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      dairy: await Dairy.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      beef: await Beef.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      goats: await Goat.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      piggery: await Piggery.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      auctions: await Auction.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      eventRegistrations: await EventRegistration.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      notifications: await Notification.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } })
-    };
-
     const currentMonthTotal = Object.values(currentMonthContent).reduce((sum, count) => sum + count, 0);
-
-    // 3. PREVIOUS MONTH CONTENT COUNT
-    const previousMonthContent = {
-      blogs: await Blog.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
+    const previousMonthTotal = Object.values(previousMonthContent).reduce((sum, count) => sum + count, 0);
       news: await News.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
       events: await Event.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
       farms: await Farm.countDocuments({ createdAt: { $gte: previousMonth, $lte: previousMonthEnd } }),
@@ -261,6 +344,8 @@ export const getDashboardStats = async (req, res) => {
       }
     };
 
+    console.timeEnd('Dashboard Stats');
+    
     res.status(200).json({
       success: true,
       data: dashboardData,
@@ -268,6 +353,7 @@ export const getDashboardStats = async (req, res) => {
     });
 
   } catch (error) {
+    console.timeEnd('Dashboard Stats');
     console.error('Error fetching dashboard stats:', error);
     res.status(500).json({
       success: false,

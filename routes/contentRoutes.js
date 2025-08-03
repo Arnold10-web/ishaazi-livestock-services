@@ -3,6 +3,7 @@ import { storeInGridFS } from '../middleware/enhancedFileUpload.js';
 import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 import { cacheProfiles } from '../middleware/enhancedCache.js';
+import { forceContentRefresh } from '../utils/performanceFix.js';
 import { validate, blogSchemas, newsSchemas, magazineSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import processFormData from '../middleware/formDataCompatibility.js';
@@ -150,6 +151,7 @@ router.delete('/blogs/:id',
   authenticateToken, requireRole(['system_admin', 'editor']),
   sensitiveOperationLimiter,
   validateObjectId('id'),
+  forceContentRefresh(['blogs']),
   invalidateCache(['blogs']),
   deleteBlog
 );
@@ -176,7 +178,7 @@ router.put('/news/:id',
   invalidateCache(['news']), 
   updateNews
 );
-router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'editor']), invalidateCache(['news']), deleteNews);
+router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'editor']), forceContentRefresh(['news']), invalidateCache(['news']), deleteNews);
 
 
 // Basic Routes
@@ -368,5 +370,46 @@ router.get('/verify/reading-time', verifyReadingTimeAccuracy);
 
 // Verify statistics accuracy across dashboard metrics
 router.get('/verify/statistics', verifyStatisticsAccuracy);
+
+// PERFORMANCE ROUTES
+// Manual content cache refresh endpoint
+router.post('/refresh-cache', authenticateToken, requireRole(['system_admin', 'editor']), async (req, res) => {
+  try {
+    const { refreshContent } = await import('../utils/performanceFix.js');
+    await refreshContent(req, res);
+  } catch (error) {
+    console.error('Cache refresh error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error refreshing cache'
+    });
+  }
+});
+
+// Manual cache refresh endpoint for immediate content updates
+router.post('/refresh-cache', authenticateToken, requireRole(['system_admin', 'editor']), async (req, res) => {
+  try {
+    // Clear all content-related caches
+    if (global.memoryCache) {
+      global.memoryCache.flushAll();
+    }
+    
+    const { invalidateCache } = await import('../middleware/enhancedCache.js');
+    await invalidateCache(['blogs', 'news', 'events', 'content', 'dashboard', 'search']);
+    
+    res.json({
+      success: true,
+      message: 'Cache refreshed successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error refreshing cache:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to refresh cache',
+      error: error.message
+    });
+  }
+});
 
 export default router;

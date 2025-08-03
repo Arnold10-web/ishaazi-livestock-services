@@ -8,9 +8,18 @@ export const streamFile = async (req, res) => {
     try {
         const fileId = req.params.fileId;
         
+        // Enhanced file ID validation
+        if (!fileId || !fileId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid file ID format'
+            });
+        }
+        
         // Get file metadata first
         const fileInfo = await getGridFSFileInfo(fileId);
         if (!fileInfo) {
+            console.log(`File not found in GridFS: ${fileId}`);
             return res.status(404).json({
                 success: false,
                 message: 'File not found'
@@ -18,25 +27,41 @@ export const streamFile = async (req, res) => {
         }
 
         // Set appropriate headers
-        res.set('Content-Type', fileInfo.contentType);
+        res.set('Content-Type', fileInfo.contentType || 'application/octet-stream');
         res.set('Content-Length', fileInfo.length);
+        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
         
         // If it's an image that should be displayed in browser
-        if (fileInfo.contentType.startsWith('image/')) {
+        if (fileInfo.contentType && fileInfo.contentType.startsWith('image/')) {
             res.set('Content-Disposition', 'inline');
         } else {
             // For other files, prompt download
-            res.set('Content-Disposition', `attachment; filename="${fileInfo.filename}"`);
+            res.set('Content-Disposition', `attachment; filename="${fileInfo.filename || 'download'}"`);
         }
 
         // Stream the file
         const stream = await getGridFSFileStream(fileId);
+        
+        // Handle stream errors
+        stream.on('error', (error) => {
+            console.error('GridFS stream error:', error);
+            if (!res.headersSent) {
+                res.status(404).json({
+                    success: false,
+                    message: 'File stream error'
+                });
+            }
+        });
+        
         stream.pipe(res);
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error streaming file',
-            error: error.message
-        });
+        console.error('File streaming error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Error streaming file',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
     }
 };

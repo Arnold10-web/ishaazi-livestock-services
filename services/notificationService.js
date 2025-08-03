@@ -27,8 +27,14 @@ import Notification from '../models/Notification.js';
  * @returns {nodemailer.Transporter} Configured email transporter
  */
 const createTransporter = () => {
+  // Check for required environment variables
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('❌ Missing email configuration: EMAIL_USER or EMAIL_PASS not set');
+    throw new Error('Email configuration missing. Please set EMAIL_USER and EMAIL_PASS environment variables.');
+  }
+
   const config = {
-    host: process.env.EMAIL_HOST || 'server252.web-hosting.com',
+    host: process.env.EMAIL_HOST || 'mail.ishaazilivestockservices.com',
     port: parseInt(process.env.EMAIL_PORT) || 587,
     secure: process.env.EMAIL_SECURE === 'true',
     auth: {
@@ -38,10 +44,21 @@ const createTransporter = () => {
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
-    rateLimit: 14
+    rateLimit: 14,
+    // Railway-specific optimizations
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000,    // 30 seconds
+    socketTimeout: 60000       // 60 seconds
   };
 
-  return nodemailer.createTransport(config);
+  console.log('📧 Email transporter configured:', {
+    host: config.host,
+    port: config.port,
+    user: config.auth.user,
+    secure: config.secure
+  });
+
+  return nodemailer.createTransporter(config);
 };
 
 /**
@@ -59,8 +76,13 @@ const createTransporter = () => {
  * @returns {string} Complete HTML template for the notification email
  */
 const createNotificationTemplate = (title, description, contentType, contentUrl, subscriberEmail, notificationId = null) => {
+  // Use environment-appropriate base URL for tracking
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? (process.env.BASE_URL || 'https://ishaazilivestockservices-production.up.railway.app')
+    : 'http://localhost:5000';
+    
   const trackingPixelUrl = notificationId ? 
-    `http://localhost:5000/api/email/track/open/notification/${notificationId}/${encodeURIComponent(subscriberEmail)}` : '';
+    `${baseUrl}/api/email/track/open/notification/${notificationId}/${encodeURIComponent(subscriberEmail)}` : '';
   
   const contentTypeLabels = {
     blog: '📝 New Blog Post',
@@ -228,15 +250,15 @@ const createNotificationTemplate = (title, description, contentType, contentUrl,
         
         <div class="footer">
             <p><strong>Ishaazi Livestock Services</strong></p>
-            <p>📧 info@ishaazi.com | 📞 +256-xxx-xxx-xxx</p>
+            <p>📧 info@ishaazilivestockservices.com | 📞 +256-xxx-xxx-xxx</p>
             <p>🏢 Kampala, Uganda</p>
             
             <div class="unsubscribe">
                 <p>You're receiving this because you subscribed to content notifications.</p>
                 <p>Email sent to: ${subscriberEmail}</p>
                 <p>
-                    <a href="http://localhost:3000/unsubscribe?email=${encodeURIComponent(subscriberEmail)}&source=notification">Unsubscribe</a> | 
-                    <a href="http://localhost:3000/preferences?email=${encodeURIComponent(subscriberEmail)}">Manage Preferences</a>
+                    <a href="${baseUrl}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}&source=notification">Unsubscribe</a> | 
+                    <a href="${baseUrl}/preferences?email=${encodeURIComponent(subscriberEmail)}">Manage Preferences</a>
                 </p>
             </div>
         </div>
@@ -247,7 +269,7 @@ const createNotificationTemplate = (title, description, contentType, contentUrl,
     <script>
         function trackClick(action, notificationId, subscriberEmail) {
             if (notificationId) {
-                fetch(\`http://localhost:5000/api/email/track/click/notification/\${notificationId}/\${subscriberEmail}?action=\${action}\`, {
+                fetch(\`${baseUrl}/api/email/track/click/notification/\${notificationId}/\${subscriberEmail}?action=\${action}\`, {
                     method: 'POST'
                 }).catch(e => console.log('Tracking failed:', e));
             }
@@ -288,19 +310,25 @@ export const sendContentNotification = async (contentType, contentId, title, des
     }
 
     // Generate content URL
-    const contentUrl = `http://localhost:3000/${contentType}/${contentId}`;
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? (process.env.BASE_URL || 'https://ishaazilivestockservices-production.up.railway.app')
+      : 'http://localhost:3000';
+    const contentUrl = `${baseUrl}/${contentType}/${contentId}`;
     
-    // Send emails in batches
+    // Send emails in batches with Railway optimizations
     const transporter = createTransporter();
-    const BATCH_SIZE = 20;
-    const DELAY_BETWEEN_BATCHES = 2000; // 2 seconds
+    const BATCH_SIZE = 10; // Reduced for Railway
+    const DELAY_BETWEEN_BATCHES = 3000; // 3 seconds for Railway
 
     let totalSent = 0;
     let totalFailed = 0;
     const errors = [];
 
+    console.log(`📧 Sending notification to ${subscribers.length} subscribers in batches of ${BATCH_SIZE}`);
+
     for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
       const batch = subscribers.slice(i, i + BATCH_SIZE);
+      console.log(`📧 Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(subscribers.length/BATCH_SIZE)}`);
       
       const emailPromises = batch.map(async (subscriber) => {
         try {
@@ -317,11 +345,18 @@ export const sendContentNotification = async (contentType, contentId, title, des
             from: `"Ishaazi Livestock Services" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
             to: subscriber.email,
             subject: `🌾 New ${contentType}: ${title}`,
-            html: htmlContent
+            html: htmlContent,
+            // Railway-specific mail options
+            priority: 'normal',
+            envelope: {
+              from: process.env.EMAIL_USER,
+              to: subscriber.email
+            }
           });
           
           return { success: true, email: subscriber.email };
         } catch (error) {
+          console.error(`❌ Failed to send to ${subscriber.email}:`, error.message);
           return { success: false, email: subscriber.email, error: error.message };
         }
       });
@@ -340,11 +375,14 @@ export const sendContentNotification = async (contentType, contentId, title, des
         }
       });
 
-      // Delay between batches
+      // Delay between batches for Railway
       if (i + BATCH_SIZE < subscribers.length) {
+        console.log(`⏳ Waiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`);
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
       }
     }
+
+    console.log(`✅ Notification complete: ${totalSent} sent, ${totalFailed} failed`);
 
     // Update notification status
     notification.status = totalSent > 0 ? 'sent' : 'failed';

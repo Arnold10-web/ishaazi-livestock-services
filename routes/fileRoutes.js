@@ -2,6 +2,7 @@ import express from 'express';
 import { streamFile } from '../controllers/fileController.js';
 import { authenticateToken } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware } from '../middleware/cache.js';
+import { enhancedFileServing, performanceMonitor } from '../middleware/enhancedFileServing.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -23,13 +24,14 @@ const fileAccessLimiter = rateLimit({
  */
 router.get('/:fileId', 
   fileAccessLimiter,
+  performanceMonitor('file-serving'),
   cacheMiddleware(3600), 
   (req, res, next) => {
     // Log file access for security monitoring
     console.log(`File access: ${req.params.fileId} from IP: ${req.ip}`);
     next();
   },
-  streamFile
+  enhancedFileServing
 );
 
 /**
@@ -39,8 +41,9 @@ router.get('/:fileId',
  */
 router.get('/protected/:fileId', 
   fileAccessLimiter,
-  authenticateToken, 
-  streamFile
+  authenticateToken,
+  performanceMonitor('protected-file-serving'),
+  enhancedFileServing
 );
 
 export default router;
