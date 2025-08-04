@@ -481,6 +481,9 @@ export const createBlog = async (req, res) => {
     console.log('🔍 DEBUG: Calculated reading time:', calculatedReadTime, 'minutes');
 
     console.log('🔍 DEBUG: Creating new Blog instance...');
+    console.log('🔍 DEBUG: Published value:', published, 'Type:', typeof published);
+    console.log('🔍 DEBUG: Published evaluation:', published === 'true' || published === true || published === "true");
+    
     const newBlog = new Blog({
       title,
       content,
@@ -493,10 +496,27 @@ export const createBlog = async (req, res) => {
       readTime: calculatedReadTime // Store calculated reading time
     });
 
+    console.log('🔍 DEBUG: Blog instance created with published:', newBlog.published);
+
     console.log('🔍 DEBUG: Blog instance created, attempting to save...');
     try {
       const savedBlog = await newBlog.save();
       console.log('🔍 DEBUG: Blog saved successfully:', savedBlog._id);
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['blogs', 'content', 'dashboard', 'admin-blogs']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Blog created successfully', savedBlog);
     } catch (error) {
       return await handleError(error);
@@ -545,10 +565,11 @@ export const getBlogs = async (req, res) => {
 
   try {
     // Admin can see all blogs, non-admin only sees published blogs
-    const query = admin ? {} : { published: true };
+    const query = admin === 'true' ? {} : { published: true };
 
     console.log("🔥 API HIT: Fetching blogs...");
     console.log("🔍 Query:", query);
+    console.log("🔍 Admin param:", admin, "Type:", typeof admin);
 
     // Log the total number of blogs in the database
     const totalBlogs = await Blog.countDocuments({});
@@ -564,7 +585,14 @@ export const getBlogs = async (req, res) => {
       .limit(Number(limit));
 
     console.log("✅ Blogs found:", blogs.length);
-    if (blogs.length > 0) console.log("Sample blog:", blogs[0]);
+    if (blogs.length > 0) {
+      console.log("Sample blog:", {
+        id: blogs[0]._id,
+        title: blogs[0].title,
+        published: blogs[0].published,
+        hasImage: !!blogs[0].image
+      });
+    }
 
     const total = await Blog.countDocuments(query);
 

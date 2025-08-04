@@ -144,7 +144,7 @@ router.post('/blogs',
   invalidateCache(['blogs']),
   createBlog
 );
-router.get('/blogs', cacheProfiles.blog, getBlogs);
+router.get('/blogs', getBlogs); // Temporarily disable cache to fix stale data
 router.get('/blogs/admin', authenticateToken, requireRole(['system_admin', 'editor']), getAdminBlogs);
 router.get('/blogs/:id', validateObjectId('id'), cacheMiddleware(600), getBlogById);
 router.put('/blogs/:id',

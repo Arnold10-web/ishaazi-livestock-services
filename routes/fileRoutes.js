@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { streamFile } from '../controllers/fileController.js';
 import { authenticateToken } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware } from '../middleware/cache.js';
@@ -29,7 +30,8 @@ router.get('/:fileId',
   cacheMiddleware(3600), 
   (req, res, next) => {
     // Log file access for security monitoring
-    console.log(`File access: ${req.params.fileId} from IP: ${req.ip}`);
+    console.log(`🔍 File access: ${req.params.fileId} from IP: ${req.ip}`);
+    console.log(`🔍 File ID validation: Valid ObjectId = ${mongoose.Types.ObjectId.isValid(req.params.fileId)}`);
     next();
   },
   enhancedFileServing

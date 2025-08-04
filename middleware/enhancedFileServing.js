@@ -11,10 +11,14 @@ import mongoose from 'mongoose';
  */
 export const enhancedFileServing = async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const { fileId, id } = req.params;
+        const fileIdToUse = fileId || id;
+        
+        console.log('🔍 Enhanced file serving - fileId:', fileId, 'id:', id, 'using:', fileIdToUse);
         
         // Validate ObjectId format early
-        if (!mongoose.Types.ObjectId.isValid(id)) {
+        if (!mongoose.Types.ObjectId.isValid(fileIdToUse)) {
+            console.log('❌ Invalid ObjectId format:', fileIdToUse);
             return res.status(400).json({
                 success: false,
                 message: 'Invalid file ID format'
@@ -24,14 +28,19 @@ export const enhancedFileServing = async (req, res, next) => {
         await gridFSStorage.connect();
         const gfs = gridFSStorage.bucket;
         
+        console.log('🔍 GridFS connected, searching for file:', fileIdToUse);
+        
         // Find file metadata first
-        const files = await gfs.find({ _id: new mongoose.Types.ObjectId(id) }).toArray();
+        const files = await gfs.find({ _id: new mongoose.Types.ObjectId(fileIdToUse) }).toArray();
+        
+        console.log('🔍 Files found:', files.length);
         
         if (!files || files.length === 0) {
+            console.log('❌ File not found in GridFS:', fileIdToUse);
             return res.status(404).json({
                 success: false,
                 message: 'File not found',
-                fileId: id
+                fileId: fileIdToUse
             });
         }
 
@@ -61,7 +70,7 @@ export const enhancedFileServing = async (req, res, next) => {
                 'Content-Length': chunksize
             });
 
-            const downloadStream = gfs.openDownloadStream(new mongoose.Types.ObjectId(id), {
+            const downloadStream = gfs.openDownloadStream(new mongoose.Types.ObjectId(fileIdToUse), {
                 start,
                 end: end + 1
             });
@@ -69,7 +78,7 @@ export const enhancedFileServing = async (req, res, next) => {
             downloadStream.pipe(res);
         } else {
             // Full file download
-            const downloadStream = gfs.openDownloadStream(new mongoose.Types.ObjectId(id));
+            const downloadStream = gfs.openDownloadStream(new mongoose.Types.ObjectId(fileIdToUse));
             
             downloadStream.on('error', (error) => {
                 console.error('GridFS download error:', error);
