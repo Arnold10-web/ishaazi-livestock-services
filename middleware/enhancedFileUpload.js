@@ -202,7 +202,9 @@ export const storeInGridFS = (fieldName, allowedMimeTypes = [], options = {}) =>
       // Attach stored file info to request
       if (req.file) {
         req.file.gridFS = storedFiles[0];
+        req.file.id = storedFiles[0].id; // Also add id directly for backward compatibility
         req.uploadedFiles = [storedFiles[0]];
+        console.log('🔍 GridFS: Stored file with ID:', storedFiles[0].id);
       }
       if (req.files) {
         req.files.gridFS = storedFiles;

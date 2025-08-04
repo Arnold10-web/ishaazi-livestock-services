@@ -123,11 +123,21 @@ router.post('/upload/media', ...storeInGridFS('file', ['video/*', 'audio/*']), (
   res.status(200).json({ message: 'Media uploaded', fileId: req.file.id });
 });
 
+// Debug middleware to log file upload info
+const debugFileUpload = (req, res, next) => {
+  console.log('🔍 DEBUG MIDDLEWARE: File upload debug');
+  console.log('🔍 DEBUG MIDDLEWARE: req.file:', req.file);
+  console.log('🔍 DEBUG MIDDLEWARE: req.files:', req.files);
+  console.log('🔍 DEBUG MIDDLEWARE: req.body keys:', Object.keys(req.body || {}));
+  next();
+};
+
 // Blog Routes with validation and enhanced form data compatibility
 router.post('/blogs',
   authenticateToken, requireRole(['system_admin', 'editor']),
   sensitiveOperationLimiter,
   ...storeInGridFS('image', ['image/*'], { optional: true }),
+  debugFileUpload, // Add debug middleware
   validateFileUpload,
   processFormData, // Process FormData fields for POST as well
   validate(blogSchemas.create),

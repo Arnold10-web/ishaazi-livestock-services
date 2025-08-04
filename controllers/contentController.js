@@ -427,8 +427,11 @@ export const createBlog = async (req, res) => {
 
     // Handle file from GridFS
     if (req.file) {
-      imageUrl = req.file.id; // Store GridFS file ID
+      imageUrl = req.file.gridFS ? req.file.gridFS.id : req.file.id; // Support both patterns
       console.log('🔍 DEBUG: Stored file ID:', imageUrl);
+      console.log('🔍 DEBUG: File object:', req.file);
+    } else {
+      console.log('🔍 DEBUG: No file in request');
     }
 
     console.log('🔍 DEBUG: Parsing metadata...');
@@ -490,18 +493,14 @@ export const createBlog = async (req, res) => {
       readTime: calculatedReadTime // Store calculated reading time
     });
 
-    try {
-      await newBlog.save();
-      return sendResponse(res, true, 'Blog created successfully', newBlog);
-    } catch (error) {
-      return handleError(error);
-    }
-
     console.log('🔍 DEBUG: Blog instance created, attempting to save...');
-    const savedBlog = await newBlog.save();
-    console.log('🔍 DEBUG: Blog saved successfully:', savedBlog._id);
-    
-    sendResponse(res, true, 'Blog created successfully', savedBlog);
+    try {
+      const savedBlog = await newBlog.save();
+      console.log('🔍 DEBUG: Blog saved successfully:', savedBlog._id);
+      sendResponse(res, true, 'Blog created successfully', savedBlog);
+    } catch (error) {
+      return await handleError(error);
+    }
   } catch (error) {
     console.error('❌ DEBUG: Error in createBlog:', error);
     console.error('❌ DEBUG: Error stack:', error.stack);
