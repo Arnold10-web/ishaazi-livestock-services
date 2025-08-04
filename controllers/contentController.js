@@ -63,8 +63,12 @@ const cleanupGridFSFile = async (fileId) => {
     if (!fileId) return;
     
     try {
+        // Use centralized bucket function and memoize ObjectId
         const bucket = getGridFSBucket();
-        await bucket.delete(new mongoose.Types.ObjectId(fileId));
+        const oid = new mongoose.Types.ObjectId(fileId);
+        
+        // Direct delete - GridFS will throw if file doesn't exist
+        await bucket.delete(oid);
     } catch (error) {
         console.error('Error cleaning up file from GridFS:', error);
         // Don't throw error to prevent blocking operations
@@ -97,20 +101,17 @@ const cleanupFile = async (fileId) => {
             return;
         }
 
-        const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db);
+        // Use centralized bucket function and memoize ObjectId
+        const bucket = getGridFSBucket();
+        const oid = new mongoose.Types.ObjectId(fileId);
         
-        // Check if file exists before attempting to delete
-        const files = await bucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
-        if (files.length === 0) {
-            console.log(`File not found in GridFS for cleanup: ${fileId}`);
-            return;
-        }
-        
-        await bucket.delete(new mongoose.Types.ObjectId(fileId));
+        // Direct delete - GridFS will throw if file doesn't exist
+        await bucket.delete(oid);
         console.log(`Successfully deleted file from GridFS: ${fileId}`);
     } catch (error) {
         // More specific error handling
-        if (error.message.includes('File not found')) {
+        // Mongo GridFS uses code 26 (NamespaceNotFound) for missing files
+        if (error.code === 26 || /File not found/i.test(error.message)) {
             console.log(`File already deleted or doesn't exist: ${fileId}`);
         } else {
             console.error('Error cleaning up file:', error);
