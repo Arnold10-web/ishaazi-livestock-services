@@ -91,10 +91,30 @@ const updateGridFSFile = async (oldFileId, newFileId) => {
 const cleanupFile = async (fileId) => {
     if (!fileId) return;
     try {
+        // Validate ObjectId format first
+        if (!mongoose.Types.ObjectId.isValid(fileId)) {
+            console.log(`Invalid ObjectId for cleanup: ${fileId}`);
+            return;
+        }
+
         const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db);
+        
+        // Check if file exists before attempting to delete
+        const files = await bucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
+        if (files.length === 0) {
+            console.log(`File not found in GridFS for cleanup: ${fileId}`);
+            return;
+        }
+        
         await bucket.delete(new mongoose.Types.ObjectId(fileId));
+        console.log(`Successfully deleted file from GridFS: ${fileId}`);
     } catch (error) {
-        console.error('Error cleaning up file:', error);
+        // More specific error handling
+        if (error.message.includes('File not found')) {
+            console.log(`File already deleted or doesn't exist: ${fileId}`);
+        } else {
+            console.error('Error cleaning up file:', error);
+        }
     }
 };
 

@@ -1,4 +1,5 @@
 import { getGridFSFileStream, getGridFSFileInfo } from '../utils/gridFSUtils.js';
+import mongoose from 'mongoose';
 
 /**
  * Stream a file from GridFS
@@ -8,8 +9,18 @@ export const streamFile = async (req, res) => {
     try {
         const fileId = req.params.fileId;
         
-        // Enhanced file ID validation
-        if (!fileId || !fileId.match(/^[0-9a-fA-F]{24}$/)) {
+        // Enhanced file ID validation - MongoDB ObjectId format (24 hex characters)
+        if (!fileId || !fileId.match(/^[0-9a-fA-F]{24}$/i)) {
+            console.log(`Invalid file ID format: ${fileId} (length: ${fileId?.length})`);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid file ID format'
+            });
+        }
+
+        // Additional ObjectId validation
+        if (!mongoose.Types.ObjectId.isValid(fileId)) {
+            console.log(`Invalid MongoDB ObjectId: ${fileId}`);
             return res.status(400).json({
                 success: false,
                 message: 'Invalid file ID format'
@@ -20,9 +31,16 @@ export const streamFile = async (req, res) => {
         const fileInfo = await getGridFSFileInfo(fileId);
         if (!fileInfo) {
             console.log(`File not found in GridFS: ${fileId}`);
+            
+            // Set no-cache headers for 404 responses to prevent caching broken images
+            res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.set('Pragma', 'no-cache');
+            res.set('Expires', '0');
+            
             return res.status(404).json({
                 success: false,
-                message: 'File not found'
+                message: 'File not found',
+                fileId: fileId
             });
         }
 
