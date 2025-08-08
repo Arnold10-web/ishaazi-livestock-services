@@ -183,7 +183,10 @@
     <div class="email-container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">🌾</div>
+            <div class="logo">
+                <img src="{{logoUrl}}" alt="{{companyName}}" style="max-width: 100px; height: auto; margin-bottom: 15px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display: none; font-size: 36px; margin-bottom: 15px;">🌾</div>
+            </div>
             <h1>Welcome to {{companyName}}!</h1>
             <p>Your gateway to modern farming knowledge</p>
         </div>

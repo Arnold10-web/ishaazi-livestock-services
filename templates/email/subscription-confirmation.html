@@ -210,7 +210,10 @@
     <div class="email-container">
         <!-- Header -->
         <div class="header">
-            <div class="confirmation-icon">📧</div>
+            <div class="confirmation-icon">
+                <img src="{{logoUrl}}" alt="{{companyName}}" style="max-width: 80px; height: auto; margin-bottom: 15px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display: none; font-size: 48px; margin-bottom: 15px;">📧</div>
+            </div>
             <h1>Confirm Your Subscription</h1>
             <p>One more step to complete your subscription</p>
         </div>

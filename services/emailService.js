@@ -386,6 +386,14 @@ class EmailService {
     const template = this.renderTemplate('newsletter', {
       ...newsletterData,
       year: new Date().getFullYear(),
+      logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
+      companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+      currentDate: new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
       unsubscribeUrl: `${process.env.FRONTEND_URL}/unsubscribe?token={{unsubscribeToken}}`
     });
 
@@ -463,6 +471,7 @@ class EmailService {
         twitterUrl: process.env.TWITTER_URL || '#',
         linkedinUrl: process.env.LINKEDIN_URL || '#',
         instagramUrl: process.env.INSTAGRAM_URL || '#',
+        logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
         year: new Date().getFullYear()
       };
 
@@ -658,6 +667,7 @@ class EmailService {
         supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
         companyAddress: process.env.COMPANY_ADDRESS || '123 Farm Street, Agriculture City, AC 12345',
         contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
         year: new Date().getFullYear()
       };
 
