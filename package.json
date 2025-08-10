@@ -19,7 +19,7 @@
     "create:placeholders": "node scripts/createPlaceholderImages.js",
     "monitor:performance": "node scripts/performanceMonitor.js",
     "optimize:production": "node -e \"import('./utils/productionOptimization.js').then(m => m.cleanupFileSystem()).then(r => console.log('Cleanup results:', r))\"",
-    "deploy:check": "npm run lint && echo 'Deployment ready'",
+    "deploy:check": "npm run lint && node scripts/deploymentCheck.js",
     "health:check": "curl -f http://localhost:$PORT/health || exit 1",
     "env:validate": "node scripts/testEnvironmentValidation.js"
   },
