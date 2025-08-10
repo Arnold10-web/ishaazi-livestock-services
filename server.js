@@ -182,6 +182,23 @@ let emailService, notificationService, logger, performanceMonitor, healthChecker
  */
 async function initializeServer() {
   try {
+    // Validate environment variables before starting server
+    console.log('\n🔍 Validating environment configuration...');
+    const { validateEnvironment } = await import('./utils/environmentValidator.js');
+    const envValidation = validateEnvironment();
+    
+    if (!envValidation.isValid) {
+      console.error('\n❌ Environment validation failed!');
+      console.error('Server cannot start with invalid environment configuration.');
+      
+      if (process.env.NODE_ENV === 'production') {
+        console.error('Exiting due to environment validation failure in production...');
+        process.exit(1);
+      } else {
+        console.warn('⚠️  Continuing in development mode despite validation errors...');
+      }
+    }
+    
     // Initialize service modules first to ensure dependencies are available
     await initializeServices();
     
@@ -491,6 +508,27 @@ const passwordLimiter = rateLimit({
 });
 
 app.use('/api/password', passwordLimiter, passwordSetupRoutes); // Password setup routes
+
+// Static assets serving
+// Serve placeholder images and static assets from public directory
+const publicPath = resolve(__dirname, 'public');
+if (existsSync(publicPath)) {
+  console.log('[STATIC] Serving static assets from:', publicPath);
+  app.use(express.static(publicPath, {
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
+    etag: true,
+    lastModified: true,
+    cacheControl: true,
+    setHeaders: (res, path) => {
+      // Set proper headers for different file types
+      if (path.match(/\.(jpg|jpeg|png|gif|ico)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours for images
+      }
+    }
+  }));
+} else {
+  console.log('[STATIC] No public directory found, creating it...');
+}
 
 // Frontend serving (Production)
 // Serve static files from the React app build folder

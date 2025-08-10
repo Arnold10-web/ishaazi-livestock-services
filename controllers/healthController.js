@@ -6,6 +6,7 @@
 
 import mongoose from 'mongoose';
 import { getMetrics } from '../middleware/performanceMetrics.js';
+import { getEnvironmentHealth } from '../utils/environmentValidator.js';
 
 /**
  * System dependencies to check
@@ -90,6 +91,20 @@ const dependencies = {
             recommendation: 'Implement actual disk space monitoring'
           }
         };
+      } catch (error) {
+        return {
+          status: 'unhealthy',
+          error: error.message
+        };
+      }
+    }
+  },
+  
+  environment: {
+    name: 'Environment Configuration',
+    check: async () => {
+      try {
+        return getEnvironmentHealth();
       } catch (error) {
         return {
           status: 'unhealthy',

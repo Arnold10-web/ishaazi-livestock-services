@@ -75,7 +75,7 @@ tmp/
 temp/
 
 # Scripts directory (contains sensitive admin creation scripts)
-scripts/
+# scripts/
 
 # Database dumps and backups
 *.sql
