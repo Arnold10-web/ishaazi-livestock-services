@@ -451,7 +451,7 @@ class EmailService {
    * @param {Object} subscriberData - Subscriber information
    * @returns {Promise<Object>} Email send result
    */
-  async sendWelcomeEmail(subscriberEmail, subscriberData = {}) {
+  async sendWelcomeEmailToSubscriber(subscriberEmail, subscriberData = {}) {
     try {
       const subject = `Welcome to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} - You're All Set!`;
       
@@ -513,7 +513,7 @@ class EmailService {
    * @param {string} createdBy - Admin who created the account
    * @returns {Promise<Object>} Email send result
    */
-  async sendWelcomeEmail(companyEmail, tempPassword, createdBy) {
+  async sendWelcomeEmailToEditor(companyEmail, tempPassword, createdBy) {
     try {
       const subject = 'Welcome to Farming Magazine Admin Portal';
       const template = this.templates.get('welcome-admin');
@@ -865,8 +865,8 @@ export const sendNewsletter = (subscribers, newsletterData) => {
   return emailService.sendNewsletter(subscribers, newsletterData);
 };
 
-export const sendWelcomeEmail = (userEmail, userData = {}) => {
-  return emailService.sendWelcomeEmail(userEmail, userData);
+export const sendWelcomeEmailToSubscriber = (userEmail, userData = {}) => {
+  return emailService.sendWelcomeEmailToSubscriber(userEmail, userData);
 };
 
 export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken, subscriberData = {}) => {
@@ -875,7 +875,7 @@ export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken,
 
 // Export new company email functions
 export const sendWelcomeEmailToEditor = (companyEmail, tempPassword, createdBy) => {
-  return emailService.sendWelcomeEmail(companyEmail, tempPassword, createdBy);
+  return emailService.sendWelcomeEmailToEditor(companyEmail, tempPassword, createdBy);
 };
 
 export const sendPasswordResetEmail = (companyEmail, tempPassword, resetBy) => {

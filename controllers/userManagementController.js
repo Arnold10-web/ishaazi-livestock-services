@@ -8,7 +8,7 @@ import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendEmail } from '../services/emailService.js';
+import { sendWelcomeEmailToEditor, sendPasswordResetEmail, sendAccountStatusEmail } from '../services/emailService.js';
 
 /**
  * Create a new editor user (System Admin only)
@@ -71,7 +71,7 @@ export const createEditor = async (req, res) => {
         
         // Send welcome email with temporary password
         try {
-            await sendWelcomeEmail(companyEmail, tempPassword, req.user.username || req.user.email);
+            await sendWelcomeEmailToEditor(companyEmail, tempPassword, req.user.username || req.user.email);
         } catch (emailError) {
             console.error('Failed to send welcome email:', emailError);
             // Continue with user creation even if email fails

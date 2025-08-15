@@ -28,7 +28,7 @@ import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
 import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmail, sendSubscriptionConfirmation, sendEmail } from '../services/emailService.js';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation, sendEmail } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
 /**
@@ -2517,7 +2517,7 @@ export const createSubscriber = async (req, res) => {
 
         // Send welcome back email (don't let email errors block reactivation)
         try {
-          const emailResult = await sendWelcomeEmail(email, { subscriptionType });
+          const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
           if (!emailResult || !emailResult.success) {
             console.error('Failed to send welcome back email:', emailResult?.error || 'Unknown email error');
           }
@@ -2543,7 +2543,7 @@ export const createSubscriber = async (req, res) => {
 
     // Send welcome email (don't let email errors block subscription)
     try {
-      const emailResult = await sendWelcomeEmail(email, { subscriptionType });
+  const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
       if (!emailResult || !emailResult.success) {
         console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
       }
@@ -3939,7 +3939,7 @@ export const confirmSubscription = async (req, res) => {
 
     // Send welcome email
     try {
-      await sendWelcomeEmail(subscriber.email, { subscriptionType: subscriber.subscriptionType });
+  await sendWelcomeEmailToSubscriber(subscriber.email, { subscriptionType: subscriber.subscriptionType });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
