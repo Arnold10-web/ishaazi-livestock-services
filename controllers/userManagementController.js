@@ -677,15 +677,3 @@ async function sendWelcomeEmail(email, tempPassword, createdBy) {
         return false;
     }
 }
-
-
-export {
-    createEditor,
-    getAllUsers,
-    getUserById,
-    updateUser,
-    resetUserPassword,
-    toggleUserStatus,
-    deleteUser,
-    getUserStats
-};
