@@ -401,6 +401,8 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
 // Database connection - Non-blocking for health checks
 let dbConnected = false;
+let connectionAttempts = 0;
+const maxRetries = 5;
 
 // Monitor connection events
 mongoose.connection.on('connected', () => {
@@ -410,7 +412,7 @@ mongoose.connection.on('connected', () => {
 
 mongoose.connection.on('error', (err) => {
   dbConnected = false;
-  console.error('❌ MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err.message);
 });
 
 mongoose.connection.on('disconnected', () => {
@@ -418,9 +420,13 @@ mongoose.connection.on('disconnected', () => {
   console.log('⚠️ MongoDB disconnected');
 });
 
-connectDB()
-  .then(async () => {
-    console.log("Connected to MongoDB");
+const attemptConnection = async () => {
+  connectionAttempts++;
+  console.log(`🔄 Database connection attempt ${connectionAttempts}/${maxRetries}`);
+  
+  try {
+    await connectDB();
+    console.log("✅ Database connection established");
     dbConnected = true;
     
     // Run database migrations after successful connection
@@ -430,13 +436,23 @@ connectDB()
     } catch (error) {
       console.error('Migration error (non-fatal):', error.message);
     }
-  })
-  .catch(err => {
-    console.error('Database connection failed:', err.message);
+  } catch (err) {
+    console.error(`❌ Database connection attempt ${connectionAttempts} failed:`, err.message);
     dbConnected = false;
-    // Don't exit immediately - allow health checks to run
-    // The application will still function for basic health checks
-  });
+    
+    // Retry with exponential backoff if we haven't exceeded max retries
+    if (connectionAttempts < maxRetries) {
+      const retryDelay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000); // Max 30 seconds
+      console.log(`⏳ Retrying in ${retryDelay/1000} seconds...`);
+      setTimeout(attemptConnection, retryDelay);
+    } else {
+      console.error('💥 Max database connection attempts reached. Service will continue without database.');
+    }
+  }
+};
+
+// Start connection attempts
+attemptConnection();
 
 // GridFS file serving routes (replaced old filesystem routes)
 // All files are now served through GridFS via API endpoints in routes
@@ -590,6 +606,7 @@ app.get('/api/diagnostic', async (req, res) => {
     
     let userCount = 'unknown';
     let sampleUsers = [];
+    let connectionDetails = {};
     
     if (mongoState === 1) {
       try {
@@ -601,21 +618,68 @@ app.get('/api/diagnostic', async (req, res) => {
       }
     }
     
+    // Get connection details
+    if (mongoose.connection) {
+      connectionDetails = {
+        host: mongoose.connection.host,
+        name: mongoose.connection.name,
+        port: mongoose.connection.port,
+        readyState: mongoose.connection.readyState
+      };
+    }
+    
     res.json({
       database: {
         connected: dbConnected,
         readyState: mongoState,
-        state: stateNames[mongoState] || 'unknown'
+        state: stateNames[mongoState] || 'unknown',
+        connectionAttempts,
+        maxRetries,
+        details: connectionDetails
       },
       users: {
         count: userCount,
         samples: sampleUsers
+      },
+      environment: {
+        mongoUriProvided: !!process.env.MONGO_URI,
+        dbName: process.env.DB_NAME || 'not set',
+        nodeEnv: process.env.NODE_ENV
       },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({
       error: 'Diagnostic failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Manual connection retry endpoint
+app.post('/api/diagnostic/retry-connection', async (req, res) => {
+  try {
+    if (dbConnected) {
+      return res.json({
+        message: 'Database already connected',
+        connected: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    console.log('🔄 Manual connection retry requested');
+    await attemptConnection();
+    
+    res.json({
+      message: 'Connection retry initiated',
+      attempts: connectionAttempts,
+      connected: dbConnected,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Connection retry failed',
       message: error.message,
       timestamp: new Date().toISOString()
     });
