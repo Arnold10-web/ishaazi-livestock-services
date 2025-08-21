@@ -401,6 +401,23 @@ app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
 // Database connection - Non-blocking for health checks
 let dbConnected = false;
+
+// Monitor connection events
+mongoose.connection.on('connected', () => {
+  dbConnected = true;
+  console.log('✅ MongoDB connected successfully');
+});
+
+mongoose.connection.on('error', (err) => {
+  dbConnected = false;
+  console.error('❌ MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  dbConnected = false;
+  console.log('⚠️ MongoDB disconnected');
+});
+
 connectDB()
   .then(async () => {
     console.log("Connected to MongoDB");
