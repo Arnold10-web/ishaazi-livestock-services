@@ -77,7 +77,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'development';
  */
 
 import express from 'express';
-
+import mongoose from 'mongoose';
 
 import cors from 'cors';
 import helmet from 'helmet';
@@ -558,6 +558,51 @@ app.get('/health', (req, res) => {
   
   // Return 200 even if DB is disconnected - service is still responsive
   res.status(200).json(health);
+});
+
+// Diagnostic endpoint to check database and users
+app.get('/api/diagnostic', async (req, res) => {
+  try {
+    const mongoState = mongoose.connection.readyState;
+    const stateNames = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting', 
+      3: 'disconnecting'
+    };
+    
+    let userCount = 'unknown';
+    let sampleUsers = [];
+    
+    if (mongoState === 1) {
+      try {
+        const User = (await import('./models/User.js')).default;
+        userCount = await User.countDocuments();
+        sampleUsers = await User.find({}, 'username companyEmail role isActive').limit(5).lean();
+      } catch (dbError) {
+        console.error('Database query error:', dbError.message);
+      }
+    }
+    
+    res.json({
+      database: {
+        connected: dbConnected,
+        readyState: mongoState,
+        state: stateNames[mongoState] || 'unknown'
+      },
+      users: {
+        count: userCount,
+        samples: sampleUsers
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Diagnostic failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Production metrics endpoint (for monitoring tools)
