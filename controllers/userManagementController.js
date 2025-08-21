@@ -680,12 +680,12 @@ async function sendWelcomeEmail(email, tempPassword, createdBy) {
 
 
 export {
-    createAdmin,
-    updateAdmin,
-    deleteAdmin,
-    getAllAdmins,
-    getAdminById,
-    resetAdminPassword,
-    updateAdminStatus,
-    updateAdminProfile
+    createEditor,
+    getAllUsers,
+    getUserById,
+    updateUser,
+    resetUserPassword,
+    toggleUserStatus,
+    deleteUser,
+    getUserStats
 };
