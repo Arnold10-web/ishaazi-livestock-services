@@ -40,19 +40,28 @@ if (!vapidPublic || !vapidPrivate) {
     const webpush = (await import('web-push')).default;
     const vapidKeys = webpush.generateVAPIDKeys();
     
-    // Append to .env file
-    const newEnvContent = `\n# Push Notification VAPID Keys
+    // In production, only set environment variables (Railway has ephemeral filesystem)
+    if (process.env.NODE_ENV === 'production') {
+        console.log('⚠️ VAPID keys missing in production. Please set environment variables:');
+        console.log('PUSH_NOTIFICATION_VAPID_PUBLIC=<public_key>');
+        console.log('PUSH_NOTIFICATION_VAPID_PRIVATE=<private_key>');
+        
+        // Use generated keys for this session only
+        process.env.PUSH_NOTIFICATION_VAPID_PUBLIC = vapidKeys.publicKey;
+        process.env.PUSH_NOTIFICATION_VAPID_PRIVATE = vapidKeys.privateKey;
+    } else {
+        // Development: append to .env file
+        const newEnvContent = `\n# Push Notification VAPID Keys
 PUSH_NOTIFICATION_VAPID_PUBLIC=${vapidKeys.publicKey}
 PUSH_NOTIFICATION_VAPID_PRIVATE=${vapidKeys.privateKey}`;
 
-    fs.appendFileSync(envPath, newEnvContent);
-    
-    // Load the new environment variables
-    process.env.PUSH_NOTIFICATION_VAPID_PUBLIC = vapidKeys.publicKey;
-    process.env.PUSH_NOTIFICATION_VAPID_PRIVATE = vapidKeys.privateKey;
-    
-    if (process.env.NODE_ENV !== 'production') {
-        console.log('ℹ️ New VAPID keys generated');
+        fs.appendFileSync(envPath, newEnvContent);
+        
+        // Load the new environment variables
+        process.env.PUSH_NOTIFICATION_VAPID_PUBLIC = vapidKeys.publicKey;
+        process.env.PUSH_NOTIFICATION_VAPID_PRIVATE = vapidKeys.privateKey;
+        
+        console.log('ℹ️ New VAPID keys generated and saved to .env');
     }
 }
 
@@ -668,7 +677,8 @@ app.post('/api/diagnostic/retry-connection', async (req, res) => {
       });
     }
     
-    console.log('🔄 Manual connection retry requested');
+    console.log('🔄 Manual connection retry requested - resetting attempts');
+    connectionAttempts = 0; // Reset counter for manual retry
     await attemptConnection();
     
     res.json({

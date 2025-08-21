@@ -8,13 +8,13 @@ const connectDB = async () => {
         console.log('Connection string format:', process.env.MONGO_URI ? 'provided' : 'missing');
         
         const conn = await mongoose.connect(process.env.MONGO_URI, {
-            dbName: process.env.DB_NAME, // Explicitly set the database name
+            dbName: process.env.DB_NAME || 'ishaazi-livestock', // Default database name
             maxPoolSize: 10, // Maintain up to 10 socket connections
             serverSelectionTimeoutMS: 30000, // Increased to 30 seconds
             socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
             connectTimeoutMS: 30000, // How long to wait for initial connection
             bufferCommands: false, // Disable mongoose buffering
-            bufferMaxEntries: 0, // Disable mongoose buffering
+            bufferMaxEntries: 0, // Fixed: correct camelCase
             retryWrites: true, // Retry failed writes
             retryReads: true // Retry failed reads
         });
