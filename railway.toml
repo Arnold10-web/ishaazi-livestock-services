@@ -4,5 +4,5 @@ builder = "NIXPACKS"
 [deploy]
 startCommand = "npm run start:production"
 healthcheckPath = "/health"
-healthcheckTimeout = 10
+healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

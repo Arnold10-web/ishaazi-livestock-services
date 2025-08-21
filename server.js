@@ -399,10 +399,12 @@ import { httpCacheHeaders } from './middleware/enhancedCache.js';
 app.use(staticCacheHeaders);
 app.use('/api/static', httpCacheHeaders(86400)); // 24 hours for static content
 
-// Database connection
+// Database connection - Non-blocking for health checks
+let dbConnected = false;
 connectDB()
   .then(async () => {
     console.log("Connected to MongoDB");
+    dbConnected = true;
     
     // Run database migrations after successful connection
     try {
@@ -414,7 +416,9 @@ connectDB()
   })
   .catch(err => {
     console.error('Database connection failed:', err.message);
-    process.exit(1);
+    dbConnected = false;
+    // Don't exit immediately - allow health checks to run
+    // The application will still function for basic health checks
   });
 
 // GridFS file serving routes (replaced old filesystem routes)
@@ -543,9 +547,17 @@ if (existsSync(frontendBuildPath)) {
 
 // GridFS file upload is handled through content routes
 
-// Health check route
+// Health check route - Available even if DB is not connected
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+  const health = {
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: dbConnected ? 'connected' : 'disconnected'
+  };
+  
+  // Return 200 even if DB is disconnected - service is still responsive
+  res.status(200).json(health);
 });
 
 // Production metrics endpoint (for monitoring tools)
