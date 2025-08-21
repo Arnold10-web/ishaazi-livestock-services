@@ -205,11 +205,32 @@ ActivityLogSchema.index({ timestamp: -1 }); // For general time-based queries
  */
 ActivityLogSchema.statics.logActivity = async function(activityData) {
     try {
+        // Check if MongoDB connection is ready
+        if (mongoose.connection.readyState !== 1) {
+            console.log('Database not ready, queueing activity log:', activityData.action);
+            // Store in memory queue or simply log to console for now
+            console.log('Activity Log (DB unavailable):', {
+                username: activityData.username,
+                action: activityData.action,
+                resource: activityData.resource,
+                timestamp: new Date().toISOString()
+            });
+            return null;
+        }
+        
         const log = new this(activityData);
         await log.save();
         return log;
     } catch (error) {
-        console.error('Failed to log activity:', error);
+        console.error('Failed to log activity:', error.message);
+        // Log essential details to console as fallback
+        console.log('Activity Log (fallback):', {
+            username: activityData.username,
+            action: activityData.action,
+            resource: activityData.resource,
+            timestamp: new Date().toISOString(),
+            error: error.message
+        });
         // Don't throw error to prevent disrupting main application flow
         return null;
     }
