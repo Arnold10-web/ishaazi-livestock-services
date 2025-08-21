@@ -678,38 +678,14 @@ async function sendWelcomeEmail(email, tempPassword, createdBy) {
     }
 }
 
-/**
- * Send password reset email
- */
-async function sendPasswordResetEmail(email, tempPassword, resetBy) {
-    try {
-        // Use the proper password reset template
-        await sendEmail({
-            to: email,
-            subject: 'Admin Account Password Reset',
-            templateName: 'password-reset-admin',
-            templateData: {
-                companyEmail: email,
-                tempPassword: tempPassword,
-                resetBy: resetBy,
-                companyName: 'Ishaazi Livestock Services',
-                resetDate: new Date().toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }),
-                loginUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/login`,
-                supportEmail: process.env.SUPPORT_EMAIL || 'support@ishaazilivestockservices.com'
-            }
-        });
-        
-        console.log(`Password reset email sent to: ${email}`);
-        return true;
-    } catch (error) {
-        console.error('Error sending password reset email:', error);
-        return false;
-    }
-}
+
+export {
+    createAdmin,
+    updateAdmin,
+    deleteAdmin,
+    getAllAdmins,
+    getAdminById,
+    resetAdminPassword,
+    updateAdminStatus,
+    updateAdminProfile
+};
