@@ -23,7 +23,7 @@ const connectDB = async () => {
             socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
             connectTimeoutMS: 30000, // How long to wait for initial connection
             bufferCommands: false, // Disable mongoose buffering
-            bufferMaxEntries: 0, // Fixed: correct camelCase spelling
+            // Removed bufferMaxEntries - may be incompatible with current mongoose version
             retryWrites: true, // Retry failed writes
             retryReads: true // Retry failed reads
         });
