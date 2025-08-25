@@ -463,8 +463,8 @@ class EmailService {
         frequency: this.getSubscriptionFrequency(subscriberData.subscriptionType),
         websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
         contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
-        companyAddress: process.env.COMPANY_ADDRESS || '123 Farm Street, Agriculture City, AC 12345',
+        contactPhone: process.env.CONTACT_PHONE || '+256 780 702 921',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Semawata Road, Ntinda, Kampala, Uganda',
         unsubscribeUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
         preferencesUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/preferences?email=${encodeURIComponent(subscriberEmail)}`,
         facebookUrl: process.env.FACEBOOK_URL || '#',
@@ -665,8 +665,8 @@ class EmailService {
         confirmationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-subscription?token=${confirmationToken}&email=${encodeURIComponent(subscriberEmail)}`,
         contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
         supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
-        companyAddress: process.env.COMPANY_ADDRESS || '123 Farm Street, Agriculture City, AC 12345',
-        contactPhone: process.env.CONTACT_PHONE || '(555) 123-4567',
+        companyAddress: process.env.COMPANY_ADDRESS || 'Semawata Road, Ntinda, Kampala, Uganda',
+        contactPhone: process.env.CONTACT_PHONE || '+256 780 702 921',
         logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
         year: new Date().getFullYear()
       };

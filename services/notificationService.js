@@ -250,7 +250,7 @@ const createNotificationTemplate = (title, description, contentType, contentUrl,
         
         <div class="footer">
             <p><strong>Ishaazi Livestock Services</strong></p>
-            <p>📧 info@ishaazilivestockservices.com | 📞 +256-xxx-xxx-xxx</p>
+            <p>📧 info@ishaazilivestockservices.com | 📞 +256 780 702 921</p>
             <p>🏢 Kampala, Uganda</p>
             
             <div class="unsubscribe">

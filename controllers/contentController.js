@@ -3436,7 +3436,7 @@ export const registerForEvent = async (req, res) => {
           eventLocation: event.location || 'To be announced',
           registrationId: savedRegistration._id.toString().slice(-8).toUpperCase(),
           companyName: 'Ishaazi Livestock Services',
-          contactEmail: process.env.SUPPORT_EMAIL || 'events@ishaazilivestockservices.com'
+          contactEmail: process.env.SUPPORT_EMAIL || 'info@ishaazilivestockservices.com'
         }
       });
       
