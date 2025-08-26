@@ -199,7 +199,7 @@ router.post(
   '/basics',
   authenticateToken, requireRole(['system_admin', 'editor']),
   ...storeInGridFS('image', ['image/*'], { optional: true }),
-  ...storeInGridFS('media', ['video/*', 'audio/*']),
+  ...storeInGridFS('media', ['video/*', 'audio/*'], { optional: false }), // Make media required
   validateFileUpload,
   invalidateCache(['basics']),
   createBasic
