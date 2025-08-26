@@ -394,7 +394,7 @@ class EmailService {
         month: 'long', 
         day: 'numeric' 
       }),
-      unsubscribeUrl: `${process.env.FRONTEND_URL}/unsubscribe?token={{unsubscribeToken}}`
+      unsubscribeUrl: `${process.env.BACKEND_URL || process.env.API_URL || 'https://ishaazi-livestock-services-production.up.railway.app'}/api/content/unsubscribe?token={{unsubscribeToken}}`
     });
 
     // Send in small batches to avoid rate limiting
@@ -465,7 +465,7 @@ class EmailService {
         contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
         contactPhone: process.env.CONTACT_PHONE || '+256 780 702 921',
         companyAddress: process.env.COMPANY_ADDRESS || 'Semawata Road, Ntinda, Kampala, Uganda',
-        unsubscribeUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
+        unsubscribeUrl: `${process.env.BACKEND_URL || process.env.API_URL || 'https://ishaazi-livestock-services-production.up.railway.app'}/api/content/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
         preferencesUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/preferences?email=${encodeURIComponent(subscriberEmail)}`,
         facebookUrl: process.env.FACEBOOK_URL || '#',
         twitterUrl: process.env.TWITTER_URL || '#',

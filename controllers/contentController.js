@@ -27,6 +27,7 @@ import Auction from '../models/Auction.js';
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
+import ActivityLog from '../models/ActivityLog.js';
 import nodemailer from 'nodemailer';
 import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation, sendEmail } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
@@ -4098,9 +4099,41 @@ export const confirmSubscription = async (req, res) => {
  */
 export const unsubscribeHandler = async (req, res) => {
   try {
-    const { token, email } = req.body;
+    // Handle both GET (query params) and POST (body) requests
+    const { token, email } = req.method === 'GET' ? req.query : req.body;
     
     if (!token && !email) {
+      // For GET requests, show a user-friendly error page
+      if (req.method === 'GET') {
+        return res.status(400).send(`
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Invalid Unsubscribe Link - Ishaazi Livestock Services</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
+              .icon { font-size: 48px; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 16px; }
+              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+              .btn:hover { background: #5a67d8; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="icon">⚠️</div>
+              <h1>Invalid Unsubscribe Link</h1>
+              <p>The unsubscribe link appears to be invalid or incomplete. Please check your email for the correct link or contact our support team.</p>
+              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+      
       return res.status(400).json({
         success: false,
         message: 'Unsubscribe token or email is required'
@@ -4118,6 +4151,37 @@ export const unsubscribeHandler = async (req, res) => {
     }
 
     if (!subscriber) {
+      // For GET requests, show a user-friendly error page
+      if (req.method === 'GET') {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Subscriber Not Found - Ishaazi Livestock Services</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
+              .icon { font-size: 48px; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 16px; }
+              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+              .btn:hover { background: #5a67d8; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="icon">❓</div>
+              <h1>Subscriber Not Found</h1>
+              <p>We couldn't find your subscription record. You may have already unsubscribed or the link may be expired.</p>
+              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+      
       return res.status(404).json({
         success: false,
         message: 'Subscriber not found'
@@ -4125,6 +4189,37 @@ export const unsubscribeHandler = async (req, res) => {
     }
 
     if (!subscriber.isActive) {
+      // For GET requests, show a user-friendly message
+      if (req.method === 'GET') {
+        return res.status(200).send(`
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Already Unsubscribed - Ishaazi Livestock Services</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
+              .icon { font-size: 48px; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 16px; }
+              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+              .btn:hover { background: #5a67d8; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="icon">✅</div>
+              <h1>Already Unsubscribed</h1>
+              <p>You have already unsubscribed from our newsletter. You will not receive any future emails from us.</p>
+              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+      
       return res.status(200).json({
         success: true,
         message: 'You are already unsubscribed'
@@ -4136,6 +4231,57 @@ export const unsubscribeHandler = async (req, res) => {
     subscriber.unsubscribedAt = new Date();
     await subscriber.save();
 
+    // Log the unsubscribe activity
+    await ActivityLog.logActivity({
+      userId: null,
+      username: 'anonymous',
+      userRole: 'subscriber',
+      action: 'newsletter_unsubscribed',
+      resource: 'subscriber',
+      details: { 
+        email: subscriber.email,
+        method: req.method,
+        unsubscribedAt: subscriber.unsubscribedAt
+      }
+    });
+
+    // For GET requests, show a user-friendly success page
+    if (req.method === 'GET') {
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Successfully Unsubscribed - Ishaazi Livestock Services</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+            h1 { color: #333; margin-bottom: 16px; }
+            p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+            .btn { display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .btn:hover { background: #059669; }
+            .subscribe-link { display: inline-block; padding: 8px 16px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 6px; margin-left: 10px; border: 1px solid #d1d5db; }
+            .subscribe-link:hover { background: #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">✅</div>
+            <h1>Successfully Unsubscribed</h1>
+            <p>You have been successfully unsubscribed from our newsletter. We're sorry to see you go!</p>
+            <p>You will no longer receive emails from Ishaazi Livestock Services. If you change your mind, you can always subscribe again on our website.</p>
+            <div style="margin-top: 30px;">
+              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
+              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/subscribe" class="subscribe-link">Subscribe Again</a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
     res.status(200).json({
       success: true,
       message: 'You have been successfully unsubscribed from our newsletter'
@@ -4143,6 +4289,38 @@ export const unsubscribeHandler = async (req, res) => {
 
   } catch (error) {
     console.error('Error processing unsubscribe:', error);
+    
+    // For GET requests, show a user-friendly error page
+    if (req.method === 'GET') {
+      return res.status(500).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Error - Ishaazi Livestock Services</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+            h1 { color: #333; margin-bottom: 16px; }
+            p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+            .btn { display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .btn:hover { background: #dc2626; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h1>Something Went Wrong</h1>
+            <p>We encountered an error while processing your unsubscribe request. Please try again later or contact our support team.</p>
+            <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to process unsubscribe request',

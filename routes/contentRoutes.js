@@ -324,7 +324,8 @@ router.put('/subscribers/bulk', authenticateToken, requireRole(['system_admin', 
 
 // Email Automation Routes
 router.get('/confirm-subscription', confirmSubscription);
-router.post('/unsubscribe', unsubscribeHandler);
+router.get('/unsubscribe', unsubscribeHandler);  // GET route for email links
+router.post('/unsubscribe', unsubscribeHandler); // POST route for forms
 router.put('/email-preferences', updateEmailPreferences);
 
 // Newsletter Routes

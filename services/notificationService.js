@@ -257,8 +257,8 @@ const createNotificationTemplate = (title, description, contentType, contentUrl,
                 <p>You're receiving this because you subscribed to content notifications.</p>
                 <p>Email sent to: ${subscriberEmail}</p>
                 <p>
-                    <a href="${baseUrl}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}&source=notification">Unsubscribe</a> | 
-                    <a href="${baseUrl}/preferences?email=${encodeURIComponent(subscriberEmail)}">Manage Preferences</a>
+                    <a href="${baseUrl}/api/content/unsubscribe?email=${encodeURIComponent(subscriberEmail)}&source=notification">Unsubscribe</a> | 
+                    <a href="${baseUrl}/api/content/preferences?email=${encodeURIComponent(subscriberEmail)}">Manage Preferences</a>
                 </p>
             </div>
         </div>
