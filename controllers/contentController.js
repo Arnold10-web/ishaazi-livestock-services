@@ -856,6 +856,21 @@ export const createNews = async (req, res) => {
 
     try {
       const savedNews = await newNews.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['news', 'content', 'dashboard', 'admin-news']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'News created successfully', savedNews, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1034,6 +1049,21 @@ export const createBasic = async (req, res) => {
 
     try {
       const savedBasic = await newBasic.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['basics', 'content', 'dashboard', 'admin-basics']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Basic media created successfully', savedBasic, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1257,6 +1287,21 @@ export const createFarm = async (req, res) => {
     });
 
     const savedFarm = await newFarm.save();
+    
+    // Force cache invalidation for immediate refresh
+    try {
+      // Clear memory cache if it exists
+      if (global.memoryCache) {
+        global.memoryCache.flushAll();
+      }
+      
+      // Clear enhanced cache
+      const { invalidateCache } = await import('../middleware/enhancedCache.js');
+      await invalidateCache(['farms', 'content', 'dashboard', 'admin-farms']);
+    } catch (cacheError) {
+      console.warn('Cache invalidation warning:', cacheError.message);
+    }
+    
     sendResponse(res, true, 'Farm created successfully', savedFarm);
   } catch (error) {
     sendResponse(res, false, 'Failed to create farm', null, error.message);
@@ -1518,6 +1563,20 @@ export const createMagazine = async (req, res) => {
       const savedMagazine = await newMagazine.save();
       console.log('📖 createMagazine: Saved successfully');
       
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['magazines', 'content', 'dashboard', 'admin-magazines']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Magazine created successfully', savedMagazine, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1724,6 +1783,21 @@ export const createPiggery = async (req, res) => {
 
     try {
       const savedPiggery = await newPiggery.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['piggeries', 'content', 'dashboard', 'admin-piggeries']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Piggery content created successfully', savedPiggery, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1916,6 +1990,21 @@ export const createGoat = async (req, res) => {
 
     try {
       const savedGoat = await newGoat.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['goats', 'content', 'dashboard', 'admin-goats']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -2108,6 +2197,21 @@ export const createDairy = async (req, res) => {
 
     try {
       const savedDairy = await newDairy.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['dairies', 'content', 'dashboard', 'admin-dairies']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -2298,6 +2402,21 @@ export const createBeef = async (req, res) => {
 
     try {
       const savedBeef = await newBeef.save();
+      
+      // Force cache invalidation for immediate refresh
+      try {
+        // Clear memory cache if it exists
+        if (global.memoryCache) {
+          global.memoryCache.flushAll();
+        }
+        
+        // Clear enhanced cache
+        const { invalidateCache } = await import('../middleware/enhancedCache.js');
+        await invalidateCache(['beefs', 'content', 'dashboard', 'admin-beefs']);
+      } catch (cacheError) {
+        console.warn('Cache invalidation warning:', cacheError.message);
+      }
+      
       sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -2929,6 +3048,21 @@ export const createEvent = async (req, res) => {
     });
 
     const savedEvent = await newEvent.save();
+    
+    // Force cache invalidation for immediate refresh
+    try {
+      // Clear memory cache if it exists
+      if (global.memoryCache) {
+        global.memoryCache.flushAll();
+      }
+      
+      // Clear enhanced cache
+      const { invalidateCache } = await import('../middleware/enhancedCache.js');
+      await invalidateCache(['events', 'content', 'dashboard', 'admin-events']);
+    } catch (cacheError) {
+      console.warn('Cache invalidation warning:', cacheError.message);
+    }
+    
     sendResponse(res, true, 'Event created successfully', savedEvent);
   } catch (error) {
     console.error("Error creating event:", error);
