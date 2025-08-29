@@ -77,19 +77,30 @@ export const uploadMedia = multer({
 
 // Helper function for image optimization
 const optimizeImage = async (file) => {
+  // Add null checks to prevent errors
+  if (!file || !file.buffer || !file.mimetype) {
+    console.warn('Skipping image optimization: file, buffer, or mimetype is missing');
+    return file;
+  }
+  
   if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/gif') {
     // Skip optimization for very large files to prevent memory issues
     if (file.buffer.length > 5 * 1024 * 1024) { // 5MB threshold
       console.warn(`Skipping optimization for large image: ${file.originalname}`);
     } else {
-      const optimized = await sharp(file.buffer)
-        .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer();
-      
-      file.buffer = optimized;
-      file.mimetype = 'image/webp';
-      file.originalname = file.originalname.replace(/\.[^/.]+$/, '.webp');
+      try {
+        const optimized = await sharp(file.buffer)
+          .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 85 })
+          .toBuffer();
+        
+        file.buffer = optimized;
+        file.mimetype = 'image/webp';
+        file.originalname = file.originalname.replace(/\.[^/.]+$/, '.webp');
+      } catch (error) {
+        console.warn('Image optimization failed:', error.message);
+        // Continue with original file if optimization fails
+      }
     }
   }
   return file;
@@ -192,8 +203,18 @@ export const storeInGridFS = (fieldName, allowedMimeTypes = [], options = {}) =>
       const storedFiles = [];
 
       for (const file of files.filter(Boolean)) {
+        // Add additional null checks before optimization
+        if (!file || !file.buffer) {
+          console.warn('Skipping file processing: file or buffer is missing');
+          continue;
+        }
+        
         // For images, optimize before storing
-        await optimizeImage(file);
+        try {
+          await optimizeImage(file);
+        } catch (optimizeError) {
+          console.warn('Image optimization failed, continuing with original file:', optimizeError.message);
+        }
 
         const stored = await gridFSStorage.store(file);
         storedFiles.push(stored);
