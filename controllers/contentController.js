@@ -1041,7 +1041,9 @@ export const createBasic = async (req, res) => {
       title,
       description,
       mediaFile: mediaFileId, // GridFS file ID for main media
+      fileUrl: `/api/files/${mediaFileId}`, // Provide URL for compatibility
       thumbnail: thumbnailId, // GridFS file ID for thumbnail
+      imageUrl: thumbnailId ? `/api/files/${thumbnailId}` : null, // Provide thumbnail URL
       fileType,
       duration: duration ? parseInt(duration) : null,
       published: published === 'true' || published === true,

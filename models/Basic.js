@@ -42,15 +42,15 @@ const basicSchema = new mongoose.Schema(
     
     fileUrl: { 
       type: String, 
-      required: true,
+      required: false, // Made optional since we use GridFS mediaFile
       trim: true 
-    }, // Path to the uploaded video/audio file
+    }, // Path to the uploaded video/audio file (legacy field)
     
     imageUrl: { 
       type: String, 
       default: null,
       trim: true 
-    }, // Path to the thumbnail or preview image
+    }, // Path to the thumbnail or preview image (legacy field)
     
     fileType: { 
       type: String, 
