@@ -371,7 +371,7 @@ app.use(helmet({
  */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,    // 15-minute sliding window
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,  // Environment-specific limits
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000,  // Increased production limit for authenticated users
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,        // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,         // Disable the `X-RateLimit-*` headers

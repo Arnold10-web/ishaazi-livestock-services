@@ -134,7 +134,7 @@ export const isValidObjectId = (id) => {
  */
 export const sensitiveOperationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  max: process.env.NODE_ENV === 'production' ? 300 : 1000, // Increased production limit for file uploads
   message: {
     success: false,
     message: 'Too many sensitive operations from this IP, please try again later.',

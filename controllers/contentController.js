@@ -1008,6 +1008,15 @@ export const createBasic = async (req, res) => {
   try {
     const { title, description, fileType, metadata, published, duration } = req.body;
 
+    // Log incoming data for debugging
+    console.log('📊 Basic content creation request:', {
+      title,
+      fileType,
+      hasFiles: !!req.files,
+      filesKeys: req.files ? Object.keys(req.files) : null,
+      bodyKeys: Object.keys(req.body)
+    });
+
     // For basic content, we expect two possible uploads: 'image' (thumbnail) and 'media' (video/audio)
     // With the corrected middleware, we check both req.file (if only one was uploaded) and req.files
     let imageFile = null;
@@ -1018,6 +1027,13 @@ export const createBasic = async (req, res) => {
       // If multiple files were uploaded
       imageFile = req.files.image?.[0];
       mediaFile = req.files.media?.[0];
+      console.log('📁 Files detected:', {
+        hasImage: !!imageFile,
+        hasMedia: !!mediaFile,
+        imageSize: imageFile?.size,
+        mediaSize: mediaFile?.size,
+        mediaType: mediaFile?.mimetype
+      });
     } else if (req.file) {
       // If only one file was uploaded, determine which one based on fieldname
       if (req.file.fieldname === 'image') {
@@ -1029,6 +1045,12 @@ export const createBasic = async (req, res) => {
 
     // Ensure required fields are provided
     if (!title || !description || !fileType || !mediaFile) {
+      console.log('❌ Missing required fields:', {
+        title: !!title,
+        description: !!description,
+        fileType: !!fileType,
+        mediaFile: !!mediaFile
+      });
       return sendResponse(res, false, 'Title, description, file type, and media file are required.', null, null, 400);
     }
 
