@@ -1008,19 +1008,33 @@ export const createBasic = async (req, res) => {
   try {
     const { title, description, fileType, metadata, published, duration } = req.body;
 
-    // Extract uploaded files
-    const files = req.files || {};
-    const image = files.image?.[0]; // Thumbnail
-    const media = files.media?.[0]; // Video/Audio
+    // For basic content, we expect two possible uploads: 'image' (thumbnail) and 'media' (video/audio)
+    // With the corrected middleware, we check both req.file (if only one was uploaded) and req.files
+    let imageFile = null;
+    let mediaFile = null;
 
-    // Ensure media file is provided
-    if (!title || !description || !fileType || !media) {
+    // The middleware might attach files differently depending on which files were uploaded
+    if (req.files) {
+      // If multiple files were uploaded
+      imageFile = req.files.image?.[0];
+      mediaFile = req.files.media?.[0];
+    } else if (req.file) {
+      // If only one file was uploaded, determine which one based on fieldname
+      if (req.file.fieldname === 'image') {
+        imageFile = req.file;
+      } else if (req.file.fieldname === 'media') {
+        mediaFile = req.file;
+      }
+    }
+
+    // Ensure required fields are provided
+    if (!title || !description || !fileType || !mediaFile) {
       return sendResponse(res, false, 'Title, description, file type, and media file are required.', null, null, 400);
     }
 
     // Get GridFS file IDs
-    const mediaFileId = media.id; // GridFS file ID for main media
-    const thumbnailId = image ? image.id : null; // GridFS file ID for thumbnail
+    const mediaFileId = mediaFile.id; // GridFS file ID for main media
+    const thumbnailId = imageFile ? imageFile.id : null; // GridFS file ID for thumbnail
 
     // Setup error handler to cleanup files if creation fails
     const handleError = async (error) => {

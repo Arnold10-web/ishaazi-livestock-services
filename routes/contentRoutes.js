@@ -198,10 +198,8 @@ router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'edit
 router.post(
   '/basics',
   authenticateToken, requireRole(['system_admin', 'editor']),
-  ...storeInGridFS([
-    { name: 'image', mimeTypes: ['image/*'], optional: true },
-    { name: 'media', mimeTypes: ['video/*', 'audio/*'], optional: false }
-  ]),
+  ...storeInGridFS('image', ['image/*'], { optional: true }),
+  ...storeInGridFS('media', ['video/*', 'audio/*'], { optional: false }),
   validateFileUpload,
   invalidateCache(['basics']),
   createBasic
