@@ -243,4 +243,107 @@ export const storeInGridFS = (fieldName, allowedMimeTypes = [], options = {}) =>
   return [uploadMiddleware, enhancedGridFSMiddleware];
 };
 
+// Function to handle multiple different file fields (for basic content that needs both image and media)
+export const storeMultipleFieldsInGridFS = (fieldConfigs = []) => {
+  // fieldConfigs format: [{ fieldName: 'image', allowedMimeTypes: ['image/*'], optional: true }, ...]
+  
+  const uploadInstance = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+      // Find the matching field configuration
+      const fieldConfig = fieldConfigs.find(config => config.fieldName === file.fieldname);
+      
+      if (!fieldConfig) {
+        return cb(new Error(`Invalid field name. Expected one of: ${fieldConfigs.map(c => c.fieldName).join(', ')}`), false);
+      }
+
+      // Check mime types if specified
+      if (fieldConfig.allowedMimeTypes && fieldConfig.allowedMimeTypes.length > 0) {
+        const isAllowed = fieldConfig.allowedMimeTypes.some(type => {
+          if (type.endsWith('/*')) {
+            return file.mimetype.startsWith(type.replace('/*', '/'));
+          }
+          return file.mimetype === type;
+        });
+        
+        if (!isAllowed) {
+          return cb(new Error(`Invalid file type for ${file.fieldname}. Allowed: ${fieldConfig.allowedMimeTypes.join(', ')}`), false);
+        }
+      }
+
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB max for any file
+      files: fieldConfigs.length
+    }
+  });
+
+  // Use fields() method to handle multiple different field names
+  const fieldArray = fieldConfigs.map(config => ({ name: config.fieldName, maxCount: 1 }));
+  
+  const uploadMiddleware = (req, res, next) => {
+    uploadInstance.fields(fieldArray)(req, res, (err) => {
+      if (err) {
+        return next(err);
+      }
+      next();
+    });
+  };
+
+  // Enhanced GridFS storage middleware for multiple fields
+  const enhancedMultiFieldGridFSMiddleware = async (req, res, next) => {
+    try {
+      // If no files uploaded, continue
+      if (!req.files || Object.keys(req.files).length === 0) {
+        return next();
+      }
+
+      // Check if mongoose is connected
+      if (mongoose.connection.readyState !== 1) {
+        throw new Error('Database not connected');
+      }
+
+      const storedFiles = {};
+
+      // Process each field
+      for (const [fieldName, fileArray] of Object.entries(req.files)) {
+        if (fileArray && fileArray.length > 0) {
+          const file = fileArray[0]; // Take first file for each field
+          
+          // Optimize images before storing
+          try {
+            await optimizeImage(file);
+          } catch (optimizeError) {
+            console.warn(`Image optimization failed for ${fieldName}, continuing with original file:`, optimizeError.message);
+          }
+
+          const stored = await gridFSStorage.store(file);
+          storedFiles[fieldName] = stored;
+          
+          console.log(`🔍 GridFS: Stored ${fieldName} file with ID:`, stored.id);
+        }
+      }
+
+      // Attach stored file info to request for backward compatibility
+      req.uploadedFiles = storedFiles;
+      
+      // Also set req.files with GridFS info for easy access
+      for (const [fieldName, stored] of Object.entries(storedFiles)) {
+        if (req.files[fieldName]) {
+          req.files[fieldName][0].gridFS = stored;
+          req.files[fieldName][0].id = stored.id;
+        }
+      }
+
+      next();
+    } catch (error) {
+      console.error('GridFS Multi-Field Storage Error:', error);
+      next(error);
+    }
+  };
+
+  return [uploadMiddleware, enhancedMultiFieldGridFSMiddleware];
+};
+
 export default upload;

@@ -1,5 +1,5 @@
 import express from 'express';
-import { storeInGridFS } from '../middleware/enhancedFileUpload.js';
+import { storeInGridFS, storeMultipleFieldsInGridFS } from '../middleware/enhancedFileUpload.js';
 import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddleware.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 import { cacheProfiles } from '../middleware/enhancedCache.js';
@@ -198,8 +198,10 @@ router.delete('/news/:id', authenticateToken, requireRole(['system_admin', 'edit
 router.post(
   '/basics',
   authenticateToken, requireRole(['system_admin', 'editor']),
-  ...storeInGridFS('image', ['image/*'], { optional: true }),
-  ...storeInGridFS('media', ['video/*', 'audio/*'], { optional: false }),
+  ...storeMultipleFieldsInGridFS([
+    { fieldName: 'image', allowedMimeTypes: ['image/*'], optional: true },
+    { fieldName: 'media', allowedMimeTypes: ['video/*', 'audio/*'], optional: false }
+  ]),
   validateFileUpload,
   invalidateCache(['basics']),
   createBasic
@@ -218,8 +220,10 @@ router.get('/basics/:id', cacheMiddleware(600), getBasicById);
 router.put(
   '/basics/:id',
   authenticateToken, requireRole(['system_admin', 'editor']),
-  ...storeInGridFS('image', ['image/*'], { optional: true }),
-  ...storeInGridFS('media', ['video/*', 'audio/*'], { optional: true }),
+  ...storeMultipleFieldsInGridFS([
+    { fieldName: 'image', allowedMimeTypes: ['image/*'], optional: true },
+    { fieldName: 'media', allowedMimeTypes: ['video/*', 'audio/*'], optional: true }
+  ]),
   validateFileUpload,
   invalidateCache(['basics']),
   updateBasic
