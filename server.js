@@ -371,10 +371,18 @@ app.use(helmet({
  */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,    // 15-minute sliding window
-  max: process.env.NODE_ENV === 'production' ? 500 : 1000,  // Increased production limit for authenticated users
+  max: process.env.NODE_ENV === 'production' ? 1000 : 1500,  // Higher limit for admin dashboard needs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,        // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,         // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for authenticated admin users on admin endpoints
+    if (req.path.includes('/api/admin/') || req.path.includes('/admin')) {
+      const authHeader = req.headers.authorization;
+      return authHeader && authHeader.startsWith('Bearer ');
+    }
+    return false;
+  }
 });
 app.use(limiter);
 
