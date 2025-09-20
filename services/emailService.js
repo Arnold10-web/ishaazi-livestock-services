@@ -1,8 +1,24 @@
 /**
  * Email Service
  * 
- * A comprehensive service for handling all email-related operations in the application.
- * This service supports multiple email providers (SMTP, Gmail, SendGrid), template
+ * A comprehensive service for handling all email-related operations in the applicat      }
+
+      this.transporter = nodemailer.createTransporter(this.config);
+      
+      // Skip verification in production to avoid timeouts that slow startup
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          await this.transporter.verify();
+          console.log('[SUCCESS] Email service initialized and verified successfully');
+        } catch (verifyError) {
+          console.warn('[WARNING] Email transporter verification failed:', verifyError.message);
+        }
+      } else {
+        console.log('[EMAIL] Email service initialized (production mode, verification skipped)');
+      }
+      
+      // Load email templates
+      await this.loadTemplates(); supports multiple email providers (SMTP, Gmail, SendGrid), template
  * management, email queuing, rate limiting, and tracking capabilities.
  * 
  * Features:

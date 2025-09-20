@@ -24,26 +24,24 @@ export const getDashboardOverview = async (req, res) => {
         const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        // Get user statistics
-        const userStats = await getUserStatistics(last24h, last7d, last30d);
-        
-        // Get content statistics
-        const contentStats = await getContentStatistics(last24h, last7d, last30d);
-        
-        // Get system activity
-        const activityStats = await getActivityStatistics(last24h, last7d, last30d);
-        
-        // Get engagement metrics
-        const engagementStats = await getEngagementStatistics();
-        
-        // Get storage and system metrics
-        const systemStats = await getSystemStatistics();
-        
-        // Get recent activities
-        const recentActivities = await getRecentActivities();
-
-        // Get top content
-        const topContent = await getTopContent();
+        // Run all statistics queries in parallel for better performance
+        const [
+            userStats,
+            contentStats,
+            activityStats,
+            engagementStats,
+            systemStats,
+            recentActivities,
+            topContent
+        ] = await Promise.all([
+            getUserStatistics(last24h, last7d, last30d),
+            getContentStatistics(last24h, last7d, last30d),
+            getActivityStatistics(last24h, last7d, last30d),
+            getEngagementStatistics(),
+            getSystemStatistics(),
+            getRecentActivities(),
+            getTopContent()
+        ]);
 
         const overview = {
             users: userStats,
