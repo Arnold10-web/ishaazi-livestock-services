@@ -380,6 +380,38 @@ router.post('/:contentType/:id/share', trackShare);
 // Get engagement stats for any content
 router.get('/:contentType/:id/stats', getEngagementStats);
 
+// General content statistics endpoint
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const Blog = (await import('../models/Blog.js')).default;
+    const News = (await import('../models/News.js')).default;
+    const Basic = (await import('../models/Basic.js')).default;
+    const Farm = (await import('../models/Farm.js')).default;
+    const Magazine = (await import('../models/Magazine.js')).default;
+    const Piggery = (await import('../models/Piggery.js')).default;
+    const Dairy = (await import('../models/Dairy.js')).default;
+    const Goat = (await import('../models/Goat.js')).default;
+    const Beef = (await import('../models/Beef.js')).default;
+    
+    const stats = {
+      blogs: await Blog.countDocuments(),
+      news: await News.countDocuments(),
+      basics: await Basic.countDocuments(),
+      farms: await Farm.countDocuments(),
+      magazines: await Magazine.countDocuments(),
+      piggeries: await Piggery.countDocuments(),
+      dairies: await Dairy.countDocuments(),
+      goats: await Goat.countDocuments(),
+      beefs: await Beef.countDocuments(),
+    };
+    
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching content stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch content stats' });
+  }
+});
+
 // ACCURACY VERIFICATION ROUTES
 // Verify reading time accuracy across all content types
 router.get('/verify/reading-time', verifyReadingTimeAccuracy);
