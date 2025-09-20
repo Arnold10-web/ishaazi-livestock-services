@@ -287,7 +287,8 @@ app.use(cors({
     'Accept', 
     'Origin', 
     'if-none-match', 
-    'Range'  // Required for media streaming
+    'Range',  // Required for media streaming
+    'expires'  // Required for cache control
   ],
   exposedHeaders: [
     'Content-Range', 
