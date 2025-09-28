@@ -94,3 +94,7 @@ backups/
 .bash_history
 .zsh_history
 UPDATED_HTACCESS_FOR_NAMECHEAP.txt
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
