@@ -78,8 +78,9 @@ class EmailService {
         greetingTimeout: 10000, // 10 seconds
         socketTimeout: 15000, // 15 seconds
         tls: {
-          rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : false,
-          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST
+          rejectUnauthorized: false, // Accept self-signed certificates for shared hosting
+          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST,
+          ciphers: 'SSLv3' // Support older SSL/TLS for shared hosting
         },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,

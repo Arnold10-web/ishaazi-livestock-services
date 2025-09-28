@@ -166,10 +166,10 @@ class EmailErrorHandler {
    */
   async retryEmail(emailData, subscriberEmail) {
     try {
-      // Import emailService here to avoid circular dependencies
-      const { default: emailService } = await import('./emailService.js');
+      // Import sendEmail function to avoid circular dependencies
+      const { sendEmail } = await import('./emailService.js');
       
-      const result = await emailService.sendEmail({
+      const result = await sendEmail({
         to: subscriberEmail,
         subject: emailData.subject,
         html: emailData.html,
