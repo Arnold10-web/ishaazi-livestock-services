@@ -74,6 +74,9 @@ class EmailService {
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
         requireTLS: true,
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000, // 10 seconds
+        socketTimeout: 15000, // 15 seconds
         tls: {
           rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : false,
           servername: process.env.EMAIL_HOST || process.env.SMTP_HOST
@@ -361,7 +364,15 @@ class EmailService {
     });
 
     try {
-      const result = await this.transporter.sendMail(mailOptions);
+      // Add timeout wrapper to prevent long delays
+      const emailTimeout = parseInt(process.env.EMAIL_TIMEOUT) || 30000; // 30 seconds default
+      const result = await Promise.race([
+        this.transporter.sendMail(mailOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email sending timeout')), emailTimeout)
+        )
+      ]);
+      
       console.log('[SUCCESS] Email sent successfully:', result.messageId);
       
       // Update subscriber success info if email is provided

@@ -335,6 +335,7 @@ export const getEngagementStats = async (req, res) => {
     const modelMap = {
       blogs: Blog,
       news: News,
+      events: Event,
       dairies: Dairy,
       beefs: Beef,
       farms: Farm,
@@ -2699,16 +2700,18 @@ export const createSubscriber = async (req, res) => {
     });
     await subscriber.save();
 
-    // Send welcome email (don't let email errors block subscription)
-    try {
-  const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
-      if (!emailResult || !emailResult.success) {
-        console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
+    // Send welcome email asynchronously (don't block subscription response)
+    setImmediate(async () => {
+      try {
+        const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
+        if (!emailResult || !emailResult.success) {
+          console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
+        }
+      } catch (emailError) {
+        console.error('Welcome email error:', emailError.message);
+        // Email errors don't affect subscription success
       }
-    } catch (emailError) {
-      console.error('Welcome email error:', emailError.message);
-      // Log but don't fail the subscription
-    }
+    });
 
     res.status(201).json({
       success: true,
@@ -3588,36 +3591,38 @@ export const registerForEvent = async (req, res) => {
     // Populate event details for response
     await savedRegistration.populate('eventId', 'title startDate location');
 
-    // Send confirmation email
-    try {
-      await sendEmail({
-        to: email,
-        subject: `Event Registration Confirmation - ${event.title}`,
-        templateName: 'event-registration-confirmation',
-        templateData: {
-          registrantName: name,
-          participantEmail: email,
-          eventTitle: event.title,
-          eventDate: new Date(event.startDate).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          eventLocation: event.location || 'To be announced',
-          registrationId: savedRegistration._id.toString().slice(-8).toUpperCase(),
-          companyName: 'Ishaazi Livestock Services',
-          contactEmail: process.env.SUPPORT_EMAIL || 'info@ishaazilivestockservices.com'
-        }
-      });
-      
-      console.log(`Event registration confirmation email sent to: ${email}`);
-    } catch (emailError) {
-      console.error('Failed to send event registration confirmation email:', emailError);
-      // Don't fail the registration if email fails
-    }
+    // Send confirmation email asynchronously (don't block registration response)
+    setImmediate(async () => {
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Event Registration Confirmation - ${event.title}`,
+          templateName: 'event-registration-confirmation',
+          templateData: {
+            registrantName: name,
+            participantEmail: email,
+            eventTitle: event.title,
+            eventDate: new Date(event.startDate).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            eventLocation: event.location || 'To be announced',
+            registrationId: savedRegistration._id.toString().slice(-8).toUpperCase(),
+            companyName: 'Ishaazi Livestock Services',
+            contactEmail: process.env.SUPPORT_EMAIL || 'info@ishaazilivestockservices.com'
+          }
+        });
+        
+        console.log(`Event registration confirmation email sent to: ${email}`);
+      } catch (emailError) {
+        console.error('Failed to send event registration confirmation email:', emailError);
+        // Email errors don't affect registration success
+      }
+    });
 
     sendResponse(res, true, 'Successfully registered for event', {
       registration: savedRegistration,
