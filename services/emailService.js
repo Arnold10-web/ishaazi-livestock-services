@@ -73,14 +73,14 @@ class EmailService {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
-        requireTLS: true,
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000, // 10 seconds
-        socketTimeout: 15000, // 15 seconds
+        // Namecheap cPanel email settings
+        connectionTimeout: 60000, // 60 seconds for shared hosting
+        greetingTimeout: 30000, // 30 seconds
+        socketTimeout: 120000, // 2 minutes for Namecheap
         tls: {
-          rejectUnauthorized: false, // Accept self-signed certificates for shared hosting
-          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST,
-          ciphers: 'SSLv3' // Support older SSL/TLS for shared hosting
+          rejectUnauthorized: false, // Namecheap shared hosting
+          servername: process.env.EMAIL_HOST,
+          minVersion: 'TLSv1.2' // Ensure modern TLS for security
         },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
@@ -131,18 +131,14 @@ class EmailService {
 
       this.transporter = nodemailer.createTransport(this.config);
       
-      // Verify the connection
-      if (process.env.NODE_ENV === 'production') {
-        try {
-          await this.transporter.verify();
-          console.log('[SUCCESS] Email service initialized and verified successfully');
-        } catch (verifyError) {
-          console.warn('[WARNING] Email transporter verification failed in production:', verifyError.message);
-          // Continue with unverified transporter rather than failing completely
-        }
-      } else {
-        console.log('[EMAIL] Email service initialized (development mode)');
-        console.log('[EMAIL] Note: SMTP verification skipped for local development');
+      // Always verify the connection for security
+      try {
+        await this.transporter.verify();
+        console.log('[SUCCESS] Email service initialized and verified successfully');
+      } catch (verifyError) {
+        console.warn('[WARNING] Email transporter verification failed:', verifyError.message);
+        console.warn('[EMAIL] Using fallback mode - emails may not be sent');
+        // Continue with unverified transporter but log the issue
       }
       
       // Load email templates
