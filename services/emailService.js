@@ -21,14 +21,25 @@ class EmailService {
   getEmailConfig() {
     console.log('[EMAIL] Initializing Namecheap SMTP configuration');
     
+    const port = parseInt(process.env.EMAIL_PORT) || 465;
+    const secure = port === 465;
+    
     return {
       provider: 'namecheap-smtp',
-      host: process.env.EMAIL_HOST || 'mail.ishaazilivestockservices.com',
-      port: parseInt(process.env.EMAIL_PORT) || 465,
-      secure: true,
+      host: process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
+      port: port,
+      secure: secure,
+      requireTLS: !secure,
+      connectionTimeout: 60000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
       auth: {
         user: process.env.EMAIL_USER || 'system@ishaazilivestockservices.com',
         pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
       },
       from: {
         name: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
@@ -84,88 +95,68 @@ class EmailService {
   }
 
   async loadDefaultTemplates() {
-    const templates = {
-      'welcome-subscriber': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #2d5a27; color: white; padding: 40px 20px; text-align: center;">
-              <h1>Welcome to {{companyName}}!</h1>
-            </div>
-            <div style="padding: 40px 20px;">
-              <h2>Thank you for subscribing!</h2>
-              <p>Email: {{subscriberEmail}}</p>
-              <p>Type: {{subscriptionType}}</p>
-            </div>
-          </body>
-        </html>
-      `,
-      newsletter: `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #2d5a27; color: white; padding: 20px; text-align: center;">
-              <h1>{{title}}</h1>
-            </div>
-            <div style="padding: 20px;">
-              {{content}}
-            </div>
-          </body>
-        </html>
-      `,
-      'welcome-admin': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #2d5a27; color: white; padding: 40px 20px; text-align: center;">
-              <h1>Welcome to {{companyName}} Admin Portal</h1>
-            </div>
-            <div style="padding: 40px 20px;">
-              <h2>Your admin account has been created</h2>
-              <p><strong>Email:</strong> {{companyEmail}}</p>
-              <p><strong>Temporary Password:</strong> {{tempPassword}}</p>
-              <p><strong>Created by:</strong> {{createdBy}}</p>
-              <p><a href="{{loginUrl}}" style="background: #2d5a27; color: white; padding: 10px 20px; text-decoration: none;">Login Now</a></p>
-            </div>
-          </body>
-        </html>
-      `,
-      'password-reset-admin': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #e74c3c; color: white; padding: 40px 20px; text-align: center;">
-              <h1>Password Reset - {{companyName}}</h1>
-            </div>
-            <div style="padding: 40px 20px;">
-              <h2>Your password has been reset</h2>
-              <p><strong>Email:</strong> {{companyEmail}}</p>
-              <p><strong>New Temporary Password:</strong> {{tempPassword}}</p>
-              <p><strong>Reset by:</strong> {{resetBy}}</p>
-              <p><strong>Reset Date:</strong> {{resetDate}}</p>
-              <p><a href="{{loginUrl}}" style="background: #2d5a27; color: white; padding: 10px 20px; text-decoration: none;">Login Now</a></p>
-            </div>
-          </body>
-        </html>
-      `,
-      'account-status-admin': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: {{statusColor}}; color: white; padding: 40px 20px; text-align: center;">
-              <h1>Account {{statusText}}</h1>
-            </div>
-            <div style="padding: 40px 20px;">
-              <h2>Your account status has been changed</h2>
-              <p><strong>Email:</strong> {{companyEmail}}</p>
-              <p><strong>Status:</strong> {{statusText}}</p>
-              <p><strong>Changed by:</strong> {{changedBy}}</p>
-              <p><strong>Change Date:</strong> {{changeDate}}</p>
-            </div>
-          </body>
-        </html>
-      `
-    };
-
-    Object.entries(templates).forEach(([name, template]) => {
-      this.templates.set(name, template);
-    });
-    console.log(`[TEMPLATES] Loaded ${this.templates.size} templates`);
+    try {
+      // Clear any existing templates first
+      this.templates.clear();
+      
+      const templateDir = path.join(__dirname, '../templates/email');
+      console.log(`[TEMPLATES] Loading templates from: ${templateDir}`);
+      
+      const templateFiles = await fs.readdir(templateDir);
+      const htmlFiles = templateFiles.filter(file => file.endsWith('.html'));
+      
+      console.log(`[TEMPLATES] Found ${htmlFiles.length} template files:`, htmlFiles);
+      
+      for (const file of htmlFiles) {
+        try {
+          const templateName = file.replace('.html', '');
+          const templatePath = path.join(templateDir, file);
+          const templateContent = await fs.readFile(templatePath, 'utf-8');
+          
+          this.templates.set(templateName, templateContent);
+          console.log(`[TEMPLATES] ✓ Loaded: ${templateName}`);
+        } catch (fileError) {
+          console.error(`[ERROR] Failed to load template ${file}:`, fileError.message);
+        }
+      }
+      
+      // Add newsletter template if not found in files
+      if (!this.templates.has('newsletter')) {
+        const newsletterTemplate = `
+          <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #2d5a27; color: white; padding: 20px; text-align: center;">
+                <h1>{{title}}</h1>
+              </div>
+              <div style="padding: 20px;">
+                {{content}}
+              </div>
+            </body>
+          </html>
+        `;
+        this.templates.set('newsletter', newsletterTemplate);
+        console.log('[TEMPLATES] ✓ Added default newsletter template');
+      }
+      
+      console.log(`[TEMPLATES] Successfully loaded ${this.templates.size} unique templates`);
+      
+    } catch (error) {
+      console.error('[ERROR] Failed to load templates from filesystem:', error.message);
+      console.log('[FALLBACK] Loading minimal default templates');
+      
+      // Clear and set fallback templates
+      this.templates.clear();
+      const fallbackTemplates = {
+        'welcome-subscriber': '<html><body><h1>Welcome to {{companyName}}!</h1><p>Email: {{subscriberEmail}}</p></body></html>',
+        'newsletter': '<html><body><h1>{{title}}</h1><div>{{content}}</div></body></html>'
+      };
+      
+      Object.entries(fallbackTemplates).forEach(([name, template]) => {
+        this.templates.set(name, template);
+      });
+      
+      console.log(`[FALLBACK] Loaded ${this.templates.size} fallback templates`);
+    }
   }
 
   renderTemplate(templateName, data) {
@@ -416,8 +407,18 @@ class EmailService {
   }
 }
 
-// Create singleton instance
-const emailService = new EmailService();
+// Create singleton instance with protection against multiple initialization
+let emailService = null;
+
+const getEmailService = () => {
+  if (!emailService) {
+    emailService = new EmailService();
+  }
+  return emailService;
+};
+
+// Get the singleton instance
+emailService = getEmailService();
 
 // Export functions
 export const sendWelcomeEmailToSubscriber = (userEmail, userData = {}) => {
