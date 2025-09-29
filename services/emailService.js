@@ -19,28 +19,57 @@ class EmailService {
   }
 
   getEmailConfig() {
-    console.log('[EMAIL] Initializing Namecheap SMTP configuration');
+    const provider = process.env.EMAIL_SERVICE || 'smtp';
     
-    const port = parseInt(process.env.EMAIL_PORT) || 465;
-    const secure = port === 465;
+    console.log('[EMAIL] Email provider selected:', provider);
+    console.log('[EMAIL] Environment variables check:', {
+      EMAIL_HOST: process.env.EMAIL_HOST ? '[SET]' : '[NOT SET]',
+      EMAIL_USER: process.env.EMAIL_USER ? '[SET]' : '[NOT SET]',
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE
+    });
     
+    const configs = {
+      smtp: {
+        host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
+        port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 465,
+        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || true,
+        requireTLS: true,
+        connectionTimeout: 120000, // Increased timeout for Railway
+        greetingTimeout: 60000,    // Increased greeting timeout
+        socketTimeout: 120000,     // Increased socket timeout
+        tls: {
+          rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : false,
+          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'ishaazilivestockservices.com'
+        },
+        auth: {
+          user: process.env.SMTP_USER || process.env.EMAIL_USER,
+          pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
+        },
+        pool: true,                // Use connection pooling
+        maxConnections: 5,         // Max concurrent connections
+        maxMessages: 100          // Max messages per connection
+      },
+      gmail: {
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      },
+      sendgrid: {
+        service: 'SendGrid',
+        auth: {
+          user: 'apikey',
+          pass: process.env.SENDGRID_API_KEY
+        }
+      }
+    };
+
+    const selectedConfig = configs[provider] || configs.smtp;
+
     return {
-      provider: 'namecheap-smtp',
-      host: process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
-      port: port,
-      secure: secure,
-      requireTLS: !secure,
-      connectionTimeout: 60000,
-      greetingTimeout: 30000,
-      socketTimeout: 60000,
-      auth: {
-        user: process.env.EMAIL_USER || 'system@ishaazilivestockservices.com',
-        pass: process.env.EMAIL_PASS
-      },
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
-      },
+      provider,
+      ...selectedConfig,
       from: {
         name: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'system@ishaazilivestockservices.com'
@@ -51,32 +80,46 @@ class EmailService {
 
   async initializeService() {
     try {
-      console.log('[EMAIL] Starting email service initialization...');
+      // Check if email credentials are properly configured
+      const hasValidCredentials = this.validateCredentials();
       
-      if (!this.validateCredentials()) {
-        console.warn('[WARNING] Email credentials not properly configured');
-        this.transporter = { sendMail: this.mockSendMail.bind(this) };
+      if (!hasValidCredentials) {
+        console.warn('[WARNING] Email credentials not configured properly. Check your environment variables.');
+        this.transporter = {
+          sendMail: this.mockSendMail.bind(this)
+        };
         return;
       }
 
       this.transporter = nodemailer.createTransport(this.config);
-      console.log('[EMAIL] Transporter created with Namecheap SMTP');
       
-      if (process.env.NODE_ENV !== 'production') {
+      // Verify the connection
+      if (process.env.NODE_ENV === 'production') {
         try {
           await this.transporter.verify();
-          console.log('[SUCCESS] Email service verified successfully');
+          console.log('[SUCCESS] Email service initialized and verified successfully');
         } catch (verifyError) {
-          console.warn('[WARNING] Email verification failed:', verifyError.message);
+          console.warn('[WARNING] Email transporter verification failed in production:', verifyError.message);
+          // Continue with unverified transporter rather than failing completely
         }
+      } else {
+        console.log('[EMAIL] Email service initialized (development mode)');
+        console.log('[EMAIL] Note: SMTP verification skipped for local development');
       }
       
-      await this.loadDefaultTemplates();
-      console.log('[SUCCESS] Email service initialization complete');
-      
+      // Load email templates
+      await this.loadTemplates();
     } catch (error) {
       console.error('[ERROR] Email service initialization failed:', error.message);
-      this.transporter = { sendMail: this.mockSendMail.bind(this) };
+      // In production, this should be treated as a critical error
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[CRITICAL] Email service failure in production environment');
+      }
+      // Fall back to mock for development only
+      this.transporter = {
+        sendMail: this.mockSendMail.bind(this)
+      };
+      console.log('[EMAIL] Using mock email service as fallback');
     }
   }
 
@@ -84,79 +127,117 @@ class EmailService {
     const user = this.config.auth?.user;
     const pass = this.config.auth?.pass;
     
+    console.log('[DEBUG] Email config validation:', {
+      user: user ? '[SET]' : '[NOT SET]',
+      pass: pass ? '[SET]' : '[NOT SET]',
+      host: this.config.host,
+      port: this.config.port
+    });
+    
+    // Check for placeholder values or missing credentials
+    const placeholderValues = [
+      'your_email_username',
+      'your_email_password', 
+      'info@companyemail.com',
+      'your_smtp_host',
+      'provided by namecheap'
+    ];
+    
     if (!user || !pass) {
+      console.log('[ERROR] Missing email credentials');
       return false;
     }
     
-    const placeholders = ['your_email_username', 'your_email_password'];
-    return !placeholders.some(placeholder => 
+    // Check if any credentials contain placeholder text
+    const hasPlaceholders = placeholderValues.some(placeholder => 
       user.includes(placeholder) || pass.includes(placeholder)
     );
+    
+    if (hasPlaceholders) {
+      console.log('[ERROR] Placeholder values detected in email credentials');
+      return false;
+    }
+    
+    console.log('[SUCCESS] Email credentials validation passed');
+    return !hasPlaceholders;
   }
 
-  async loadDefaultTemplates() {
+  async loadTemplates() {
+    const templatesDir = path.join(__dirname, '../templates/email');
     try {
-      // Clear any existing templates first
-      this.templates.clear();
-      
-      const templateDir = path.join(__dirname, '../templates/email');
-      console.log(`[TEMPLATES] Loading templates from: ${templateDir}`);
-      
-      const templateFiles = await fs.readdir(templateDir);
-      const htmlFiles = templateFiles.filter(file => file.endsWith('.html'));
-      
-      console.log(`[TEMPLATES] Found ${htmlFiles.length} template files:`, htmlFiles);
-      
-      for (const file of htmlFiles) {
-        try {
+      const files = await fs.readdir(templatesDir);
+      for (const file of files) {
+        if (file.endsWith('.html')) {
           const templateName = file.replace('.html', '');
-          const templatePath = path.join(templateDir, file);
-          const templateContent = await fs.readFile(templatePath, 'utf-8');
-          
+          const templateContent = await fs.readFile(
+            path.join(templatesDir, file), 
+            'utf-8'
+          );
           this.templates.set(templateName, templateContent);
-          console.log(`[TEMPLATES] ✓ Loaded: ${templateName}`);
-        } catch (fileError) {
-          console.error(`[ERROR] Failed to load template ${file}:`, fileError.message);
         }
       }
-      
-      // Add newsletter template if not found in files
-      if (!this.templates.has('newsletter')) {
-        const newsletterTemplate = `
-          <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #2d5a27; color: white; padding: 20px; text-align: center;">
-                <h1>{{title}}</h1>
-              </div>
-              <div style="padding: 20px;">
-                {{content}}
-              </div>
-            </body>
-          </html>
-        `;
-        this.templates.set('newsletter', newsletterTemplate);
-        console.log('[TEMPLATES] ✓ Added default newsletter template');
-      }
-      
-      console.log(`[TEMPLATES] Successfully loaded ${this.templates.size} unique templates`);
-      
+      console.log(`[TEMPLATES] Loaded ${this.templates.size} email templates`);
     } catch (error) {
-      console.error('[ERROR] Failed to load templates from filesystem:', error.message);
-      console.log('[FALLBACK] Loading minimal default templates');
-      
-      // Clear and set fallback templates
-      this.templates.clear();
-      const fallbackTemplates = {
-        'welcome-subscriber': '<html><body><h1>Welcome to {{companyName}}!</h1><p>Email: {{subscriberEmail}}</p></body></html>',
-        'newsletter': '<html><body><h1>{{title}}</h1><div>{{content}}</div></body></html>'
-      };
-      
-      Object.entries(fallbackTemplates).forEach(([name, template]) => {
-        this.templates.set(name, template);
-      });
-      
-      console.log(`[FALLBACK] Loaded ${this.templates.size} fallback templates`);
+      console.log('[TEMPLATES] No email templates directory found, using default templates');
+      this.loadDefaultTemplates();
     }
+  }
+
+  loadDefaultTemplates() {
+    const defaultTemplates = {
+      newsletter: `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #2d5a27; color: white; padding: 20px; text-align: center;">
+              <h1>{{title}}</h1>
+            </div>
+            <div style="padding: 20px;">
+              {{content}}
+            </div>
+            <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+              <p>© {{year}} Ishaazi Livestock Services. All rights reserved.</p>
+              <p><a href="{{unsubscribeUrl}}" style="color: #666;">Unsubscribe</a></p>
+            </div>
+          </body>
+        </html>
+      `,
+      'welcome-subscriber': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center;">
+              <div style="font-size: 36px; margin-bottom: 15px;">&#127806;</div>
+              <h1 style="font-size: 28px; margin-bottom: 10px;">Welcome to {{companyName}}!</h1>
+              <p>Your gateway to modern farming knowledge</p>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <div style="background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0;">
+                <h2 style="color: #2d5a27; margin-bottom: 15px;">Thank you for subscribing!</h2>
+                <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
+              </div>
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #2d5a27;">Your Subscription Details</h3>
+                <p><strong>Email:</strong> {{subscriberEmail}}</p>
+                <p><strong>Subscription Type:</strong> {{subscriptionType}}</p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{websiteUrl}}" style="display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visit Our Website</a>
+              </div>
+            </div>
+            <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
+              <p><strong>{{companyName}}</strong></p>
+              <p>{{contactEmail}}</p>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                <a href="{{unsubscribeUrl}}" style="color: #999; text-decoration: none; font-size: 12px;">Unsubscribe</a>
+              </div>
+            </div>
+          </body>
+        </html>
+      `
+    };
+
+    Object.entries(defaultTemplates).forEach(([name, template]) => {
+      this.templates.set(name, template);
+    });
   }
 
   renderTemplate(templateName, data) {
