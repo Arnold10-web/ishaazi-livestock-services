@@ -1,36 +1,5 @@
 /**
- * Email Service
- * 
- * A comprehensive service for handling all email-related operations in the applicat      }
-
-      this.transporter = nodemailer.createTransporter(this.config);
-      
-      // Skip verification in production to avoid timeouts that slow startup
-      if (process.env.NODE_ENV !== 'production') {
-        try {
-          await this.transporter.verify();
-          console.log('[SUCCESS] Email service initialized and verified successfully');
-        } catch (verifyError) {
-          console.warn('[WARNING] Email transporter verification failed:', verifyError.message);
-        }
-      } else {
-        console.log('[EMAIL] Email service initialized (production mode, verification skipped)');
-      }
-      
-      // Load email templates
-      await this.loadTemplates(); supports multiple email providers (SMTP, Gmail, SendGrid), template
- * management, email queuing, rate limiting, and tracking capabilities.
- * 
- * Features:
- * - Dynamic template loading and rendering
- * - Email delivery with attachments
- * - Templated emails with variable substitution
- * - Batched sending for newsletters
- * - Email open and click tracking
- * - Configurable retry mechanism
- * - Multiple provider support with fallback
- * 
- * @module services/emailService
+ * Email Service - Namecheap SMTP Only
  */
 import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
@@ -38,19 +7,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import emailErrorHandler from './emailErrorHandler.js';
 
-// Create __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * EmailService class for handling all email functionality
- */
 class EmailService {
-  /**
-   * Creates a new EmailService instance
-   * Initializes the email transporter with configuration from environment variables
-   * and loads email templates from the filesystem
-   */
   constructor() {
     this.transporter = null;
     this.config = this.getEmailConfig();
@@ -59,101 +19,53 @@ class EmailService {
   }
 
   getEmailConfig() {
-    const provider = process.env.EMAIL_SERVICE || 'smtp';
+    console.log('[EMAIL] Initializing Namecheap SMTP configuration');
     
-    console.log('[EMAIL] Email provider selected:', provider);
-    console.log('[EMAIL] Environment variables check:', {
-      EMAIL_HOST: process.env.EMAIL_HOST ? '[SET]' : '[NOT SET]',
-      EMAIL_USER: process.env.EMAIL_USER ? '[SET]' : '[NOT SET]',
-      EMAIL_SERVICE: process.env.EMAIL_SERVICE
-    });
-    
-    const configs = {
-      smtp: {
-        host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true',
-        // Namecheap cPanel email settings
-        connectionTimeout: 60000, // 60 seconds for shared hosting
-        greetingTimeout: 30000, // 30 seconds
-        socketTimeout: 120000, // 2 minutes for Namecheap
-        tls: {
-          rejectUnauthorized: false, // Namecheap shared hosting
-          servername: process.env.EMAIL_HOST,
-          minVersion: 'TLSv1.2' // Ensure modern TLS for security
-        },
-        auth: {
-          user: process.env.SMTP_USER || process.env.EMAIL_USER,
-          pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
-        }
-      },
-      gmail: {
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        }
-      },
-      sendgrid: {
-        service: 'SendGrid',
-        auth: {
-          user: 'apikey',
-          pass: process.env.SENDGRID_API_KEY
-        }
-      }
-    };
-
-    const selectedConfig = configs[provider] || configs.smtp;
-
     return {
-      provider,
-      ...selectedConfig,
-      from: {
-        name: process.env.EMAIL_FROM_NAME || 'Farming Magazine',
-        address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@farmingmagazine.com'
+      provider: 'namecheap-smtp',
+      host: process.env.EMAIL_HOST || 'mail.ishaazilivestockservices.com',
+      port: parseInt(process.env.EMAIL_PORT) || 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER || 'system@ishaazilivestockservices.com',
+        pass: process.env.EMAIL_PASS
       },
-      replyTo: process.env.EMAIL_REPLY_TO || 'contact@farmingmagazine.com'
+      from: {
+        name: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'system@ishaazilivestockservices.com'
+      },
+      replyTo: process.env.EMAIL_REPLY_TO || 'info@ishaazilivestockservices.com'
     };
   }
 
   async initializeService() {
     try {
-      // Check if email credentials are properly configured
-      const hasValidCredentials = this.validateCredentials();
+      console.log('[EMAIL] Starting email service initialization...');
       
-      if (!hasValidCredentials) {
-        console.warn('[WARNING] Email credentials not configured properly. Check your environment variables.');
-        this.transporter = {
-          sendMail: this.mockSendMail.bind(this)
-        };
+      if (!this.validateCredentials()) {
+        console.warn('[WARNING] Email credentials not properly configured');
+        this.transporter = { sendMail: this.mockSendMail.bind(this) };
         return;
       }
 
       this.transporter = nodemailer.createTransport(this.config);
+      console.log('[EMAIL] Transporter created with Namecheap SMTP');
       
-      // Always verify the connection for security
-      try {
-        await this.transporter.verify();
-        console.log('[SUCCESS] Email service initialized and verified successfully');
-      } catch (verifyError) {
-        console.warn('[WARNING] Email transporter verification failed:', verifyError.message);
-        console.warn('[EMAIL] Using fallback mode - emails may not be sent');
-        // Continue with unverified transporter but log the issue
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          await this.transporter.verify();
+          console.log('[SUCCESS] Email service verified successfully');
+        } catch (verifyError) {
+          console.warn('[WARNING] Email verification failed:', verifyError.message);
+        }
       }
       
-      // Load email templates
-      await this.loadTemplates();
+      await this.loadDefaultTemplates();
+      console.log('[SUCCESS] Email service initialization complete');
+      
     } catch (error) {
       console.error('[ERROR] Email service initialization failed:', error.message);
-      // In production, this should be treated as a critical error
-      if (process.env.NODE_ENV === 'production') {
-        console.error('[CRITICAL] Email service failure in production environment');
-      }
-      // Fall back to mock for development only
-      this.transporter = {
-        sendMail: this.mockSendMail.bind(this)
-      };
-      console.log('[EMAIL] Using mock email service as fallback');
+      this.transporter = { sendMail: this.mockSendMail.bind(this) };
     }
   }
 
@@ -161,64 +73,32 @@ class EmailService {
     const user = this.config.auth?.user;
     const pass = this.config.auth?.pass;
     
-    console.log('[DEBUG] Email config validation:', {
-      user: user ? '[SET]' : '[NOT SET]',
-      pass: pass ? '[SET]' : '[NOT SET]',
-      host: this.config.host,
-      port: this.config.port
-    });
-    
-    // Check for placeholder values or missing credentials
-    const placeholderValues = [
-      'your_email_username',
-      'your_email_password', 
-      'info@companyemail.com',
-      'your_smtp_host',
-      'provided by namecheap'
-    ];
-    
     if (!user || !pass) {
-      console.log('[ERROR] Missing email credentials');
       return false;
     }
     
-    // Check if any credentials contain placeholder text
-    const hasPlaceholders = placeholderValues.some(placeholder => 
+    const placeholders = ['your_email_username', 'your_email_password'];
+    return !placeholders.some(placeholder => 
       user.includes(placeholder) || pass.includes(placeholder)
     );
-    
-    if (hasPlaceholders) {
-      console.log('[ERROR] Placeholder values detected in email credentials');
-      return false;
-    }
-    
-    console.log('[SUCCESS] Email credentials validation passed');
-    return !hasPlaceholders;
   }
 
-  async loadTemplates() {
-    const templatesDir = path.join(__dirname, '../templates/email');
-    try {
-      const files = await fs.readdir(templatesDir);
-      for (const file of files) {
-        if (file.endsWith('.html')) {
-          const templateName = file.replace('.html', '');
-          const templateContent = await fs.readFile(
-            path.join(templatesDir, file), 
-            'utf-8'
-          );
-          this.templates.set(templateName, templateContent);
-        }
-      }
-      console.log(`[TEMPLATES] Loaded ${this.templates.size} email templates`);
-    } catch (error) {
-      console.log('[TEMPLATES] No email templates directory found, using default templates');
-      this.loadDefaultTemplates();
-    }
-  }
-
-  loadDefaultTemplates() {
-    const defaultTemplates = {
+  async loadDefaultTemplates() {
+    const templates = {
+      'welcome-subscriber': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #2d5a27; color: white; padding: 40px 20px; text-align: center;">
+              <h1>Welcome to {{companyName}}!</h1>
+            </div>
+            <div style="padding: 40px 20px;">
+              <h2>Thank you for subscribing!</h2>
+              <p>Email: {{subscriberEmail}}</p>
+              <p>Type: {{subscriptionType}}</p>
+            </div>
+          </body>
+        </html>
+      `,
       newsletter: `
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -228,95 +108,64 @@ class EmailService {
             <div style="padding: 20px;">
               {{content}}
             </div>
-            <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-              <p>© {{year}} Farming Magazine. All rights reserved.</p>
-              <p><a href="{{unsubscribeUrl}}" style="color: #666;">Unsubscribe</a></p>
-            </div>
           </body>
         </html>
       `,
-      'welcome-subscriber': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
-            <div style="background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center;">
-              <div style="font-size: 36px; margin-bottom: 15px;">&#127806;</div>
-              <h1 style="font-size: 28px; margin-bottom: 10px;">Welcome to {{companyName}}!</h1>
-              <p>Your gateway to modern farming knowledge</p>
-            </div>
-            <div style="padding: 40px 30px; background: white;">
-              <div style="background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0;">
-                <h2 style="color: #2d5a27; margin-bottom: 15px;">Thank you for subscribing!</h2>
-                <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
-              </div>
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="color: #2d5a27;">Your Subscription Details</h3>
-                <p><strong>Email:</strong> {{subscriberEmail}}</p>
-                <p><strong>Subscription Type:</strong> {{subscriptionType}}</p>
-              </div>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="{{websiteUrl}}" style="display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visit Our Website</a>
-              </div>
-            </div>
-            <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
-              <p><strong>{{companyName}}</strong></p>
-              <p>{{contactEmail}}</p>
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                <a href="{{unsubscribeUrl}}" style="color: #999; text-decoration: none; font-size: 12px;">Unsubscribe</a>
-              </div>
-            </div>
-          </body>
-        </html>
-      `,
-      'subscription-confirmation': `
-        <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5;">
-            <div style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 15px;">&#128231;</div>
-              <h1>Confirm Your Subscription</h1>
-              <p>One more step to complete your subscription</p>
-            </div>
-            <div style="padding: 40px 30px; background: white;">
-              <div style="background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #e67e22; margin: 20px 0; text-align: center;">
-                <h2 style="color: #e67e22; margin-bottom: 15px;">&#127881; Thanks for subscribing!</h2>
-                <p>Please confirm your email address to complete your subscription.</p>
-              </div>
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                <p><strong>Please confirm this email address:</strong></p>
-                <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">{{subscriberEmail}}</div>
-              </div>
-              <div style="text-align: center; margin: 40px 0;">
-                <a href="{{confirmationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px;">&#10003; Confirm My Subscription</a>
-              </div>
-            </div>
-            <div style="background: #f8f9fa; padding: 30px; text-align: center; color: #666;">
-              <p><strong>{{companyName}}</strong></p>
-              <p>If you didn't request this subscription, you can safely ignore this email.</p>
-            </div>
-          </body>
-        </html>
-      `,
-      welcome: `
+      'welcome-admin': `
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #2d5a27; color: white; padding: 20px; text-align: center;">
-              <h1>Welcome to Farming Magazine!</h1>
+            <div style="background: #2d5a27; color: white; padding: 40px 20px; text-align: center;">
+              <h1>Welcome to {{companyName}} Admin Portal</h1>
             </div>
-            <div style="padding: 20px;">
-              <p>Hello {{username}},</p>
-              <p>Thank you for joining our farming community! We're excited to have you aboard.</p>
-              <p>You'll receive the latest farming news, tips, and insights directly to your inbox.</p>
+            <div style="padding: 40px 20px;">
+              <h2>Your admin account has been created</h2>
+              <p><strong>Email:</strong> {{companyEmail}}</p>
+              <p><strong>Temporary Password:</strong> {{tempPassword}}</p>
+              <p><strong>Created by:</strong> {{createdBy}}</p>
+              <p><a href="{{loginUrl}}" style="background: #2d5a27; color: white; padding: 10px 20px; text-decoration: none;">Login Now</a></p>
             </div>
-            <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-              <p>© {{year}} Farming Magazine. All rights reserved.</p>
+          </body>
+        </html>
+      `,
+      'password-reset-admin': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #e74c3c; color: white; padding: 40px 20px; text-align: center;">
+              <h1>Password Reset - {{companyName}}</h1>
+            </div>
+            <div style="padding: 40px 20px;">
+              <h2>Your password has been reset</h2>
+              <p><strong>Email:</strong> {{companyEmail}}</p>
+              <p><strong>New Temporary Password:</strong> {{tempPassword}}</p>
+              <p><strong>Reset by:</strong> {{resetBy}}</p>
+              <p><strong>Reset Date:</strong> {{resetDate}}</p>
+              <p><a href="{{loginUrl}}" style="background: #2d5a27; color: white; padding: 10px 20px; text-decoration: none;">Login Now</a></p>
+            </div>
+          </body>
+        </html>
+      `,
+      'account-status-admin': `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: {{statusColor}}; color: white; padding: 40px 20px; text-align: center;">
+              <h1>Account {{statusText}}</h1>
+            </div>
+            <div style="padding: 40px 20px;">
+              <h2>Your account status has been changed</h2>
+              <p><strong>Email:</strong> {{companyEmail}}</p>
+              <p><strong>Status:</strong> {{statusText}}</p>
+              <p><strong>Changed by:</strong> {{changedBy}}</p>
+              <p><strong>Change Date:</strong> {{changeDate}}</p>
             </div>
           </body>
         </html>
       `
     };
 
-    Object.entries(defaultTemplates).forEach(([name, template]) => {
+    Object.entries(templates).forEach(([name, template]) => {
       this.templates.set(name, template);
     });
+    console.log(`[TEMPLATES] Loaded ${this.templates.size} templates`);
   }
 
   renderTemplate(templateName, data) {
@@ -324,27 +173,14 @@ class EmailService {
     if (!template) {
       throw new Error(`Email template "${templateName}" not found`);
     }
-
-    // Simple template rendering (replace {{variable}} with data.variable)
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       return data[key] || match;
     });
   }
 
   async sendEmail(options) {
-    // Debug logging
-    console.log('[DEBUG] sendEmail called with options:', {
-      to: options.to,
-      subject: options.subject,
-      hasHtml: !!options.html,
-      optionsKeys: Object.keys(options)
-    });
-    
-    // Validate required fields
     if (!options.to) {
-      const error = new Error('No recipients defined - "to" field is required');
-      console.error('[ERROR]', error.message);
-      throw error;
+      throw new Error('No recipients defined');
     }
     
     const mailOptions = {
@@ -353,26 +189,10 @@ class EmailService {
       ...options
     };
 
-    console.log('[DEBUG] Final mailOptions:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      hasHtml: !!mailOptions.html
-    });
-
     try {
-      // Add timeout wrapper to prevent long delays
-      const emailTimeout = parseInt(process.env.EMAIL_TIMEOUT) || 30000; // 30 seconds default
-      const result = await Promise.race([
-        this.transporter.sendMail(mailOptions),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email sending timeout')), emailTimeout)
-        )
-      ]);
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('[SUCCESS] Email sent:', result.messageId);
       
-      console.log('[SUCCESS] Email sent successfully:', result.messageId);
-      
-      // Update subscriber success info if email is provided
       if (options.to && typeof options.to === 'string') {
         await emailErrorHandler.updateSubscriberSuccess(options.to);
       }
@@ -381,13 +201,11 @@ class EmailService {
     } catch (error) {
       console.error('[ERROR] Email sending failed:', error.message);
       
-      // Handle email failure if subscriber email is provided
       if (options.to && typeof options.to === 'string') {
         await emailErrorHandler.handleEmailFailure(
           {
             subject: options.subject,
             html: options.html,
-            text: options.text,
             type: options.emailType || 'unknown',
             error: error
           },
@@ -400,478 +218,195 @@ class EmailService {
     }
   }
 
-  async sendNewsletter(subscribers, newsletterData) {
-    const results = {
-      sent: 0,
-      failed: 0,
-      errors: []
-    };
+  async sendWelcomeEmailToSubscriber(subscriberEmail, subscriberData = {}) {
+    try {
+      const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
+        subscriberEmail,
+        subscriptionType: subscriberData.subscriptionType || 'all'
+      };
 
-    const template = this.renderTemplate('newsletter', {
-      ...newsletterData,
-      year: new Date().getFullYear(),
-      logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
-      companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
-      currentDate: new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }),
-      unsubscribeUrl: `${process.env.BACKEND_URL || process.env.API_URL || 'https://ishaazi-livestock-services-production.up.railway.app'}/api/content/unsubscribe?token={{unsubscribeToken}}`
-    });
-
-    // Send in small batches to avoid rate limiting
-    const batchSize = parseInt(process.env.EMAIL_BATCH_SIZE) || 5;
-    const delay = parseInt(process.env.EMAIL_BATCH_DELAY) || 2000;
-
-    for (let i = 0; i < subscribers.length; i += batchSize) {
-      const batch = subscribers.slice(i, i + batchSize);
+      const html = this.renderTemplate('welcome-subscriber', templateData);
       
-      for (const subscriber of batch) {
-        try {
-          const personalizedTemplate = template.replace(
-            '{{unsubscribeToken}}', 
-            subscriber.unsubscribeToken || 'no-token'
-          );
+      return await this.sendEmail({
+        to: subscriberEmail,
+        subject: `Welcome to ${templateData.companyName}!`,
+        html
+      });
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+      return { success: false, error: error.message, recipient: subscriberEmail };
+    }
+  }
 
-          const result = await this.sendEmail({
-            to: subscriber.email,
-            subject: newsletterData.subject,
-            html: personalizedTemplate
-          });
+  async sendNewsletter(subscribers, newsletterData) {
+    const results = { sent: 0, failed: 0, errors: [] };
 
-          if (result.success) {
-            results.sent++;
-          } else {
-            results.failed++;
-            results.errors.push({
-              email: subscriber.email,
-              error: result.error
-            });
-          }
-        } catch (error) {
+    for (const subscriber of subscribers) {
+      try {
+        const html = this.renderTemplate('newsletter', newsletterData);
+        const result = await this.sendEmail({
+          to: subscriber.email,
+          subject: newsletterData.subject,
+          html
+        });
+
+        if (result.success) {
+          results.sent++;
+        } else {
           results.failed++;
           results.errors.push({
             email: subscriber.email,
-            error: error.message
+            error: result.error
           });
         }
-      }
-
-      // Add delay between batches
-      if (i + batchSize < subscribers.length) {
-        console.log(`[BATCH] Waiting ${delay}ms before next batch...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          email: subscriber.email,
+          error: error.message
+        });
       }
     }
 
     return results;
   }
 
-  /**
-   * Send welcome email to new subscriber
-   * @param {string} subscriberEmail - Subscriber's email address
-   * @param {Object} subscriberData - Subscriber information
-   * @returns {Promise<Object>} Email send result
-   */
-  async sendWelcomeEmailToSubscriber(subscriberEmail, subscriberData = {}) {
-    try {
-      const subject = `Welcome to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} - You're All Set!`;
-      
-      // Get template data
-      const templateData = {
-        companyName: process.env.EMAIL_FROM_NAME || 'Farming Magazine',
-        subscriberEmail,
-        subscriptionType: subscriberData.subscriptionType || 'all',
-        frequency: this.getSubscriptionFrequency(subscriberData.subscriptionType),
-        websiteUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        contactPhone: process.env.CONTACT_PHONE || '+256 780 702 921',
-        companyAddress: process.env.COMPANY_ADDRESS || 'Semawata Road, Ntinda, Kampala, Uganda',
-        unsubscribeUrl: `${process.env.BACKEND_URL || process.env.API_URL || 'https://ishaazi-livestock-services-production.up.railway.app'}/api/content/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
-        preferencesUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/preferences?email=${encodeURIComponent(subscriberEmail)}`,
-        facebookUrl: process.env.FACEBOOK_URL || '#',
-        twitterUrl: process.env.TWITTER_URL || '#',
-        linkedinUrl: process.env.LINKEDIN_URL || '#',
-        instagramUrl: process.env.INSTAGRAM_URL || '#',
-        logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
-        year: new Date().getFullYear()
-      };
-
-      // Use welcome-subscriber template
-      const template = this.templates.get('welcome-subscriber');
-      const html = template ? this.renderTemplate('welcome-subscriber', templateData) : this.getDefaultWelcomeSubscriberTemplate(templateData);
-      
-      const mailOptions = {
-        from: `${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
-        to: subscriberEmail,
-        subject,
-        html,
-        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log(`[SUCCESS] Welcome email sent to new subscriber: ${subscriberEmail}`);
-      return {
-        success: true,
-        messageId: result.messageId,
-        recipient: subscriberEmail
-      };
-
-    } catch (error) {
-      console.error('Failed to send welcome email to subscriber:', error);
-      return {
-        success: false,
-        error: error.message,
-        recipient: subscriberEmail
-      };
-    }
-  }
-
-  /**
-   * Send welcome email to new editor user
-   * @param {string} companyEmail - Company email address
-   * @param {string} tempPassword - Temporary password
-   * @param {string} createdBy - Admin who created the account
-   * @returns {Promise<Object>} Email send result
-   */
   async sendWelcomeEmailToEditor(companyEmail, tempPassword, createdBy) {
     try {
-      const subject = 'Welcome to Farming Magazine Admin Portal';
-      const template = this.templates.get('welcome-admin');
-      
       const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
         companyEmail,
         tempPassword,
         createdBy,
-        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
-        supportEmail: this.config.replyTo,
-        companyName: 'Farming Magazine'
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`
       };
 
-      const html = template ? this.renderTemplate('welcome-admin', templateData) : this.getDefaultWelcomeTemplate(templateData);
+      const html = this.renderTemplate('welcome-admin', templateData);
       
-      const mailOptions = {
-        from: `${this.config.from.name} <${this.config.from.address}>`,
+      return await this.sendEmail({
         to: companyEmail,
-        subject,
-        html,
-        replyTo: this.config.replyTo
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log(`[SUCCESS] Welcome email sent to ${companyEmail}`);
-      return {
-        success: true,
-        messageId: result.messageId,
-        recipient: companyEmail
-      };
-
+        subject: `Welcome to ${templateData.companyName} Admin Portal`,
+        html
+      });
     } catch (error) {
-      console.error('Failed to send welcome email:', error);
-      throw new Error(`Failed to send welcome email: ${error.message}`);
+      console.error('Failed to send welcome email to editor:', error);
+      return { success: false, error: error.message, recipient: companyEmail };
     }
   }
 
-  /**
-   * Send password reset email to company email
-   * @param {string} companyEmail - Company email address
-   * @param {string} tempPassword - New temporary password
-   * @param {string} resetBy - Admin who reset the password
-   * @returns {Promise<Object>} Email send result
-   */
   async sendPasswordResetEmail(companyEmail, tempPassword, resetBy) {
     try {
-      const subject = 'Admin Account Password Reset - Farming Magazine';
-      const template = this.templates.get('password-reset-admin');
-      
       const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
         companyEmail,
         tempPassword,
         resetBy,
-        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
-        supportEmail: this.config.replyTo,
-        companyName: 'Farming Magazine',
-        resetDate: new Date().toLocaleString()
+        resetDate: new Date().toLocaleString(),
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`
       };
 
-      const html = template ? this.renderTemplate('password-reset-admin', templateData) : this.getDefaultPasswordResetTemplate(templateData);
+      const html = this.renderTemplate('password-reset-admin', templateData);
       
-      const mailOptions = {
-        from: `${this.config.from.name} <${this.config.from.address}>`,
+      return await this.sendEmail({
         to: companyEmail,
-        subject,
-        html,
-        replyTo: this.config.replyTo,
-        priority: 'high'
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log(`[SUCCESS] Password reset email sent to ${companyEmail}`);
-      return {
-        success: true,
-        messageId: result.messageId,
-        recipient: companyEmail
-      };
-
+        subject: `Password Reset - ${templateData.companyName}`,
+        html
+      });
     } catch (error) {
       console.error('Failed to send password reset email:', error);
-      throw new Error(`Failed to send password reset email: ${error.message}`);
+      return { success: false, error: error.message, recipient: companyEmail };
     }
   }
 
-  /**
-   * Send account status change notification
-   * @param {string} companyEmail - Company email address
-   * @param {boolean} isActive - New account status
-   * @param {string} changedBy - Admin who changed the status
-   * @returns {Promise<Object>} Email send result
-   */
   async sendAccountStatusEmail(companyEmail, isActive, changedBy) {
     try {
-      const subject = `Admin Account ${isActive ? 'Activated' : 'Deactivated'} - Farming Magazine`;
-      const template = this.templates.get('account-status-admin');
-      
       const templateData = {
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
         companyEmail,
         isActive,
         changedBy,
-        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/login`,
-        supportEmail: this.config.replyTo,
-        companyName: 'Farming Magazine',
-        changeDate: new Date().toLocaleString()
+        changeDate: new Date().toLocaleString(),
+        statusText: isActive ? 'Activated' : 'Deactivated',
+        statusColor: isActive ? '#27ae60' : '#e74c3c'
       };
 
-      const html = template ? this.renderTemplate('account-status-admin', templateData) : this.getDefaultAccountStatusTemplate(templateData);
+      const html = this.renderTemplate('account-status-admin', templateData);
       
-      const mailOptions = {
-        from: `${this.config.from.name} <${this.config.from.address}>`,
+      return await this.sendEmail({
         to: companyEmail,
-        subject,
-        html,
-        replyTo: this.config.replyTo
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log(`[SUCCESS] Account status email sent to ${companyEmail}`);
-      return {
-        success: true,
-        messageId: result.messageId,
-        recipient: companyEmail
-      };
-
+        subject: `Account ${isActive ? 'Activated' : 'Deactivated'} - ${templateData.companyName}`,
+        html
+      });
     } catch (error) {
       console.error('Failed to send account status email:', error);
-      throw new Error(`Failed to send account status email: ${error.message}`);
+      return { success: false, error: error.message, recipient: companyEmail };
     }
   }
 
-  /**
-   * Send subscription confirmation email (double opt-in)
-   * @param {string} subscriberEmail - Subscriber's email address  
-   * @param {string} confirmationToken - Unique confirmation token
-   * @param {Object} subscriberData - Subscriber information
-   * @returns {Promise<Object>} Email send result
-   */
   async sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData = {}) {
     try {
-      const subject = `Please Confirm Your Subscription to ${process.env.EMAIL_FROM_NAME || 'Farming Magazine'}`;
-      
       const templateData = {
-        companyName: process.env.EMAIL_FROM_NAME || 'Farming Magazine',
+        companyName: process.env.EMAIL_FROM_NAME || 'Ishaazi Livestock Services',
         subscriberEmail,
-        subscriptionType: subscriberData.subscriptionType || 'all',
-        confirmationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-subscription?token=${confirmationToken}&email=${encodeURIComponent(subscriberEmail)}`,
-        contactEmail: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        supportEmail: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM,
-        companyAddress: process.env.COMPANY_ADDRESS || 'Semawata Road, Ntinda, Kampala, Uganda',
-        contactPhone: process.env.CONTACT_PHONE || '+256 780 702 921',
-        logoUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/ishaazi.jpg`,
-        year: new Date().getFullYear()
+        confirmationToken,
+        confirmationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-subscription?token=${confirmationToken}&email=${encodeURIComponent(subscriberEmail)}`
       };
 
-      const template = this.templates.get('subscription-confirmation');
-      const html = template ? this.renderTemplate('subscription-confirmation', templateData) : this.getDefaultConfirmationTemplate(templateData);
+      // Simple confirmation template
+      const html = `
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #e67e22; color: white; padding: 40px 20px; text-align: center;">
+              <h1>Confirm Your Subscription</h1>
+            </div>
+            <div style="padding: 40px 20px;">
+              <h2>Please confirm your email address</h2>
+              <p>Email: ${subscriberEmail}</p>
+              <p><a href="${templateData.confirmationUrl}" style="background: #2d5a27; color: white; padding: 10px 20px; text-decoration: none;">Confirm Subscription</a></p>
+            </div>
+          </body>
+        </html>
+      `;
       
-      const mailOptions = {
-        from: `${process.env.EMAIL_FROM_NAME || 'Farming Magazine'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      return await this.sendEmail({
         to: subscriberEmail,
-        subject,
-        html,
-        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log(`[SUCCESS] Confirmation email sent to: ${subscriberEmail}`);
-      return {
-        success: true,
-        messageId: result.messageId,
-        recipient: subscriberEmail
-      };
-
+        subject: `Please confirm your subscription to ${templateData.companyName}`,
+        html
+      });
     } catch (error) {
-      console.error('Failed to send confirmation email:', error);
-      return {
-        success: false,
-        error: error.message,
-        recipient: subscriberEmail
-      };
+      console.error('Failed to send subscription confirmation:', error);
+      return { success: false, error: error.message, recipient: subscriberEmail };
     }
   }
 
-  /**
-   * Get subscription frequency text based on type
-   * @param {string} subscriptionType - Type of subscription
-   * @returns {string} Frequency description
-   */
-  getSubscriptionFrequency(subscriptionType) {
-    const frequencies = {
-      'all': 'weekly',
-      'newsletters': 'weekly', 
-      'events': 'as announced',
-      'auctions': 'as scheduled',
-      'farming-tips': 'twice weekly',
-      'livestock-updates': 'weekly'
-    };
-    return frequencies[subscriptionType] || 'regular';
-  }
-
-  /**
-   * Default welcome subscriber template
-   */
-  getDefaultWelcomeSubscriberTemplate(data) {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Welcome to ${data.companyName}</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
-          .header { background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 40px 30px; text-align: center; }
-          .content { padding: 40px 30px; }
-          .welcome-box { background: linear-gradient(135deg, #f8fdf6 0%, #e8f5e8 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #2d5a27; margin: 20px 0; }
-          .details-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .button { display: inline-block; background: linear-gradient(135deg, #2d5a27 0%, #4a7c3a 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; }
-          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div style="font-size: 36px; margin-bottom: 15px;">&#127806;</div>
-            <h1>Welcome to ${data.companyName}!</h1>
-            <p>Your gateway to modern farming knowledge</p>
-          </div>
-          <div class="content">
-            <div class="welcome-box">
-              <h2 style="color: #2d5a27; margin-bottom: 15px;">Thank you for subscribing!</h2>
-              <p>Welcome to our community of passionate farmers and agricultural enthusiasts. We're thrilled to have you join us!</p>
-            </div>
-            <div class="details-box">
-              <h3 style="color: #2d5a27;">&#128231; Your Subscription Details</h3>
-              <p><strong>Email:</strong> ${data.subscriberEmail}</p>
-              <p><strong>Subscription Type:</strong> ${data.subscriptionType}</p>
-              <p><strong>Frequency:</strong> ${data.frequency} updates</p>
-            </div>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${data.websiteUrl}" class="button">Visit Our Website</a>
-            </div>
-          </div>
-          <div class="footer">
-            <p><strong>${data.companyName}</strong></p>
-            <p>${data.contactEmail}</p>
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-              <a href="${data.unsubscribeUrl}" style="color: #999; text-decoration: none; font-size: 12px;">Unsubscribe</a>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  /**
-   * Default confirmation email template
-   */
-  getDefaultConfirmationTemplate(data) {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Confirm Your Subscription</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
-          .header { background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 40px 30px; text-align: center; }
-          .content { padding: 40px 30px; }
-          .confirmation-box { background: linear-gradient(135deg, #fff8f0 0%, #fef5e7 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #e67e22; margin: 20px 0; text-align: center; }
-          .email-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
-          .button { display: inline-block; background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 18px; }
-          .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div style="font-size: 48px; margin-bottom: 15px;">&#128231;</div>
-            <h1>Confirm Your Subscription</h1>
-            <p>One more step to complete your subscription</p>
-          </div>
-          <div class="content">
-            <div class="confirmation-box">
-              <h2 style="color: #e67e22; margin-bottom: 15px;">&#127881; Thanks for subscribing!</h2>
-              <p>Please confirm your email address to complete your subscription.</p>
-            </div>
-            <div class="email-box">
-              <p><strong>Please confirm this email address:</strong></p>
-              <div style="font-size: 18px; font-weight: bold; color: #2d5a27; background: white; padding: 10px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">${data.subscriberEmail}</div>
-            </div>
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.confirmationUrl}" class="button">&#10003; Confirm My Subscription</a>
-            </div>
-          </div>
-          <div class="footer">
-            <p><strong>${data.companyName}</strong></p>
-            <p>If you didn't request this subscription, you can safely ignore this email.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  // Mock email sending for development/testing
   mockSendMail(options) {
-    console.log('[MOCK] Mock Email Sent:');
-    console.log('To:', options.to);
-    console.log('Subject:', options.subject);
-    console.log('From:', options.from);
-    return Promise.resolve({ messageId: 'mock-' + Date.now() });
+    console.log('[MOCK EMAIL] To:', options.to);
+    console.log('[MOCK EMAIL] Subject:', options.subject);
+    return Promise.resolve({ 
+      messageId: `mock-${Date.now()}`,
+      accepted: [options.to],
+      rejected: []
+    });
   }
 
-  // Health check for email service
   async healthCheck() {
     try {
-      if (this.transporter && typeof this.transporter.verify === 'function') {
+      if (this.transporter.sendMail === this.mockSendMail) {
+        return { status: 'mock', provider: 'development' };
+      }
+      
+      if (typeof this.transporter.verify === 'function') {
         await this.transporter.verify();
         return { status: 'healthy', provider: this.config.provider };
       }
-      return { status: 'mock', provider: 'development' };
+      
+      return { status: 'configured', provider: this.config.provider };
     } catch (error) {
       return { status: 'unhealthy', error: error.message };
     }
   }
 
-  // Get email service statistics
   getStats() {
     return {
       provider: this.config.provider,
@@ -884,20 +419,15 @@ class EmailService {
 // Create singleton instance
 const emailService = new EmailService();
 
-// Export individual functions for backward compatibility
-export const sendNewsletter = (subscribers, newsletterData) => {
-  return emailService.sendNewsletter(subscribers, newsletterData);
-};
-
+// Export functions
 export const sendWelcomeEmailToSubscriber = (userEmail, userData = {}) => {
   return emailService.sendWelcomeEmailToSubscriber(userEmail, userData);
 };
 
-export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken, subscriberData = {}) => {
-  return emailService.sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData);
+export const sendNewsletter = (subscribers, newsletterData) => {
+  return emailService.sendNewsletter(subscribers, newsletterData);
 };
 
-// Export new company email functions
 export const sendWelcomeEmailToEditor = (companyEmail, tempPassword, createdBy) => {
   return emailService.sendWelcomeEmailToEditor(companyEmail, tempPassword, createdBy);
 };
@@ -910,52 +440,24 @@ export const sendAccountStatusEmail = (companyEmail, isActive, changedBy) => {
   return emailService.sendAccountStatusEmail(companyEmail, isActive, changedBy);
 };
 
-export const validateCompanyEmail = (email) => {
-  return emailService.validateCompanyEmail(email);
+export const sendSubscriptionConfirmation = (subscriberEmail, confirmationToken, subscriberData = {}) => {
+  return emailService.sendSubscriptionConfirmation(subscriberEmail, confirmationToken, subscriberData);
 };
 
-// Email service statistics and health
-export const getStats = () => {
-  return emailService.getStats();
-};
-
-export const healthCheck = () => {
-  return emailService.healthCheck();
-};
-
-// Generic send email function
 export const sendEmail = function(options, subject, html, additionalOptions) {
-  // Handle both calling patterns:
-  // 1. sendEmail({ to, subject, html, templateName, templateData, ... }) - object pattern
-  // 2. sendEmail(to, subject, html, options) - parameter pattern (legacy)
   if (typeof options === 'string') {
-    // Legacy pattern: sendEmail(to, subject, html, options)
-    const to = options;
     return emailService.sendEmail({ 
-      to, 
+      to: options, 
       subject, 
       html, 
       ...(additionalOptions || {}) 
     });
   } else {
-    // Modern pattern: sendEmail({ to, subject, html, templateName, templateData, ... })
-    if (options.templateName && options.templateData) {
-      // Render template with data
-      try {
-        const renderedHtml = emailService.renderTemplate(options.templateName, options.templateData);
-        return emailService.sendEmail({
-          ...options,
-          html: renderedHtml
-        });
-      } catch (error) {
-        console.error(`[ERROR] Failed to render template "${options.templateName}":`, error);
-        throw error;
-      }
-    } else {
-      return emailService.sendEmail(options);
-    }
+    return emailService.sendEmail(options);
   }
 };
 
-// Export the class as default
+export const getStats = () => emailService.getStats();
+export const healthCheck = () => emailService.healthCheck();
+
 export default EmailService;
