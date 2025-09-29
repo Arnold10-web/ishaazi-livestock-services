@@ -32,22 +32,19 @@ class EmailService {
       smtp: {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 465,
-        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || true,
-        requireTLS: true,
-        connectionTimeout: 120000, // Increased timeout for Railway
-        greetingTimeout: 60000,    // Increased greeting timeout
-        socketTimeout: 120000,     // Increased socket timeout
-        tls: {
-          rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED === 'true' ? false : false,
-          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'ishaazilivestockservices.com'
-        },
+        secure: true, // SSL for port 465 as per Namecheap settings
+        connectionTimeout: 300000, // 5 minutes for Railway network
+        greetingTimeout: 180000,   // 3 minutes greeting timeout
+        socketTimeout: 300000,     // 5 minutes socket timeout
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
         },
-        pool: true,                // Use connection pooling
-        maxConnections: 5,         // Max concurrent connections
-        maxMessages: 100          // Max messages per connection
+        pool: false,               // Disable pooling to avoid connection issues
+        maxConnections: 1,         // Single connection for reliability
+        rateLimit: 10,             // Conservative rate limit
+        logger: process.env.NODE_ENV === 'development', // Enable logging in dev
+        debug: process.env.NODE_ENV === 'development'   // Enable debug in dev
       },
       gmail: {
         service: 'gmail',
@@ -91,16 +88,35 @@ class EmailService {
         return;
       }
 
+            // Create transporter with user's preferred configuration
       this.transporter = nodemailer.createTransport(this.config);
       
-      // Verify the connection
+      // Verify connection with extended timeout for Railway environment
       if (process.env.NODE_ENV === 'production') {
         try {
-          await this.transporter.verify();
-          console.log('[SUCCESS] Email service initialized and verified successfully');
+          console.log('[EMAIL] Attempting SMTP verification with extended timeout...');
+          console.log('[EMAIL] Using configuration:', {
+            host: this.config.host,
+            port: this.config.port,
+            secure: this.config.secure,
+            user: this.config.auth.user ? '[SET]' : '[NOT SET]'
+          });
+          
+          // Create a timeout promise - longer for Railway
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Verification timeout after 60 seconds')), 60000)
+          );
+          
+          // Race between verification and timeout
+          await Promise.race([
+            this.transporter.verify(),
+            timeoutPromise
+          ]);
+          
+          console.log('[SUCCESS] Email service verified successfully with user configuration');
         } catch (verifyError) {
-          console.warn('[WARNING] Email transporter verification failed in production:', verifyError.message);
-          // Continue with unverified transporter rather than failing completely
+          console.warn('[WARNING] SMTP verification failed in production:', verifyError.message);
+          console.log('[EMAIL] Continuing with unverified transporter - emails may still work');
         }
       } else {
         console.log('[EMAIL] Email service initialized (development mode)');
@@ -251,8 +267,19 @@ class EmailService {
   }
 
   async sendEmail(options) {
+    // Debug logging
+    console.log('[DEBUG] sendEmail called with options:', {
+      to: options.to,
+      subject: options.subject,
+      hasHtml: !!options.html,
+      optionsKeys: Object.keys(options)
+    });
+    
+    // Validate required fields
     if (!options.to) {
-      throw new Error('No recipients defined');
+      const error = new Error('No recipients defined - "to" field is required');
+      console.error('[ERROR]', error.message);
+      throw error;
     }
     
     const mailOptions = {
@@ -261,10 +288,27 @@ class EmailService {
       ...options
     };
 
+    console.log('[DEBUG] Final mailOptions:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      hasHtml: !!mailOptions.html
+    });
+
     try {
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('[SUCCESS] Email sent:', result.messageId);
+      // Add timeout to email sending
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email send timeout')), 180000) // 3 minutes
+      );
       
+      const result = await Promise.race([
+        this.transporter.sendMail(mailOptions),
+        timeoutPromise
+      ]);
+      
+      console.log('[SUCCESS] Email sent successfully:', result.messageId);
+      
+      // Update subscriber success info if email is provided
       if (options.to && typeof options.to === 'string') {
         await emailErrorHandler.updateSubscriberSuccess(options.to);
       }
@@ -273,11 +317,13 @@ class EmailService {
     } catch (error) {
       console.error('[ERROR] Email sending failed:', error.message);
       
+      // Handle email failure if subscriber email is provided
       if (options.to && typeof options.to === 'string') {
         await emailErrorHandler.handleEmailFailure(
           {
             subject: options.subject,
             html: options.html,
+            text: options.text,
             type: options.emailType || 'unknown',
             error: error
           },
