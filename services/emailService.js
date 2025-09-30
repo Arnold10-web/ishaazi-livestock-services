@@ -32,10 +32,12 @@ class EmailService {
       smtp: {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 465,
-        secure: true, // SSL for port 465 as per Namecheap settings
-        connectionTimeout: 300000, // 5 minutes for Railway network
-        greetingTimeout: 180000,   // 3 minutes greeting timeout
-        socketTimeout: 300000,     // 5 minutes socket timeout
+        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || true,
+        requireTLS: false, // Disable TLS requirement for SSL-only port 465
+        tls: {
+          rejectUnauthorized: false,
+          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'ishaazilivestockservices.com'
+        },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
@@ -91,31 +93,24 @@ class EmailService {
             // Create transporter with user's preferred configuration
       this.transporter = nodemailer.createTransport(this.config);
       
-      // Verify connection with extended timeout for Railway environment
+      // Verify connection with configuration from August 3rd working version
       if (process.env.NODE_ENV === 'production') {
         try {
-          console.log('[EMAIL] Attempting SMTP verification with extended timeout...');
+          console.log('[EMAIL] Attempting SMTP verification with working August 3rd configuration...');
           console.log('[EMAIL] Using configuration:', {
             host: this.config.host,
             port: this.config.port,
             secure: this.config.secure,
-            user: this.config.auth.user ? '[SET]' : '[NOT SET]'
+            user: this.config.auth.user ? '[SET]' : '[NOT SET]',
+            requireTLS: this.config.requireTLS
           });
           
-          // Create a timeout promise - longer for Railway
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Verification timeout after 60 seconds')), 60000)
-          );
-          
-          // Race between verification and timeout
-          await Promise.race([
-            this.transporter.verify(),
-            timeoutPromise
-          ]);
-          
-          console.log('[SUCCESS] Email service verified successfully with user configuration');
+          // Try verification like the working August 3rd version
+          await this.transporter.verify();
+          console.log('[SUCCESS] Email service verified successfully with August 3rd configuration');
         } catch (verifyError) {
           console.warn('[WARNING] SMTP verification failed in production:', verifyError.message);
+          // Continue without verification as the August 3rd version would
           console.log('[EMAIL] Continuing with unverified transporter - emails may still work');
         }
       } else {

@@ -27,7 +27,6 @@ import Auction from '../models/Auction.js';
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
-import nodemailer from 'nodemailer';
 import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
@@ -2381,15 +2380,6 @@ export const deleteBeef = async (req, res) => {
   }
 };
 
-
-// Nodemailer Setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'your-email@gmail.com',
-    pass: 'your-email-password',
-  },
-});
 
 // Enhanced subscriber management functions
 export const getSubscribers = async (req, res) => {
