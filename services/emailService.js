@@ -33,20 +33,15 @@ class EmailService {
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
         port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 465,
         secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || true,
-        requireTLS: false, // Disable TLS requirement for SSL-only port 465
+        requireTLS: false,
         tls: {
           rejectUnauthorized: false,
-          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'ishaazilivestockservices.com'
+          servername: process.env.EMAIL_HOST || process.env.SMTP_HOST
         },
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
-        },
-        pool: false,               // Disable pooling to avoid connection issues
-        maxConnections: 1,         // Single connection for reliability
-        rateLimit: 10,             // Conservative rate limit
-        logger: process.env.NODE_ENV === 'development', // Enable logging in dev
-        debug: process.env.NODE_ENV === 'development'   // Enable debug in dev
+        }
       },
       gmail: {
         service: 'gmail',
