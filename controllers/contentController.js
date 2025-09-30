@@ -3761,6 +3761,42 @@ export const getAdminRegistrations = async (req, res) => {
   }
 };
 
+// Update event registration (admin function)
+export const updateEventRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Find and update the registration
+    const registration = await EventRegistration.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event registration not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Event registration updated successfully',
+      data: { registration }
+    });
+
+  } catch (error) {
+    console.error('Error updating event registration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update event registration',
+      error: error.message
+    });
+  }
+};
+
 // Delete event registration (admin function)
 export const deleteEventRegistration = async (req, res) => {
   try {
