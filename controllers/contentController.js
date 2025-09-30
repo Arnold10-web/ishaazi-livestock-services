@@ -27,9 +27,8 @@ import Auction from '../models/Auction.js';
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
 import User from '../models/User.js';
-import ActivityLog from '../models/ActivityLog.js';
 import nodemailer from 'nodemailer';
-import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation, sendEmail } from '../services/emailService.js';
+import { sendNewsletter as sendNewsletterEmail, sendWelcomeEmailToSubscriber, sendSubscriptionConfirmation } from '../services/emailService.js';
 import { calculateReadingTimeByType } from '../utils/readingTimeCalculator.js';
 
 /**
@@ -64,12 +63,8 @@ const cleanupGridFSFile = async (fileId) => {
     if (!fileId) return;
     
     try {
-        // Use centralized bucket function and memoize ObjectId
         const bucket = getGridFSBucket();
-        const oid = new mongoose.Types.ObjectId(fileId);
-        
-        // Direct delete - GridFS will throw if file doesn't exist
-        await bucket.delete(oid);
+        await bucket.delete(new mongoose.Types.ObjectId(fileId));
     } catch (error) {
         console.error('Error cleaning up file from GridFS:', error);
         // Don't throw error to prevent blocking operations
@@ -96,27 +91,10 @@ const updateGridFSFile = async (oldFileId, newFileId) => {
 const cleanupFile = async (fileId) => {
     if (!fileId) return;
     try {
-        // Validate ObjectId format first
-        if (!mongoose.Types.ObjectId.isValid(fileId)) {
-            console.log(`Invalid ObjectId for cleanup: ${fileId}`);
-            return;
-        }
-
-        // Use centralized bucket function and memoize ObjectId
-        const bucket = getGridFSBucket();
-        const oid = new mongoose.Types.ObjectId(fileId);
-        
-        // Direct delete - GridFS will throw if file doesn't exist
-        await bucket.delete(oid);
-        console.log(`Successfully deleted file from GridFS: ${fileId}`);
+        const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db);
+        await bucket.delete(new mongoose.Types.ObjectId(fileId));
     } catch (error) {
-        // More specific error handling
-        // Mongo GridFS uses code 26 (NamespaceNotFound) for missing files
-        if (error.code === 26 || /File not found/i.test(error.message)) {
-            console.log(`File already deleted or doesn't exist: ${fileId}`);
-        } else {
-            console.error('Error cleaning up file:', error);
-        }
+        console.error('Error cleaning up file:', error);
     }
 };
 
@@ -335,7 +313,6 @@ export const getEngagementStats = async (req, res) => {
     const modelMap = {
       blogs: Blog,
       news: News,
-      events: Event,
       dairies: Dairy,
       beefs: Beef,
       farms: Farm,
@@ -414,42 +391,27 @@ export const approveContentComment = async (req, res) => {
 // ----- BLOG CRUD -----
 export const createBlog = async (req, res) => {
   try {
-    console.log('🔍 DEBUG: Starting createBlog function');
-    console.log('🔍 DEBUG: Request body:', req.body);
-    
     const { title, content, author, category, tags, metadata, published } = req.body;
     let imageUrl = null;
 
-    console.log('🔍 DEBUG: Extracted fields:', { title, content, author, category, tags, published });
-
     if (!title || !content || !author) {
-      console.log('🔍 DEBUG: Missing required fields');
       return sendResponse(res, false, 'Title, content, and author are required.');
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageUrl = req.file.gridFS ? req.file.gridFS.id : req.file.id; // Support both patterns
-      console.log('🔍 DEBUG: Stored file ID:', imageUrl);
-      console.log('🔍 DEBUG: File object:', req.file);
-    } else {
-      console.log('🔍 DEBUG: No file in request');
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageUrl = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageUrl = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
 
-    console.log('🔍 DEBUG: Parsing metadata...');
     let parsedMetadata = {};
 
-    // Setup error handler to cleanup file if blog creation fails
-    const handleError = async (error) => {
-      if (imageUrl) {
-        await cleanupGridFSFile(imageUrl);
-      }
-      return sendResponse(res, false, 'Failed to create blog', null, error.message);
-    };
     try {
       parsedMetadata = parseMetadata(metadata);
     } catch (e) {
-      console.error('🔍 DEBUG: Error parsing metadata, using empty metadata:', e);
       // Continue with empty metadata instead of throwing error
       parsedMetadata = {};
     }
@@ -476,56 +438,34 @@ export const createBlog = async (req, res) => {
       }
     }
     
-    console.log('🔍 DEBUG: Parsed tags:', parsedTags);
-
     // Calculate accurate reading time
     const calculatedReadTime = calculateReadingTimeByType(content, 'blog');
-    console.log('🔍 DEBUG: Calculated reading time:', calculatedReadTime, 'minutes');
 
-    console.log('🔍 DEBUG: Creating new Blog instance...');
-    console.log('🔍 DEBUG: Published value:', published, 'Type:', typeof published);
-    console.log('🔍 DEBUG: Published evaluation:', published === 'true' || published === true || published === "true");
-    
     const newBlog = new Blog({
       title,
       content,
       author,
       category: category || 'General',
       tags: parsedTags,
-      image: imageUrl, // Store GridFS file ID in image field
+      image: imageUrl, // Store GridFS file ID in image field (can be null)
       metadata: parsedMetadata,
       published: published === 'true' || published === true || published === "true",
       readTime: calculatedReadTime // Store calculated reading time
     });
 
-    console.log('🔍 DEBUG: Blog instance created with published:', newBlog.published);
-
-    console.log('🔍 DEBUG: Blog instance created, attempting to save...');
-    try {
-      const savedBlog = await newBlog.save();
-      console.log('🔍 DEBUG: Blog saved successfully:', savedBlog._id);
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['blogs', 'content', 'dashboard', 'admin-blogs']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'Blog created successfully', savedBlog);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedBlog = await newBlog.save();
+    
+    sendResponse(res, true, 'Blog created successfully', savedBlog);
   } catch (error) {
-    console.error('❌ DEBUG: Error in createBlog:', error);
-    console.error('❌ DEBUG: Error stack:', error.stack);
+    // Cleanup uploaded file if blog creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create blog', null, error.message);
   }
 };
@@ -567,11 +507,10 @@ export const getBlogs = async (req, res) => {
 
   try {
     // Admin can see all blogs, non-admin only sees published blogs
-    const query = admin === 'true' ? {} : { published: true };
+    const query = admin ? {} : { published: true };
 
     console.log("🔥 API HIT: Fetching blogs...");
     console.log("🔍 Query:", query);
-    console.log("🔍 Admin param:", admin, "Type:", typeof admin);
 
     // Log the total number of blogs in the database
     const totalBlogs = await Blog.countDocuments({});
@@ -587,14 +526,7 @@ export const getBlogs = async (req, res) => {
       .limit(Number(limit));
 
     console.log("✅ Blogs found:", blogs.length);
-    if (blogs.length > 0) {
-      console.log("Sample blog:", {
-        id: blogs[0]._id,
-        title: blogs[0].title,
-        published: blogs[0].published,
-        hasImage: !!blogs[0].image
-      });
-    }
+    if (blogs.length > 0) console.log("Sample blog:", blogs[0]);
 
     const total = await Blog.countDocuments(query);
 
@@ -644,9 +576,11 @@ export const updateBlog = async (req, res) => {
     
     // Handle file update if new file uploaded
     let imageUrl = existingBlog.image;
-    if (req.file) {
+    if (req.file && req.file.gridFS) {
       // Update file in GridFS and get new file ID
-      imageUrl = await updateFile(existingBlog.image, req.file.id);
+      imageUrl = await updateFile(existingBlog.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageUrl = await updateFile(existingBlog.image, req.uploadedFiles[0].id);
     }
     
     // Parse metadata if it's a string
@@ -770,20 +704,6 @@ export const deleteBlog = async (req, res) => {
     // Delete the blog from the database
     await Blog.findByIdAndDelete(id);
 
-    // Enhanced cache invalidation for immediate refresh on Railway
-    try {
-      // Force cache clear for content lists
-      if (global.memoryCache) {
-        global.memoryCache.flushAll();
-      }
-      
-      // Clear any other cache layers
-      const { invalidateCache } = await import('../middleware/enhancedCache.js');
-      await invalidateCache(['blogs', 'content', 'dashboard', 'search']);
-    } catch (cacheError) {
-      console.warn('Cache invalidation warning:', cacheError.message);
-    }
-
     res.json({ message: 'Blog deleted successfully' });
   } catch (error) {
     console.error('Error deleting blog:', error);
@@ -800,18 +720,14 @@ export const createNews = async (req, res) => {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
-
-    // Setup error handler to cleanup file if news creation fails
-    const handleError = async (error) => {
-      if (imageId) {
-        await cleanupGridFSFile(imageId);
-      }
-      return sendResponse(res, false, 'Failed to create news', null, error.message, 500);
-    };
 
     // Parse metadata (check if it's already an object or needs parsing)
     let parsedMetadata = {};
@@ -849,36 +765,27 @@ export const createNews = async (req, res) => {
       author: author || '',
       category: category || 'general',
       tags: parsedTags,
-      image: imageId, // Store GridFS file ID instead of imageUrl
+      image: imageId, // Store GridFS file ID instead of imageUrl (can be null)
       metadata: parsedMetadata,
       published: published === 'true' || published === true,
       featured: featured === 'true' || featured === true,
       isBreaking: isBreaking === 'true' || isBreaking === true
     });
 
-    try {
-      const savedNews = await newNews.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['news', 'content', 'dashboard', 'admin-news']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'News created successfully', savedNews, null, 201);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedNews = await newNews.save();
+    sendResponse(res, true, 'News created successfully', savedNews, null, 201);
   } catch (error) {
-    console.error('Error creating news:', error);
+    console.error('Error in createNews:', error);
+    
+    // Cleanup uploaded file if news creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create news', null, error.message, 500);
   }
 };
@@ -957,8 +864,10 @@ export const updateNews = async (req, res) => {
     let imageId = existingNews.image;
     
     // Handle new file upload
-    if (req.file) {
-      imageId = await updateGridFSFile(existingNews.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      imageId = await updateGridFSFile(existingNews.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageId = await updateGridFSFile(existingNews.image, req.uploadedFiles[0].id);
     }
 
     let updateData = { 
@@ -1009,55 +918,19 @@ export const createBasic = async (req, res) => {
   try {
     const { title, description, fileType, metadata, published, duration } = req.body;
 
-    // Log incoming data for debugging
-    console.log('📊 Basic content creation request:', {
-      title,
-      fileType,
-      hasFiles: !!req.files,
-      filesKeys: req.files ? Object.keys(req.files) : null,
-      bodyKeys: Object.keys(req.body)
-    });
+    // Extract uploaded files
+    const files = req.files || {};
+    const image = files.image?.[0]; // Thumbnail
+    const media = files.media?.[0]; // Video/Audio
 
-    // For basic content, we expect two possible uploads: 'image' (thumbnail) and 'media' (video/audio)
-    // With the corrected middleware, we check both req.file (if only one was uploaded) and req.files
-    let imageFile = null;
-    let mediaFile = null;
-
-    // The middleware might attach files differently depending on which files were uploaded
-    if (req.files) {
-      // If multiple files were uploaded
-      imageFile = req.files.image?.[0];
-      mediaFile = req.files.media?.[0];
-      console.log('📁 Files detected:', {
-        hasImage: !!imageFile,
-        hasMedia: !!mediaFile,
-        imageSize: imageFile?.size,
-        mediaSize: mediaFile?.size,
-        mediaType: mediaFile?.mimetype
-      });
-    } else if (req.file) {
-      // If only one file was uploaded, determine which one based on fieldname
-      if (req.file.fieldname === 'image') {
-        imageFile = req.file;
-      } else if (req.file.fieldname === 'media') {
-        mediaFile = req.file;
-      }
-    }
-
-    // Ensure required fields are provided
-    if (!title || !description || !fileType || !mediaFile) {
-      console.log('❌ Missing required fields:', {
-        title: !!title,
-        description: !!description,
-        fileType: !!fileType,
-        mediaFile: !!mediaFile
-      });
+    // Ensure media file is provided
+    if (!title || !description || !fileType || !media) {
       return sendResponse(res, false, 'Title, description, file type, and media file are required.', null, null, 400);
     }
 
     // Get GridFS file IDs
-    const mediaFileId = mediaFile.id; // GridFS file ID for main media
-    const thumbnailId = imageFile ? imageFile.id : null; // GridFS file ID for thumbnail
+    const mediaFileId = media.id; // GridFS file ID for main media
+    const thumbnailId = image ? image.id : null; // GridFS file ID for thumbnail
 
     // Setup error handler to cleanup files if creation fails
     const handleError = async (error) => {
@@ -1078,9 +951,7 @@ export const createBasic = async (req, res) => {
       title,
       description,
       mediaFile: mediaFileId, // GridFS file ID for main media
-      fileUrl: `/api/files/${mediaFileId}`, // Provide URL for compatibility
       thumbnail: thumbnailId, // GridFS file ID for thumbnail
-      imageUrl: thumbnailId ? `/api/files/${thumbnailId}` : null, // Provide thumbnail URL
       fileType,
       duration: duration ? parseInt(duration) : null,
       published: published === 'true' || published === true,
@@ -1089,21 +960,6 @@ export const createBasic = async (req, res) => {
 
     try {
       const savedBasic = await newBasic.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['basics', 'content', 'dashboard', 'admin-basics']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
       sendResponse(res, true, 'Basic media created successfully', savedBasic, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1310,9 +1166,13 @@ export const createFarm = async (req, res) => {
       return sendResponse(res, false, 'Name, location, price, and description are required.');
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
 
     const parsedMetadata = parseMetadata(metadata);
@@ -1322,28 +1182,24 @@ export const createFarm = async (req, res) => {
       location,
       price,
       description,
-      image: imageId, // Use GridFS file ID
+      image: imageId, // Use GridFS file ID (can be null)
       metadata: parsedMetadata,
     });
 
     const savedFarm = await newFarm.save();
-    
-    // Force cache invalidation for immediate refresh
-    try {
-      // Clear memory cache if it exists
-      if (global.memoryCache) {
-        global.memoryCache.flushAll();
-      }
-      
-      // Clear enhanced cache
-      const { invalidateCache } = await import('../middleware/enhancedCache.js');
-      await invalidateCache(['farms', 'content', 'dashboard', 'admin-farms']);
-    } catch (cacheError) {
-      console.warn('Cache invalidation warning:', cacheError.message);
-    }
-    
     sendResponse(res, true, 'Farm created successfully', savedFarm);
   } catch (error) {
+    console.error('Error creating farm:', error);
+    
+    // Cleanup uploaded file if farm creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create farm', null, error.message);
   }
 };
@@ -1415,9 +1271,11 @@ export const updateFarm = async (req, res) => {
     let updateData = { name, location, price, description, metadata };
 
     // Handle GridFS file update
-    if (req.file) {
+    if (req.file && req.file.gridFS) {
       // Update the GridFS file ID
-      updateData.image = await updateGridFSFile(existingFarm.image, req.file.id);
+      updateData.image = await updateGridFSFile(existingFarm.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      updateData.image = await updateGridFSFile(existingFarm.image, req.uploadedFiles[0].id);
     }
 
     const updatedFarm = await Farm.findByIdAndUpdate(id, updateData, { new: true });
@@ -1487,8 +1345,8 @@ export const createMagazine = async (req, res) => {
       return sendResponse(res, false, 'Both image and PDF file are required.', null, null, 400);
     }
 
-    const coverImageId = image.id; // GridFS file ID
-    const pdfId = pdf.id; // GridFS file ID
+    const coverImageId = image.gridFS ? image.gridFS.id : image.id; // GridFS file ID
+    const pdfId = pdf.gridFS ? pdf.gridFS.id : pdf.id; // GridFS file ID
 
     // Setup error handler to cleanup files if magazine creation fails
     const handleError = async (error) => {
@@ -1603,20 +1461,6 @@ export const createMagazine = async (req, res) => {
       const savedMagazine = await newMagazine.save();
       console.log('📖 createMagazine: Saved successfully');
       
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['magazines', 'content', 'dashboard', 'admin-magazines']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
       sendResponse(res, true, 'Magazine created successfully', savedMagazine, null, 201);
     } catch (error) {
       return await handleError(error);
@@ -1716,11 +1560,15 @@ export const updateMagazine = async (req, res) => {
 
     // Handle GridFS file updates
     if (files.image?.[0]) {
-      updateData.coverImage = await updateGridFSFile(existingMagazine.coverImage, files.image[0].id);
+      const imageFile = files.image[0];
+      const imageId = imageFile.gridFS ? imageFile.gridFS.id : imageFile.id;
+      updateData.coverImage = await updateGridFSFile(existingMagazine.coverImage, imageId);
     }
 
     if (files.pdf?.[0]) {
-      updateData.pdf = await updateGridFSFile(existingMagazine.pdf, files.pdf[0].id);
+      const pdfFile = files.pdf[0];
+      const pdfId = pdfFile.gridFS ? pdfFile.gridFS.id : pdfFile.id;
+      updateData.pdf = await updateGridFSFile(existingMagazine.pdf, pdfId);
     }
 
     const updatedMagazine = await Magazine.findByIdAndUpdate(id, updateData, { new: true });
@@ -1772,18 +1620,14 @@ export const createPiggery = async (req, res) => {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
-
-    // Setup error handler to cleanup file if creation fails
-    const handleError = async (error) => {
-      if (imageId) {
-        await cleanupGridFSFile(imageId);
-      }
-      return sendResponse(res, false, 'Failed to create piggery content', null, error.message, 500);
-    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -1821,29 +1665,20 @@ export const createPiggery = async (req, res) => {
       readTime: calculatedReadTime // Store in main document for queries
     });
 
-    try {
-      const savedPiggery = await newPiggery.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['piggeries', 'content', 'dashboard', 'admin-piggeries']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'Piggery content created successfully', savedPiggery, null, 201);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedPiggery = await newPiggery.save();
+    sendResponse(res, true, 'Piggery content created successfully', savedPiggery, null, 201);
   } catch (error) {
     console.error('Error creating piggery content:', error);
+    
+    // Cleanup uploaded file if piggery creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create piggery content', null, error.message, 500);
   }
 };
@@ -1911,8 +1746,10 @@ export const updatePiggery = async (req, res) => {
     let imageId = existingPiggery.image;
     
     // Handle new file upload
-    if (req.file) {
-      imageId = await updateGridFSFile(existingPiggery.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      imageId = await updateGridFSFile(existingPiggery.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageId = await updateGridFSFile(existingPiggery.image, req.uploadedFiles[0].id);
     }
 
     // Parse metadata to ensure it's stored as an object
@@ -1971,18 +1808,14 @@ export const createGoat = async (req, res) => {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
-
-    // Setup error handler to cleanup file if creation fails
-    const handleError = async (error) => {
-      if (imageId) {
-        await cleanupGridFSFile(imageId);
-      }
-      return sendResponse(res, false, 'Failed to create goat content', null, error.message, 500);
-    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -2017,7 +1850,7 @@ export const createGoat = async (req, res) => {
       author: author || '',
       category: category || 'Goat',
       tags: parsedTags,
-      image: imageId, // GridFS file ID
+      image: imageId, // GridFS file ID (can be null)
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -2028,29 +1861,20 @@ export const createGoat = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    try {
-      const savedGoat = await newGoat.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['goats', 'content', 'dashboard', 'admin-goats']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedGoat = await newGoat.save();
+    sendResponse(res, true, 'Goat content created successfully', savedGoat, null, 201);
   } catch (error) {
     console.error('Error creating goat content:', error);
+    
+    // Cleanup uploaded file if goat creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create goat content', null, error.message, 500);
   }
 };
@@ -2119,8 +1943,10 @@ export const updateGoat = async (req, res) => {
     let imageId = existingGoat.image;
     
     // Handle new file upload
-    if (req.file) {
-      imageId = await updateGridFSFile(existingGoat.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      imageId = await updateGridFSFile(existingGoat.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageId = await updateGridFSFile(existingGoat.image, req.uploadedFiles[0].id);
     }
 
     // Parse metadata to ensure it's stored as an object
@@ -2178,18 +2004,14 @@ export const createDairy = async (req, res) => {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
-
-    // Setup error handler to cleanup file if creation fails
-    const handleError = async (error) => {
-      if (imageId) {
-        await cleanupGridFSFile(imageId);
-      }
-      return sendResponse(res, false, 'Failed to create dairy content', null, error.message, 500);
-    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -2224,7 +2046,7 @@ export const createDairy = async (req, res) => {
       author: author || '',
       category: category || 'Dairy',
       tags: parsedTags,
-      image: imageId, // GridFS file ID
+      image: imageId, // GridFS file ID (can be null)
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -2235,29 +2057,20 @@ export const createDairy = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    try {
-      const savedDairy = await newDairy.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['dairies', 'content', 'dashboard', 'admin-dairies']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedDairy = await newDairy.save();
+    sendResponse(res, true, 'Dairy content created successfully', savedDairy, null, 201);
   } catch (error) {
     console.error('Error creating dairy content:', error);
+    
+    // Cleanup uploaded file if dairy creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create dairy content', null, error.message, 500);
   }
 };
@@ -2325,8 +2138,10 @@ export const updateDairy = async (req, res) => {
     let imageId = existingDairy.image;
     
     // Handle new file upload
-    if (req.file) {
-      imageId = await updateGridFSFile(existingDairy.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      imageId = await updateGridFSFile(existingDairy.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageId = await updateGridFSFile(existingDairy.image, req.uploadedFiles[0].id);
     }
 
     // Parse metadata to ensure it's stored as an object
@@ -2383,18 +2198,14 @@ export const createBeef = async (req, res) => {
       return sendResponse(res, false, 'Title and content are required.', null, null, 400);
     }
 
-    // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    // Handle file from GridFS (optional)
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
-
-    // Setup error handler to cleanup file if creation fails
-    const handleError = async (error) => {
-      if (imageId) {
-        await cleanupGridFSFile(imageId);
-      }
-      return sendResponse(res, false, 'Failed to create beef content', null, error.message, 500);
-    };
 
     // Parse metadata
     let parsedMetadata = {};
@@ -2429,7 +2240,7 @@ export const createBeef = async (req, res) => {
       author: author || '',
       category: category || 'Beef',
       tags: parsedTags,
-      image: imageId, // GridFS file ID
+      image: imageId, // GridFS file ID (can be null)
       metadata: {
         ...parsedMetadata,
         keywords: parsedKeywords,
@@ -2440,29 +2251,20 @@ export const createBeef = async (req, res) => {
       featured: featured === 'true' || featured === true
     });
 
-    try {
-      const savedBeef = await newBeef.save();
-      
-      // Force cache invalidation for immediate refresh
-      try {
-        // Clear memory cache if it exists
-        if (global.memoryCache) {
-          global.memoryCache.flushAll();
-        }
-        
-        // Clear enhanced cache
-        const { invalidateCache } = await import('../middleware/enhancedCache.js');
-        await invalidateCache(['beefs', 'content', 'dashboard', 'admin-beefs']);
-      } catch (cacheError) {
-        console.warn('Cache invalidation warning:', cacheError.message);
-      }
-      
-      sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
-    } catch (error) {
-      return await handleError(error);
-    }
+    const savedBeef = await newBeef.save();
+    sendResponse(res, true, 'Beef content created successfully', savedBeef, null, 201);
   } catch (error) {
     console.error('Error creating beef content:', error);
+    
+    // Cleanup uploaded file if beef creation failed
+    if (req.file && req.file.gridFS) {
+      try {
+        await cleanupGridFSFile(req.file.gridFS.id);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
+    
     sendResponse(res, false, 'Failed to create beef content', null, error.message, 500);
   }
 };
@@ -2529,8 +2331,10 @@ export const updateBeef = async (req, res) => {
     let imageId = existingBeef.image;
     
     // Handle new file upload
-    if (req.file) {
-      imageId = await updateGridFSFile(existingBeef.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      imageId = await updateGridFSFile(existingBeef.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      imageId = await updateGridFSFile(existingBeef.image, req.uploadedFiles[0].id);
     }
 
     // Parse metadata to ensure it's stored as an object
@@ -2700,18 +2504,16 @@ export const createSubscriber = async (req, res) => {
     });
     await subscriber.save();
 
-    // Send welcome email asynchronously (don't block subscription response)
-    setImmediate(async () => {
-      try {
-        const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
-        if (!emailResult || !emailResult.success) {
-          console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
-        }
-      } catch (emailError) {
-        console.error('Welcome email error:', emailError.message);
-        // Email errors don't affect subscription success
+    // Send welcome email (don't let email errors block subscription)
+    try {
+      const emailResult = await sendWelcomeEmailToSubscriber(email, { subscriptionType });
+      if (!emailResult || !emailResult.success) {
+        console.error('Failed to send welcome email:', emailResult?.error || 'Unknown email error');
       }
-    });
+    } catch (emailError) {
+      console.error('Welcome email error:', emailError.message);
+      // Log but don't fail the subscription
+    }
 
     res.status(201).json({
       success: true,
@@ -2876,13 +2678,12 @@ export const createNewsletter = async (req, res) => {
 
   try {
     // Use createdBy from request body if req.admin._id is not available
-    // This allows for testing while maintaining backward compatibility
+    // Get admin ID from request context
     const adminId = req.admin?._id || createdBy;
     
-    // For testing purposes, if no admin ID is available, use a default test ID
-    // This ensures the API can be tested without a valid admin account
-    const testAdminId = '684de6093e77b767108cf318'; // Default test admin ID
-    const finalAdminId = adminId || testAdminId;
+    if (!adminId) {
+      return sendResponse(res, false, 'Admin authentication required to create newsletter', null, null, 401);
+    }
     
     const newsletter = new Newsletter({ 
       title, 
@@ -2890,7 +2691,7 @@ export const createNewsletter = async (req, res) => {
       subject,
       targetSubscriptionTypes,
       featured,
-      createdBy: finalAdminId
+      createdBy: adminId
     });
     await newsletter.save();
     
@@ -3065,8 +2866,12 @@ export const createEvent = async (req, res) => {
     }
 
     // Handle file from GridFS
-    if (req.file) {
-      imageId = req.file.id; // Store GridFS file ID
+    if (req.file && req.file.gridFS) {
+      imageId = req.file.gridFS.id; // Store GridFS file ID
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      // Defensive access pattern for file ID
+      const uploadedFile = req.uploadedFiles[0];
+      imageId = uploadedFile.gridFS ? uploadedFile.gridFS.id : uploadedFile.id;
     }
 
     // Safely parse metadata
@@ -3090,21 +2895,6 @@ export const createEvent = async (req, res) => {
     });
 
     const savedEvent = await newEvent.save();
-    
-    // Force cache invalidation for immediate refresh
-    try {
-      // Clear memory cache if it exists
-      if (global.memoryCache) {
-        global.memoryCache.flushAll();
-      }
-      
-      // Clear enhanced cache
-      const { invalidateCache } = await import('../middleware/enhancedCache.js');
-      await invalidateCache(['events', 'content', 'dashboard', 'admin-events']);
-    } catch (cacheError) {
-      console.warn('Cache invalidation warning:', cacheError.message);
-    }
-    
     sendResponse(res, true, 'Event created successfully', savedEvent);
   } catch (error) {
     console.error("Error creating event:", error);
@@ -3209,8 +2999,10 @@ export const updateEvent = async (req, res) => {
     };
 
     // Handle GridFS file update
-    if (req.file) {
-      updateData.image = await updateGridFSFile(existingEvent.image, req.file.id);
+    if (req.file && req.file.gridFS) {
+      updateData.image = await updateGridFSFile(existingEvent.image, req.file.gridFS.id);
+    } else if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      updateData.image = await updateGridFSFile(existingEvent.image, req.uploadedFiles[0].id);
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true });
@@ -3591,38 +3383,26 @@ export const registerForEvent = async (req, res) => {
     // Populate event details for response
     await savedRegistration.populate('eventId', 'title startDate location');
 
-    // Send confirmation email asynchronously (don't block registration response)
-    setImmediate(async () => {
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Event Registration Confirmation - ${event.title}`,
-          templateName: 'event-registration-confirmation',
-          templateData: {
-            registrantName: name,
-            participantEmail: email,
-            eventTitle: event.title,
-            eventDate: new Date(event.startDate).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }),
-            eventLocation: event.location || 'To be announced',
-            registrationId: savedRegistration._id.toString().slice(-8).toUpperCase(),
-            companyName: 'Ishaazi Livestock Services',
-            contactEmail: process.env.SUPPORT_EMAIL || 'info@ishaazilivestockservices.com'
-          }
-        });
-        
-        console.log(`Event registration confirmation email sent to: ${email}`);
-      } catch (emailError) {
-        console.error('Failed to send event registration confirmation email:', emailError);
-        // Email errors don't affect registration success
+    // Send event registration confirmation email
+    try {
+      const { sendEventRegistrationConfirmation } = await import('../services/emailService.js');
+      const emailResult = await sendEventRegistrationConfirmation(email, {
+        eventTitle: event.title,
+        eventDate: new Date(event.startDate).toLocaleDateString(),
+        eventLocation: event.location || 'Location TBD',
+        registrantName: name,
+        registrationId: savedRegistration._id.toString()
+      });
+      
+      if (!emailResult || !emailResult.success) {
+        console.error('Failed to send event registration confirmation email:', emailResult?.error || 'Unknown email error');
+      } else {
+        console.log(`[SUCCESS] Event registration confirmation sent to: ${email}`);
       }
-    });
+    } catch (emailError) {
+      console.error('Event registration confirmation email error:', emailError.message);
+      // Log but don't fail the registration
+    }
 
     sendResponse(res, true, 'Successfully registered for event', {
       registration: savedRegistration,
@@ -4022,60 +3802,6 @@ export const deleteEventRegistration = async (req, res) => {
   }
 };
 
-// Update event registration (admin function)
-export const updateEventRegistration = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      organization, 
-      status, 
-      specialRequirements,
-      emergencyContact 
-    } = req.body;
-
-    // Find the registration
-    const registration = await EventRegistration.findById(id);
-    
-    if (!registration) {
-      return res.status(404).json({
-        success: false,
-        message: 'Event registration not found'
-      });
-    }
-
-    // Update fields if provided
-    if (firstName !== undefined) registration.firstName = firstName;
-    if (lastName !== undefined) registration.lastName = lastName;
-    if (email !== undefined) registration.email = email;
-    if (phone !== undefined) registration.phone = phone;
-    if (organization !== undefined) registration.organization = organization;
-    if (status !== undefined) registration.status = status;
-    if (specialRequirements !== undefined) registration.specialRequirements = specialRequirements;
-    if (emergencyContact !== undefined) registration.emergencyContact = emergencyContact;
-
-    // Save the updated registration
-    const updatedRegistration = await registration.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Event registration updated successfully',
-      data: { registration: updatedRegistration }
-    });
-
-  } catch (error) {
-    console.error('Error updating event registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update event registration',
-      error: error.message
-    });
-  }
-};
-
 // ----- EMAIL AUTOMATION FUNCTIONS -----
 
 /**
@@ -4117,7 +3843,7 @@ export const confirmSubscription = async (req, res) => {
 
     // Send welcome email
     try {
-  await sendWelcomeEmailToSubscriber(subscriber.email, { subscriptionType: subscriber.subscriptionType });
+      await sendWelcomeEmailToSubscriber(subscriber.email, { subscriptionType: subscriber.subscriptionType });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
@@ -4142,41 +3868,9 @@ export const confirmSubscription = async (req, res) => {
  */
 export const unsubscribeHandler = async (req, res) => {
   try {
-    // Handle both GET (query params) and POST (body) requests
-    const { token, email } = req.method === 'GET' ? req.query : req.body;
+    const { token, email } = req.body;
     
     if (!token && !email) {
-      // For GET requests, show a user-friendly error page
-      if (req.method === 'GET') {
-        return res.status(400).send(`
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invalid Unsubscribe Link - Ishaazi Livestock Services</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              h1 { color: #333; margin-bottom: 16px; }
-              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
-              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-              .btn:hover { background: #5a67d8; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">⚠️</div>
-              <h1>Invalid Unsubscribe Link</h1>
-              <p>The unsubscribe link appears to be invalid or incomplete. Please check your email for the correct link or contact our support team.</p>
-              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
-            </div>
-          </body>
-          </html>
-        `);
-      }
-      
       return res.status(400).json({
         success: false,
         message: 'Unsubscribe token or email is required'
@@ -4194,37 +3888,6 @@ export const unsubscribeHandler = async (req, res) => {
     }
 
     if (!subscriber) {
-      // For GET requests, show a user-friendly error page
-      if (req.method === 'GET') {
-        return res.status(404).send(`
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Subscriber Not Found - Ishaazi Livestock Services</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              h1 { color: #333; margin-bottom: 16px; }
-              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
-              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-              .btn:hover { background: #5a67d8; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">❓</div>
-              <h1>Subscriber Not Found</h1>
-              <p>We couldn't find your subscription record. You may have already unsubscribed or the link may be expired.</p>
-              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
-            </div>
-          </body>
-          </html>
-        `);
-      }
-      
       return res.status(404).json({
         success: false,
         message: 'Subscriber not found'
@@ -4232,37 +3895,6 @@ export const unsubscribeHandler = async (req, res) => {
     }
 
     if (!subscriber.isActive) {
-      // For GET requests, show a user-friendly message
-      if (req.method === 'GET') {
-        return res.status(200).send(`
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Already Unsubscribed - Ishaazi Livestock Services</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-              .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              h1 { color: #333; margin-bottom: 16px; }
-              p { color: #666; line-height: 1.6; margin-bottom: 20px; }
-              .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-              .btn:hover { background: #5a67d8; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">✅</div>
-              <h1>Already Unsubscribed</h1>
-              <p>You have already unsubscribed from our newsletter. You will not receive any future emails from us.</p>
-              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
-            </div>
-          </body>
-          </html>
-        `);
-      }
-      
       return res.status(200).json({
         success: true,
         message: 'You are already unsubscribed'
@@ -4274,57 +3906,6 @@ export const unsubscribeHandler = async (req, res) => {
     subscriber.unsubscribedAt = new Date();
     await subscriber.save();
 
-    // Log the unsubscribe activity
-    await ActivityLog.logActivity({
-      userId: null,
-      username: 'anonymous',
-      userRole: 'subscriber',
-      action: 'newsletter_unsubscribed',
-      resource: 'subscriber',
-      details: { 
-        email: subscriber.email,
-        method: req.method,
-        unsubscribedAt: subscriber.unsubscribedAt
-      }
-    });
-
-    // For GET requests, show a user-friendly success page
-    if (req.method === 'GET') {
-      return res.status(200).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Successfully Unsubscribed - Ishaazi Livestock Services</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            h1 { color: #333; margin-bottom: 16px; }
-            p { color: #666; line-height: 1.6; margin-bottom: 20px; }
-            .btn { display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-            .btn:hover { background: #059669; }
-            .subscribe-link { display: inline-block; padding: 8px 16px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 6px; margin-left: 10px; border: 1px solid #d1d5db; }
-            .subscribe-link:hover { background: #e5e7eb; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">✅</div>
-            <h1>Successfully Unsubscribed</h1>
-            <p>You have been successfully unsubscribed from our newsletter. We're sorry to see you go!</p>
-            <p>You will no longer receive emails from Ishaazi Livestock Services. If you change your mind, you can always subscribe again on our website.</p>
-            <div style="margin-top: 30px;">
-              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
-              <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/subscribe" class="subscribe-link">Subscribe Again</a>
-            </div>
-          </div>
-        </body>
-        </html>
-      `);
-    }
-
     res.status(200).json({
       success: true,
       message: 'You have been successfully unsubscribed from our newsletter'
@@ -4332,38 +3913,6 @@ export const unsubscribeHandler = async (req, res) => {
 
   } catch (error) {
     console.error('Error processing unsubscribe:', error);
-    
-    // For GET requests, show a user-friendly error page
-    if (req.method === 'GET') {
-      return res.status(500).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Error - Ishaazi Livestock Services</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            h1 { color: #333; margin-bottom: 16px; }
-            p { color: #666; line-height: 1.6; margin-bottom: 20px; }
-            .btn { display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-            .btn:hover { background: #dc2626; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">❌</div>
-            <h1>Something Went Wrong</h1>
-            <p>We encountered an error while processing your unsubscribe request. Please try again later or contact our support team.</p>
-            <a href="${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}" class="btn">Return to Website</a>
-          </div>
-        </body>
-        </html>
-      `);
-    }
-    
     res.status(500).json({
       success: false,
       message: 'Failed to process unsubscribe request',
