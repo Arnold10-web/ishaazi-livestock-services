@@ -25,15 +25,20 @@ class EmailService {
     console.log('[EMAIL] Environment variables check:', {
       EMAIL_HOST: process.env.EMAIL_HOST ? '[SET]' : '[NOT SET]',
       EMAIL_USER: process.env.EMAIL_USER ? '[SET]' : '[NOT SET]',
-      EMAIL_SERVICE: process.env.EMAIL_SERVICE
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE,
+      SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? '[SET]' : '[NOT SET]'
     });
     
     const configs = {
       smtp: {
+        // Current: TLS configuration for Railway (port 587)
         host: process.env.SMTP_HOST || process.env.EMAIL_HOST || 'ishaazilivestockservices.com',
-        port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 465,
-        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || true,
-        requireTLS: false,
+        port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true' || process.env.EMAIL_SECURE === 'true' || false,
+        requireTLS: true, // Use TLS for port 587
+        connectionTimeout: 60000,   // 60 seconds for Railway
+        greetingTimeout: 30000,     // 30 seconds for Railway  
+        socketTimeout: 60000,       // 60 seconds for Railway
         tls: {
           rejectUnauthorized: false,
           servername: process.env.EMAIL_HOST || process.env.SMTP_HOST
@@ -42,6 +47,12 @@ class EmailService {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
         }
+        
+        // BACKUP: Original SSL configuration (if Railway restores SMTP access)
+        // port: 465,
+        // secure: true,
+        // requireTLS: false,
+        // (remove timeout settings for original config)
       },
       gmail: {
         service: 'gmail',
@@ -51,7 +62,9 @@ class EmailService {
         }
       },
       sendgrid: {
-        service: 'SendGrid',
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false,
         auth: {
           user: 'apikey',
           pass: process.env.SENDGRID_API_KEY
