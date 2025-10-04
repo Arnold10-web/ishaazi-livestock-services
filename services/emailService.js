@@ -409,6 +409,60 @@ class EmailService {
     }
   }
 
+  async sendWelcomeEmailToSubscriber(subscriberEmail, subscriptionData = {}) {
+    try {
+      const templateData = {
+        subscriberEmail: subscriberEmail,
+        subscriptionType: subscriptionData.subscriptionType || 'all',
+        subscriberName: subscriptionData.name || 'Valued Subscriber',
+        welcomeMessage: 'Welcome to Ishaazi Livestock Services!',
+        unsubscribe_url: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`,
+        manage_preferences_url: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/preferences?email=${encodeURIComponent(subscriberEmail)}`,
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('welcome-subscriber', templateData);
+      
+      return await this.sendEmail({
+        to: subscriberEmail,
+        subject: 'Welcome to Ishaazi Livestock Services!',
+        html,
+        emailType: 'welcome-subscriber',
+        categories: ['welcome', 'subscriber', 'onboarding']
+      });
+    } catch (error) {
+      console.warn('[WARNING] Welcome subscriber email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendEventRegistrationConfirmation(participantEmail, eventDetails) {
+    try {
+      const templateData = {
+        participantEmail: participantEmail,
+        eventTitle: eventDetails.title || 'Event',
+        eventDate: eventDetails.date || 'TBD',
+        eventLocation: eventDetails.location || 'To be announced',
+        registrationId: eventDetails.registrationId || 'N/A',
+        eventDescription: eventDetails.description || '',
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('event-registration-confirmation', templateData);
+      
+      return await this.sendEmail({
+        to: participantEmail,
+        subject: `Event Registration Confirmed - ${eventDetails.title || 'Event'}`,
+        html,
+        emailType: 'event-registration',
+        categories: ['event', 'registration', 'confirmation']
+      });
+    } catch (error) {
+      console.warn('[WARNING] Event registration email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
   async sendNewsletter(subscribers, newsletterData) {
     const results = { sent: 0, failed: 0, errors: [] };
     
@@ -484,7 +538,7 @@ class EmailService {
 const emailService = new EmailService();
 
 export const sendEmail = (options) => emailService.sendEmail(options);
-export const sendWelcomeEmailToSubscriber = (userEmail) => emailService.sendWelcomeEmailToSubscriber(userEmail);
+export const sendWelcomeEmailToSubscriber = (userEmail, subscriptionData) => emailService.sendWelcomeEmailToSubscriber(userEmail, subscriptionData);
 export const sendWelcomeEmailToEditor = (email, pass, by) => emailService.sendWelcomeEmailToEditor(email, pass, by);
 export const sendPasswordResetEmail = (email, pass, by) => emailService.sendPasswordResetEmail(email, pass, by);
 export const sendAccountStatusEmail = (email, active, by) => emailService.sendAccountStatusEmail(email, active, by);
@@ -493,6 +547,7 @@ export const sendNewsletter = (subscribers, data) => emailService.sendNewsletter
 export const sendAuctionRegistrationConfirmation = (email, details) => emailService.sendAuctionRegistrationConfirmation(email, details);
 export const sendAuctionRegistrationApproved = (email, details) => emailService.sendAuctionRegistrationApproved(email, details);
 export const sendAuctionRegistrationRejected = (email, details, reason) => emailService.sendAuctionRegistrationRejected(email, details, reason);
+export const sendEventRegistrationConfirmation = (email, details) => emailService.sendEventRegistrationConfirmation(email, details);
 export const getStats = () => emailService.getStats();
 export const getTemplates = () => emailService.getTemplates();
 export const healthCheck = () => emailService.healthCheck();
