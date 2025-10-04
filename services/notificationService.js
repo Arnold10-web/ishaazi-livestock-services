@@ -14,51 +14,48 @@
  * 
  * @module services/notificationService
  */
-import nodemailer from 'nodemailer';
 import Subscriber from '../models/Subscriber.js';
 import Notification from '../models/Notification.js';
 
 /**
- * Creates and configures a Nodemailer transporter for sending notification emails
+ * Create email transporter for sending notifications
  * 
- * Uses a connection pool for better performance when sending multiple notifications
- * and implements rate limiting to prevent being flagged as spam.
+ * Uses the centralized EmailService instead of creating separate SMTP configuration
  * 
- * @returns {nodemailer.Transporter} Configured email transporter
+ * @returns {Object} Email service instance
  */
-const createTransporter = () => {
-  // Check for required environment variables
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error('❌ Missing email configuration: EMAIL_USER or EMAIL_PASS not set');
-    throw new Error('Email configuration missing. Please set EMAIL_USER and EMAIL_PASS environment variables.');
+const createTransporter = async () => {
+  try {
+    // Import the centralized email service
+    const { default: EmailService } = await import('./emailService.js');
+    const emailService = new EmailService();
+    
+    return {
+      sendMail: async (mailOptions) => {
+        // Adapt the mailOptions to our EmailService format
+        const result = await emailService.sendEmail({
+          to: mailOptions.to,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          text: mailOptions.text
+        });
+        
+        return result;
+      }
+    };
+  } catch (error) {
+    console.error('❌ Failed to initialize email service for notifications:', error.message);
+    // Return a mock transporter that logs instead of sending
+    return {
+      sendMail: async (mailOptions) => {
+        console.log('[NOTIFICATION] Would send email:', {
+          to: mailOptions.to,
+          subject: mailOptions.subject
+        });
+        return { success: false, message: 'Email service not available' };
+      }
+    };
   }
-
-  const config = {
-    host: process.env.EMAIL_HOST || 'mail.ishaazilivestockservices.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateLimit: 14,
-    // Railway-specific optimizations
-    connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000,    // 30 seconds
-    socketTimeout: 60000       // 60 seconds
-  };
-
-  console.log('📧 Email transporter configured:', {
-    host: config.host,
-    port: config.port,
-    user: config.auth.user,
-    secure: config.secure
-  });
-
-  return nodemailer.createTransporter(config);
 };
 
 /**
@@ -316,7 +313,7 @@ export const sendContentNotification = async (contentType, contentId, title, des
     const contentUrl = `${baseUrl}/${contentType}/${contentId}`;
     
     // Send emails in batches with Railway optimizations
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
     const BATCH_SIZE = 10; // Reduced for Railway
     const DELAY_BETWEEN_BATCHES = 3000; // 3 seconds for Railway
 
@@ -342,14 +339,14 @@ export const sendContentNotification = async (contentType, contentId, title, des
           );
           
           await transporter.sendMail({
-            from: `"Ishaazi Livestock Services" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
+            from: `"Ishaazi Livestock Services" <${process.env.EMAIL_FROM || 'system@ishaazilivestockservices.com'}>`,
             to: subscriber.email,
             subject: `🌾 New ${contentType}: ${title}`,
             html: htmlContent,
             // Railway-specific mail options
             priority: 'normal',
             envelope: {
-              from: process.env.EMAIL_USER,
+              from: process.env.EMAIL_FROM || 'system@ishaazilivestockservices.com',
               to: subscriber.email
             }
           });

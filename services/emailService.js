@@ -14,7 +14,7 @@ class EmailService {
     this.isInitialized = false;
     this.config = this.getEmailConfig();
     this.templates = new Map();
-    this.initializeService();
+    this.initialize();
   }
 
   getEmailConfig() {
