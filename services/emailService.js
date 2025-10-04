@@ -63,8 +63,34 @@ class EmailService {
   }
 
   async loadTemplates() {
-    this.templates.set('newsletter', '<html><body>{{content}}</body></html>');
-    this.templates.set('welcome-subscriber', '<html><body>Welcome {{subscriberEmail}}!</body></html>');
+    try {
+      const templatesPath = path.resolve(__dirname, '../templates/email');
+      
+      // Load basic templates
+      this.templates.set('newsletter', await this.loadTemplate('newsletter.html'));
+      this.templates.set('welcome-subscriber', await this.loadTemplate('welcome-subscriber.html'));
+      this.templates.set('subscription-confirmation', await this.loadTemplate('subscription-confirmation.html'));
+      this.templates.set('event-registration-confirmation', await this.loadTemplate('event-registration-confirmation.html'));
+      this.templates.set('auction-registration-confirmation', await this.loadTemplate('auction-registration-confirmation.html'));
+      
+      console.log(`[SUCCESS] Loaded ${this.templates.size} email templates`);
+    } catch (error) {
+      console.warn('[WARNING] Could not load email templates:', error.message);
+      // Fallback to basic templates
+      this.templates.set('newsletter', '<html><body>{{content}}</body></html>');
+      this.templates.set('welcome-subscriber', '<html><body>Welcome {{subscriberEmail}}!</body></html>');
+    }
+  }
+
+  async loadTemplate(filename) {
+    try {
+      const templatesPath = path.resolve(__dirname, '../templates/email');
+      const templatePath = path.join(templatesPath, filename);
+      return await fs.readFile(templatePath, 'utf8');
+    } catch (error) {
+      console.warn(`[WARNING] Could not load template ${filename}:`, error.message);
+      return '<html><body>{{content}}</body></html>';
+    }
   }
 
   renderTemplate(templateName, data) {
@@ -72,9 +98,33 @@ class EmailService {
     if (!template) {
       throw new Error(`Email template "${templateName}" not found`);
     }
-    return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    
+    // Enhanced template rendering with nested object support
+    let rendered = template;
+    
+    // Replace simple variables {{variable}}
+    rendered = rendered.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       return data[key] || match;
     });
+    
+    // Replace conditional blocks {{#if variable}}...{{/if}}
+    rendered = rendered.replace(/\{\{#if\s+(\w+)\}\}(.*?)\{\{\/if\}\}/gs, (match, condition, content) => {
+      return data[condition] ? content : '';
+    });
+    
+    // Add default unsubscribe and preference URLs if not provided
+    if (!data.unsubscribe_url) {
+      const baseUrl = process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com';
+      data.unsubscribe_url = `${baseUrl}/unsubscribe?email=${encodeURIComponent(data.subscriberEmail || data.email || '')}`;
+      data.manage_preferences_url = `${baseUrl}/preferences?email=${encodeURIComponent(data.subscriberEmail || data.email || '')}`;
+    }
+    
+    // Second pass for any remaining variables
+    rendered = rendered.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return data[key] || '';
+    });
+    
+    return rendered;
   }
 
   async sendEmail(options) {
@@ -98,16 +148,83 @@ class EmailService {
       subject: options.subject,
       html: options.html,
       text: options.text,
-      replyTo: this.config.replyTo
+      replyTo: this.config.replyTo,
+      
+      // Enhanced SendGrid features
+      trackingSettings: {
+        clickTracking: { enable: true },
+        openTracking: { enable: true },
+        subscriptionTracking: { enable: true },
+        ganalytics: { enable: false } // Can be enabled if you have GA
+      },
+      
+      // Custom headers for tracking
+      customArgs: {
+        campaignId: options.campaignId || 'general',
+        userId: options.userId || 'anonymous',
+        emailType: options.emailType || 'transactional'
+      },
+      
+      // Unsubscribe link
+      asm: {
+        groupId: options.unsubscribeGroupId || 1 // Default unsubscribe group
+      }
     };
+
+    // Add categories for analytics
+    if (options.categories) {
+      mailOptions.categories = Array.isArray(options.categories) 
+        ? options.categories 
+        : [options.categories];
+    }
+
+    // Add send time optimization
+    if (options.sendAt) {
+      mailOptions.sendAt = options.sendAt;
+    }
 
     try {
       const result = await sgMail.send(mailOptions);
       console.log('[SUCCESS] Email sent successfully via SendGrid');
-      return { success: true, messageId: result[0].headers['x-message-id'] };
+      
+      // Update subscriber stats
+      if (options.to) {
+        await this.updateSubscriberStats(options.to, { sent: 1 });
+      }
+      
+      return { 
+        success: true, 
+        messageId: result[0].headers['x-message-id'],
+        tracking: {
+          openTracking: mailOptions.trackingSettings.openTracking.enable,
+          clickTracking: mailOptions.trackingSettings.clickTracking.enable
+        }
+      };
     } catch (error) {
       console.error('[ERROR] Email sending failed:', error.message);
       return { success: false, error: error.message };
+    }
+  }
+
+  async updateSubscriberStats(email, stats) {
+    try {
+      const updateQuery = {};
+      Object.keys(stats).forEach(key => {
+        updateQuery[`stats.${key}`] = stats[key];
+      });
+
+      await import('../models/Subscriber.js').then(module => {
+        const Subscriber = module.default;
+        return Subscriber.findOneAndUpdate(
+          { email },
+          { 
+            $inc: { ...updateQuery, emailsSent: stats.sent || 0 }
+          },
+          { upsert: false }
+        );
+      });
+    } catch (error) {
+      console.warn('[WARNING] Could not update subscriber stats:', error.message);
     }
   }
 
@@ -150,22 +267,49 @@ class EmailService {
 
   async sendNewsletter(subscribers, newsletterData) {
     const results = { sent: 0, failed: 0, errors: [] };
+    
+    // Add tracking and analytics
+    const campaignId = `newsletter_${Date.now()}`;
+    
     for (const subscriber of subscribers) {
       try {
-        const html = this.renderTemplate('newsletter', newsletterData);
+        const templateData = {
+          ...newsletterData,
+          subscriberEmail: subscriber.email,
+          subscriptionType: subscriber.subscriptionType,
+          unsubscribe_url: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/unsubscribe?email=${encodeURIComponent(subscriber.email)}&campaign=${campaignId}`,
+          manage_preferences_url: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/preferences?email=${encodeURIComponent(subscriber.email)}`
+        };
+        
+        const html = this.renderTemplate('newsletter', templateData);
+        
         const result = await this.sendEmail({
           to: subscriber.email,
           subject: newsletterData.subject,
-          html
+          html,
+          campaignId,
+          emailType: 'newsletter',
+          categories: ['newsletter', newsletterData.category || 'general'],
+          unsubscribeGroupId: 1, // Newsletter unsubscribe group
+          userId: subscriber._id
         });
-        if (result.success) results.sent++;
-        else results.failed++;
+        
+        if (result.success) {
+          results.sent++;
+        } else {
+          results.failed++;
+          results.errors.push({ email: subscriber.email, error: result.error });
+        }
       } catch (error) {
         results.failed++;
         results.errors.push({ email: subscriber.email, error: error.message });
       }
     }
-    return results;
+    
+    // Log campaign results
+    console.log(`[NEWSLETTER] Campaign ${campaignId}: ${results.sent} sent, ${results.failed} failed`);
+    
+    return { ...results, campaignId };
   }
 
   async healthCheck() {

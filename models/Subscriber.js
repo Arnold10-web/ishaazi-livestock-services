@@ -72,6 +72,52 @@ const subscriberSchema = new mongoose.Schema({
   openCount: { type: Number, default: 0 },
   
   /**
+   * @property {Object} stats - SendGrid delivery statistics
+   */
+  stats: {
+    delivered: { type: Number, default: 0 },
+    opens: { type: Number, default: 0 },
+    clicks: { type: Number, default: 0 },
+    bounces: { type: Number, default: 0 },
+    drops: { type: Number, default: 0 }
+  },
+  
+  /**
+   * @property {Boolean} spamReported - Whether user reported as spam
+   */
+  spamReported: { type: Boolean, default: false },
+  
+  /**
+   * @property {Date} spamReportedAt - When spam was reported
+   */
+  spamReportedAt: { type: Date, default: null },
+  
+  /**
+   * @property {String} bounceReason - Reason for email bounce
+   */
+  bounceReason: { type: String, default: null },
+  
+  /**
+   * @property {Date} lastBounced - Last bounce timestamp
+   */
+  lastBounced: { type: Date, default: null },
+  
+  /**
+   * @property {Date} unsubscribedAt - When user unsubscribed
+   */
+  unsubscribedAt: { type: Date, default: null },
+  
+  /**
+   * @property {String} unsubscribeReason - Reason for unsubscribe
+   */
+  unsubscribeReason: { type: String, default: null },
+  
+  /**
+   * @property {Object} groupUnsubscribes - Group-specific unsubscribes
+   */
+  groupUnsubscribes: { type: Object, default: {} },
+  
+  /**
    * @property {String} confirmationToken - Token for email confirmation (double opt-in)
    */
   confirmationToken: { type: String, default: null },

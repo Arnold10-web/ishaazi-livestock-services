@@ -508,6 +508,7 @@ import managementRoutes from './routes/managementRoutes.js';
 import auctionRegistrationRoutes from './routes/auctionRegistrationRoutes.js';
 import migrationRoutes from './routes/migrationRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
+import sendgridWebhookRoutes from './routes/sendgridWebhookRoutes.js';
 
 // API Documentation with Swagger
 // setupSwagger(app);
@@ -528,6 +529,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/syndication', syndicationRoutes); // RSS feeds and sitemaps
 app.use('/api/push', pushSubscriptionRoutes); // Push notification subscriptions
 app.use('/api/files', fileRoutes); // File serving routes
+app.use('/api/sendgrid', sendgridWebhookRoutes); // SendGrid webhook handling
 app.use('/api', auctionRegistrationRoutes); // Auction registration API endpoints
 // Password-specific rate limiter - ENHANCED SECURITY
 const passwordLimiter = rateLimit({
