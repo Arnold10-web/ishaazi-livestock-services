@@ -18,22 +18,18 @@ import Subscriber from '../models/Subscriber.js';
 import Notification from '../models/Notification.js';
 
 /**
- * Create email transporter for sending notifications
- * 
- * Uses the centralized EmailService instead of creating separate SMTP configuration
- * 
+ * Creates a transporter using the centralized email service
  * @returns {Object} Email service instance
  */
 const createTransporter = async () => {
   try {
-    // Import the centralized email service
-    const { default: EmailService } = await import('./emailService.js');
-    const emailService = new EmailService();
+    // Import the centralized email service functions (singleton)
+    const { sendEmail } = await import('./emailService.js');
     
     return {
       sendMail: async (mailOptions) => {
         // Adapt the mailOptions to our EmailService format
-        const result = await emailService.sendEmail({
+        const result = await sendEmail({
           to: mailOptions.to,
           subject: mailOptions.subject,
           html: mailOptions.html,

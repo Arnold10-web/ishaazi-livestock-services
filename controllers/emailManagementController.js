@@ -8,13 +8,10 @@ import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
 import Newsletter from '../models/Newsletter.js';
 import Subscriber from '../models/Subscriber.js';
-import EmailService from '../services/emailService.js';
+import { getStats, getTemplates, sendEmail, healthCheck } from '../services/emailService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Create email service instance
-const emailService = new EmailService();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,7 +47,7 @@ export const getEmailTemplates = async (req, res) => {
         }
         
         // Get loaded template information from email service
-        const serviceTemplates = emailService.getTemplates();
+        const serviceTemplates = getTemplates();
         
         res.json({
             success: true,
@@ -259,7 +256,7 @@ export const testEmailTemplate = async (req, res) => {
         }
         
         // Send test email
-        await emailService.sendEmail({
+        await sendEmail({
             to: testEmail,
             subject: `Test Email - ${templateName}`,
             templateName,
@@ -355,7 +352,7 @@ export const getEmailTracking = async (req, res) => {
 export const getEmailSystemHealth = async (req, res) => {
     try {
         // Check email service health
-        const emailHealth = await emailService.healthCheck();
+        const emailHealth = await healthCheck();
         
         // Get recent email errors
         const recentErrors = await ActivityLog.find({

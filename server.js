@@ -106,7 +106,7 @@ import productionOptimizer from './utils/productionOptimizer.js';
  * Using dynamic imports allows for cleaner dependency management and
  * better error handling when loading modules
  */
-let setupMonitoring, NotificationWebSocketService, NotificationTypes, createNotification, EmailService;
+let setupMonitoring, NotificationWebSocketService, NotificationTypes, createNotification;
 
 /**
  * Dynamically imports and initializes service modules
@@ -122,13 +122,11 @@ let setupMonitoring, NotificationWebSocketService, NotificationTypes, createNoti
 async function initializeServices() {
   const monitoringModule = await import('./services/monitoringService.js');
   const wsModule = await import('./services/notificationWebSocketService.js');
-  const emailModule = await import('./services/emailService.js');
   
   setupMonitoring = monitoringModule.setupMonitoring;
   NotificationWebSocketService = wsModule.NotificationWebSocketService;
   NotificationTypes = wsModule.NotificationTypes;
   createNotification = wsModule.createNotification;
-  EmailService = emailModule.default;
 }
 
 /**
@@ -164,14 +162,13 @@ if (process.env.NODE_ENV === 'production') {
  * Service instances declaration
  * 
  * These services will be initialized during the startup process:
- * - emailService: Handles email delivery and templating
  * - notificationService: WebSocket-based real-time notifications
  * - logger: Centralized application logging
  * - performanceMonitor: Tracks application metrics
  * - healthChecker: Provides system health status
  * - errorTracker: Captures and reports errors
  */
-let emailService, notificationService, logger, performanceMonitor, healthChecker, errorTracker;
+let notificationService, logger, performanceMonitor, healthChecker, errorTracker;
 
 /**
  * Server initialization sequence
@@ -195,7 +192,6 @@ async function initializeServer() {
     await initializeServices();
     
     // Create service instances with proper initialization order
-    emailService = new EmailService();
     notificationService = new NotificationWebSocketService();
     
     // Setup monitoring and observability infrastructure
@@ -752,10 +748,13 @@ app.use((err, req, res, next) => {
 // Enhanced health check endpoints
 app.get('/api/health/detailed', async (req, res) => {
   try {
+    // Import email service functions
+    const { getStats: getEmailStats, healthCheck: emailHealthCheck } = await import('./services/emailService.js');
+    
     const health = await healthChecker.runChecks();
     const metrics = performanceMonitor.getMetrics();
     const wsStats = notificationService.getStats();
-    const emailStats = emailService.getStats();
+    const emailStats = getEmailStats();
     
     res.json({
       status: health.status,
@@ -765,7 +764,7 @@ app.get('/api/health/detailed', async (req, res) => {
       environment: process.env.NODE_ENV,
       services: {
         database: health.checks.database || { status: 'unknown' },
-        email: await emailService.healthCheck(),
+        email: await emailHealthCheck(),
         websocket: wsStats,
         memory: health.checks.memory || { status: 'unknown' }
       },
