@@ -39,11 +39,11 @@ if (existsSync(envPath)) {
 const getVapidKeys = () => {
     const vapidPublic = process.env.PUSH_NOTIFICATION_VAPID_PUBLIC?.trim();
     const vapidPrivate = process.env.PUSH_NOTIFICATION_VAPID_PRIVATE?.trim();
-    const emailContact = process.env.EMAIL_USER?.trim();
+    const emailContact = process.env.EMAIL_FROM?.trim() || process.env.EMAIL_USER?.trim();
 
     // Debug logging for VAPID configuration
     console.log('\n[PUSH] Push Notification Configuration:');
-    console.log('- EMAIL_USER:', emailContact ? '[SET]' : '[NOT SET]');
+    console.log('- EMAIL_FROM/EMAIL_USER:', emailContact ? '[SET]' : '[NOT SET]');
     console.log('- PUSH_NOTIFICATION_VAPID_PUBLIC:', vapidPublic ? '[SET]' : '[NOT SET]');
     console.log('- PUSH_NOTIFICATION_VAPID_PRIVATE:', vapidPrivate ? '[SET]' : '[NOT SET]');
 
@@ -57,7 +57,7 @@ const { vapidPublic, vapidPrivate, emailContact } = getVapidKeys();
 const missingKeys = [];
 if (!vapidPublic)   missingKeys.push('PUSH_NOTIFICATION_VAPID_PUBLIC');
 if (!vapidPrivate)  missingKeys.push('PUSH_NOTIFICATION_VAPID_PRIVATE');
-if (!emailContact)  missingKeys.push('EMAIL_USER');
+if (!emailContact)  missingKeys.push('EMAIL_FROM or EMAIL_USER');
 
 if (missingKeys.length > 0) {
   const errorMsg = `Missing required VAPID keys: ${missingKeys.join(', ')}.\n` +
