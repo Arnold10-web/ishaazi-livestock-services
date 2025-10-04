@@ -73,7 +73,7 @@ router.get('/diagnostics', async (req, res) => {
       cache: performanceStats.cache,
       slowRequests: performanceStats.slowRequests,
       services: {
-        email: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+        email: !!(process.env.SENDGRID_API_KEY && process.env.EMAIL_FROM),
         database: true, // If we're responding, DB is connected
         gridfs: true,
         performanceOptimized: true

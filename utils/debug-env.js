@@ -39,7 +39,7 @@ export const validateEnvironment = () => {
   
   // Production-specific checks
   if (process.env.NODE_ENV === 'production') {
-    const prodRequired = ['EMAIL_USER', 'EMAIL_PASS'];
+    const prodRequired = ['SENDGRID_API_KEY', 'EMAIL_FROM'];
     const missingProd = prodRequired.filter(key => !process.env[key]);
     
     if (missingProd.length > 0) {
