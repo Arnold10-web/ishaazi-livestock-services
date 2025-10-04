@@ -144,8 +144,8 @@ class ProductionOptimizer {
     const requiredEnvVars = [
       'MONGO_URI',
       'JWT_SECRET',
-      'EMAIL_USER',
-      'EMAIL_PASS'
+      'SENDGRID_API_KEY',
+      'EMAIL_FROM'
     ];
     
     const missing = requiredEnvVars.filter(key => !process.env[key]);
