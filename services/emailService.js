@@ -40,14 +40,14 @@ class EmailService {
 
   async initialize() {
     try {
-      if (!this.apiKey) {
+      if (!this.config.apiKey) {
         console.warn('[WARNING] SendGrid API key not configured properly. Check your SENDGRID_API_KEY environment variable.');
         console.warn('[INFO] Email service will continue in degraded mode - emails will not be sent');
         this.isInitialized = false;
         return; // Non-blocking - server can continue
       }
 
-      sgMail.setApiKey(this.apiKey);
+      sgMail.setApiKey(this.config.apiKey);
       
       this.isInitialized = true;
       
