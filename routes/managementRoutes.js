@@ -9,6 +9,7 @@ import { authenticateToken, requireRole } from '../middleware/enhancedAuthMiddle
 
 // Import management controllers
 import * as emailManagementController from '../controllers/emailManagementController.js';
+import { getOverallEmailAnalytics } from '../controllers/emailTrackingController.js';
 import * as fileManagementController from '../controllers/fileManagementController.js';
 import * as pushNotificationManagementController from '../controllers/pushNotificationManagementController.js';
 import * as backupManagementController from '../controllers/backupManagementController.js';
@@ -32,7 +33,8 @@ router.get('/email/templates', requireSystemAdmin, emailManagementController.get
 router.post('/email/templates', requireSystemAdmin, emailManagementController.createEmailTemplate);
 router.put('/email/templates/:id', requireSystemAdmin, emailManagementController.updateEmailTemplate);
 router.delete('/email/templates/:id', requireSystemAdmin, emailManagementController.deleteEmailTemplate);
-router.get('/email/stats', requireSystemAdmin, emailManagementController.getEmailStats);
+router.get('/email/stats', requireSystemAdmin, getOverallEmailAnalytics);  // Enhanced SendGrid analytics
+router.get('/email/basic-stats', requireSystemAdmin, emailManagementController.getEmailStats);  // Basic stats
 router.post('/email/test', requireSystemAdmin, emailManagementController.testEmailTemplate);
 router.get('/email/tracking', requireSystemAdmin, emailManagementController.getEmailTracking);
 router.get('/email/health', requireSystemAdmin, emailManagementController.getEmailSystemHealth);

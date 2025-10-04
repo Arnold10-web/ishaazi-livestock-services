@@ -36,6 +36,17 @@
             font-size: 16px;
             line-height: 1.8;
         }
+        .content h1, .content h2, .content h3 {
+            color: #28a745;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .content img {
+            max-width: 100%;
+            height: auto;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
         .button {
             display: inline-block;
             background-color: #28a745;
@@ -48,6 +59,13 @@
         }
         .button:hover {
             background-color: #218838;
+        }
+        .highlight-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
         }
         .footer {
             text-align: center;
@@ -88,10 +106,18 @@
         <div class="header">
             <div class="logo">🐄 Ishaazi Livestock Services</div>
             <p>Your trusted partner in livestock farming</p>
+            {{#if campaignName}}
+            <h2 style="color: #28a745; margin: 15px 0;">{{campaignName}}</h2>
+            {{/if}}
         </div>
         
         <div class="content">
             <h1>{{title}}</h1>
+            
+            {{#if featured_image}}
+            <img src="{{featured_image}}" alt="Newsletter Featured Image" style="width: 100%; border-radius: 8px;">
+            {{/if}}
+            
             {{content}}
             
             {{#if buttonText}}
@@ -99,17 +125,37 @@
                 <a href="{{buttonLink}}" class="button">{{buttonText}}</a>
             </p>
             {{/if}}
+            
+            {{#if highlights}}
+            <div class="highlight-box">
+                <h3>📌 This Week's Highlights</h3>
+                {{highlights}}
+            </div>
+            {{/if}}
+            
+            {{#if upcoming_events}}
+            <div class="highlight-box">
+                <h3>📅 Upcoming Events</h3>
+                {{upcoming_events}}
+            </div>
+            {{/if}}
         </div>
         
         <div class="footer">
             <div class="social-links">
                 <a href="https://ishaazilivestockservices.com">Visit Website</a>
                 <a href="mailto:contact@ishaazilivestockservices.com">Contact Us</a>
+                <a href="https://ishaazilivestockservices.com/events">View Events</a>
             </div>
             
             <p>
                 <strong>Ishaazi Livestock Services</strong><br>
                 Expert guidance for beef, dairy, goats, and piggery farming
+            </p>
+            
+            <p style="margin: 15px 0; font-size: 12px; color: #888;">
+                Newsletter sent to {{subscriberEmail}} on {{date}}<br>
+                You subscribed to: <strong>{{subscriptionType}}</strong> updates
             </p>
             
             <div class="unsubscribe">
@@ -121,5 +167,7 @@
             </div>
         </div>
     </div>
+    
+    <!-- SendGrid tracking pixel will be automatically inserted here -->
 </body>
 </html>

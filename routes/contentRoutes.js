@@ -8,6 +8,7 @@ import { completeAdminRefresh } from '../middleware/forceRefresh.js';
 import { validate, blogSchemas, newsSchemas, magazineSchemas, validateObjectId, validateFileUpload } from '../middleware/validation.js';
 import { sensitiveOperationLimiter } from '../middleware/sanitization.js';
 import processFormData from '../middleware/formDataCompatibility.js';
+import { getNewsletterAnalytics } from '../controllers/emailTrackingController.js';
 import {
   createBlog,
   getBlogs,
@@ -339,6 +340,7 @@ router.post('/newsletters', authenticateToken, requireRole(['system_admin', 'edi
 router.put('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), updateNewsletter);
 router.delete('/newsletters/:id', authenticateToken, requireRole(['system_admin', 'editor']), deleteNewsletter);
 router.post('/newsletters/:id/send', authenticateToken, requireRole(['system_admin', 'editor']), sendNewsletter);
+router.get('/newsletters/:id/analytics', authenticateToken, requireRole(['system_admin', 'editor']), getNewsletterAnalytics);
 
 // Event Routes
 router.post('/events', authenticateToken, requireRole(['system_admin', 'editor']), ...storeInGridFS('image', ['image/*']), validateFileUpload, ...completeAdminRefresh(['events']), createEvent);
