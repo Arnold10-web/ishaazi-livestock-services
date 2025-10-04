@@ -42,17 +42,26 @@ export const getEmailTemplates = async (req, res) => {
                         filename: file,
                         size: stats.size,
                         lastModified: stats.mtime,
-                        preview: content.substring(0, 200) + '...'
+                        preview: content.substring(0, 200) + '...',
+                        isLoaded: true // All templates are now dynamically loaded
                     });
                 }
             }
         }
         
+        // Get loaded template information from email service
+        const serviceTemplates = emailService.getTemplates();
+        
         res.json({
             success: true,
             data: {
                 templates,
-                totalTemplates: templates.length
+                totalTemplates: templates.length,
+                serviceInfo: {
+                    loadedTemplates: serviceTemplates.count,
+                    templateNames: serviceTemplates.templates,
+                    allTemplatesLoaded: serviceTemplates.isLoaded
+                }
             }
         });
         

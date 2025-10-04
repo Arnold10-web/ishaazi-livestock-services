@@ -66,19 +66,23 @@ class EmailService {
     try {
       const templatesPath = path.resolve(__dirname, '../templates/email');
       
-      // Load basic templates
-      this.templates.set('newsletter', await this.loadTemplate('newsletter.html'));
-      this.templates.set('welcome-subscriber', await this.loadTemplate('welcome-subscriber.html'));
-      this.templates.set('subscription-confirmation', await this.loadTemplate('subscription-confirmation.html'));
-      this.templates.set('event-registration-confirmation', await this.loadTemplate('event-registration-confirmation.html'));
-      this.templates.set('auction-registration-confirmation', await this.loadTemplate('auction-registration-confirmation.html'));
+      // Dynamically load all templates from directory
+      const templateFiles = await fs.readdir(templatesPath);
+      const htmlFiles = templateFiles.filter(file => file.endsWith('.html'));
       
-      console.log(`[SUCCESS] Loaded ${this.templates.size} email templates`);
+      for (const file of htmlFiles) {
+        const templateName = file.replace('.html', '');
+        const template = await this.loadTemplate(file);
+        this.templates.set(templateName, template);
+      }
+      
+      console.log(`[SUCCESS] Loaded ${this.templates.size} email templates:`, Array.from(this.templates.keys()));
     } catch (error) {
       console.warn('[WARNING] Could not load email templates:', error.message);
       // Fallback to basic templates
       this.templates.set('newsletter', '<html><body>{{content}}</body></html>');
       this.templates.set('welcome-subscriber', '<html><body>Welcome {{subscriberEmail}}!</body></html>');
+      this.templates.set('subscription-confirmation', '<html><body>Please confirm your subscription.</body></html>');
     }
   }
 
@@ -229,21 +233,63 @@ class EmailService {
   }
 
   async sendWelcomeEmailToEditor(companyEmail, tempPassword, createdBy) {
-    const html = `<html><body><h1>Welcome to Admin Portal</h1><p>Email: ${companyEmail}</p><p>Password: ${tempPassword}</p></body></html>`;
-    return await this.sendEmail({
-      to: companyEmail,
-      subject: 'Welcome to Admin Portal',
-      html
-    });
+    try {
+      const templateData = {
+        adminEmail: companyEmail,
+        temporaryPassword: tempPassword,
+        createdBy: createdBy,
+        loginUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/admin/login`,
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('welcome-admin', templateData);
+      
+      return await this.sendEmail({
+        to: companyEmail,
+        subject: 'Welcome to Admin Portal - Account Created',
+        html,
+        emailType: 'admin-welcome',
+        categories: ['admin', 'welcome']
+      });
+    } catch (error) {
+      // Fallback to basic template
+      const html = `<html><body><h1>Welcome to Admin Portal</h1><p>Email: ${companyEmail}</p><p>Password: ${tempPassword}</p></body></html>`;
+      return await this.sendEmail({
+        to: companyEmail,
+        subject: 'Welcome to Admin Portal',
+        html
+      });
+    }
   }
 
   async sendPasswordResetEmail(companyEmail, tempPassword, resetBy) {
-    const html = `<html><body><h1>Password Reset</h1><p>Email: ${companyEmail}</p><p>New Password: ${tempPassword}</p></body></html>`;
-    return await this.sendEmail({
-      to: companyEmail,
-      subject: 'Password Reset',
-      html
-    });
+    try {
+      const templateData = {
+        adminEmail: companyEmail,
+        newPassword: tempPassword,
+        resetBy: resetBy,
+        loginUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/admin/login`,
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('password-reset-admin', templateData);
+      
+      return await this.sendEmail({
+        to: companyEmail,
+        subject: 'Password Reset - Admin Account',
+        html,
+        emailType: 'password-reset',
+        categories: ['admin', 'password-reset']
+      });
+    } catch (error) {
+      // Fallback to basic template
+      const html = `<html><body><h1>Password Reset</h1><p>Email: ${companyEmail}</p><p>New Password: ${tempPassword}</p></body></html>`;
+      return await this.sendEmail({
+        to: companyEmail,
+        subject: 'Password Reset',
+        html
+      });
+    }
   }
 
   async sendAccountStatusEmail(companyEmail, isActive, changedBy) {
@@ -257,12 +303,110 @@ class EmailService {
   }
 
   async sendSubscriptionConfirmation(subscriberEmail, token) {
-    const html = `<html><body><h1>Confirm Subscription</h1><p>Email: ${subscriberEmail}</p><p>Token: ${token}</p></body></html>`;
-    return await this.sendEmail({
-      to: subscriberEmail,
-      subject: 'Confirm Subscription',
-      html
-    });
+    try {
+      const templateData = {
+        subscriberEmail: subscriberEmail,
+        confirmationToken: token,
+        confirmationUrl: `${process.env.FRONTEND_URL || 'https://ishaazilivestockservices.com'}/confirm-subscription?token=${token}&email=${encodeURIComponent(subscriberEmail)}`,
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('subscription-confirmation', templateData);
+      
+      return await this.sendEmail({
+        to: subscriberEmail,
+        subject: 'Please Confirm Your Subscription',
+        html,
+        emailType: 'subscription-confirmation',
+        categories: ['subscription', 'confirmation']
+      });
+    } catch (error) {
+      // Fallback to basic template
+      const html = `<html><body><h1>Confirm Subscription</h1><p>Email: ${subscriberEmail}</p><p>Token: ${token}</p></body></html>`;
+      return await this.sendEmail({
+        to: subscriberEmail,
+        subject: 'Confirm Subscription',
+        html
+      });
+    }
+  }
+
+  // New auction-related email methods
+  async sendAuctionRegistrationConfirmation(participantEmail, auctionDetails) {
+    try {
+      const templateData = {
+        participantEmail: participantEmail,
+        auctionTitle: auctionDetails.title,
+        auctionDate: auctionDetails.date,
+        auctionLocation: auctionDetails.location,
+        registrationId: auctionDetails.registrationId,
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('auction-registration-confirmation', templateData);
+      
+      return await this.sendEmail({
+        to: participantEmail,
+        subject: `Auction Registration Confirmed - ${auctionDetails.title}`,
+        html,
+        emailType: 'auction-registration',
+        categories: ['auction', 'registration', 'confirmation']
+      });
+    } catch (error) {
+      console.warn('[WARNING] Auction registration email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendAuctionRegistrationApproved(participantEmail, auctionDetails) {
+    try {
+      const templateData = {
+        participantEmail: participantEmail,
+        auctionTitle: auctionDetails.title,
+        auctionDate: auctionDetails.date,
+        auctionLocation: auctionDetails.location,
+        approvalDate: new Date().toLocaleDateString(),
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('auction-registration-approved', templateData);
+      
+      return await this.sendEmail({
+        to: participantEmail,
+        subject: `Auction Registration Approved - ${auctionDetails.title}`,
+        html,
+        emailType: 'auction-approved',
+        categories: ['auction', 'registration', 'approved']
+      });
+    } catch (error) {
+      console.warn('[WARNING] Auction approval email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendAuctionRegistrationRejected(participantEmail, auctionDetails, reason) {
+    try {
+      const templateData = {
+        participantEmail: participantEmail,
+        auctionTitle: auctionDetails.title,
+        rejectionReason: reason,
+        rejectionDate: new Date().toLocaleDateString(),
+        supportEmail: this.config.replyTo
+      };
+      
+      const html = this.renderTemplate('auction-registration-rejected', templateData);
+      
+      return await this.sendEmail({
+        to: participantEmail,
+        subject: `Auction Registration Update - ${auctionDetails.title}`,
+        html,
+        emailType: 'auction-rejected',
+        categories: ['auction', 'registration', 'rejected']
+      });
+    } catch (error) {
+      console.warn('[WARNING] Auction rejection email failed:', error.message);
+      return { success: false, error: error.message };
+    }
   }
 
   async sendNewsletter(subscribers, newsletterData) {
@@ -322,7 +466,16 @@ class EmailService {
     return {
       provider: 'sendgrid',
       templatesLoaded: this.templates.size,
+      templateNames: Array.from(this.templates.keys()),
       isConfigured: this.isInitialized
+    };
+  }
+
+  getTemplates() {
+    return {
+      templates: Array.from(this.templates.keys()),
+      count: this.templates.size,
+      isLoaded: this.templates.size > 0
     };
   }
 }
@@ -337,7 +490,11 @@ export const sendPasswordResetEmail = (email, pass, by) => emailService.sendPass
 export const sendAccountStatusEmail = (email, active, by) => emailService.sendAccountStatusEmail(email, active, by);
 export const sendSubscriptionConfirmation = (email, token) => emailService.sendSubscriptionConfirmation(email, token);
 export const sendNewsletter = (subscribers, data) => emailService.sendNewsletter(subscribers, data);
+export const sendAuctionRegistrationConfirmation = (email, details) => emailService.sendAuctionRegistrationConfirmation(email, details);
+export const sendAuctionRegistrationApproved = (email, details) => emailService.sendAuctionRegistrationApproved(email, details);
+export const sendAuctionRegistrationRejected = (email, details, reason) => emailService.sendAuctionRegistrationRejected(email, details, reason);
 export const getStats = () => emailService.getStats();
+export const getTemplates = () => emailService.getTemplates();
 export const healthCheck = () => emailService.healthCheck();
 
 export default EmailService;
